@@ -16,7 +16,7 @@ enum nv_bufftypes {
     NV_STDOUT   = 2,
     BROWSER     = 4,
     NETWORK     = 8,
-    CUSTOM      = 16,
+    SOURCE      = 16,
 };
 
 typedef struct {
@@ -26,7 +26,7 @@ typedef struct {
 } nv_buff;
 
 struct nv_editor {
-    nv_buff buffer;
+    nv_buff* buffers;
 
     struct nv_conf {
          int  tab_width;
