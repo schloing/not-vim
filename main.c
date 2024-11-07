@@ -1,30 +1,40 @@
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
-
-#include "nv.h"
+#include <unistd.h>
+#define TB_IMPL
+#include "not-vim.h"
+#include "editor.h"
+#include "termbox2.h"
 
 int main(int argc, char** argv) {
     assert(argc >= 2);
-    struct stat statbuf;
+    int rv = 0;
     struct nv_editor editor = { 0 };
     nv_editor_init(&editor);
 
-    char* filename = argv[1];
-    FILE* file = fopen(filename, "r+");
-    editor->buffers[0] = (nv_buff){
-        .name = filename,
-        .id   = 0,
-        .type = SOURCE,
+    if ((rv = tb_init()) != TB_OK) {
+        fprintf(stderr, "%s\n", tb_strerror(rv));
+        editor.status = rv;
+        return rv;
+    }
+
+    struct nv_buff buff = {
+        .name = argv[1],
+        .type = NV_BUFFTYPE_SOURCE,
+        .file = fopen(argv[1], "r+") // check this later
     };
 
-    fstat(file, statbuf);
-    if (S_ISDIR(statbuf.st_mode))
-        editor->buffers[0].type = BROWSER;
+    nv_push_buffer(&editor, &buff);
 
-    nv_load_config(&editor);
-    nv_render_editor(&editor);
+    editor.width = tb_width();
+    editor.height = tb_height();
+    editor.running = true;
 
-    fclose(file);
-    free(editor->buffers);
-    return 0;
+    nv_render_term(&editor);
+   
+    tb_shutdown();
+    free(editor.buffers);
+    return rv;
 }
