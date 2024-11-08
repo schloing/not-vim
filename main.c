@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     };
 
     nv_push_buffer(&editor, &buff);
+    editor.buffers->peek = 0;
 
     editor.width = tb_width();
     editor.height = tb_height();
@@ -35,6 +36,6 @@ int main(int argc, char** argv) {
     nv_render_term(&editor);
    
     tb_shutdown();
-    free(editor.buffers);
+    free_vector(editor.buffers);
     return rv;
 }

@@ -1,5 +1,8 @@
-all:
+./nv:
 	gcc -g *.c -o nv
 
-run: ./nv
+clean:
+	rm ./nv
+
+run: nv
 	./nv main.c

@@ -2,14 +2,14 @@
 #define EDITOR_H
 
 #include <stdbool.h>
-#include "not-vim.h"
 #define TUI
 
+#include "general.h"
+#include "not-vim.h"
+
 struct nv_editor {
-    // buffers
-    struct nv_buff* buffers;
-    size_t len;
-    size_t cap;
+    // nv_buff*
+    Vector* buffers;
 
     // rendering tui
 #ifdef TUI
@@ -44,6 +44,5 @@ struct nv_editor {
 
 void nv_editor_init(struct nv_editor* editor);
 void nv_render_term(struct nv_editor* editor);
-void nv_push_buffer(struct nv_editor* editor, struct nv_buff* buffer);
 
 #endif
