@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "editor.h"
+#include "keyboard.h"
 #include "not-vim.h"
 #include "termbox2.h"
 #include "vec.h"
@@ -35,46 +36,34 @@ void nv_mainloop(struct nv_editor* editor) {
     struct tb_event ev;
     editor->running = true;
 
-    while (editor->running) {
-        editor->status = tb_poll_event(&ev);
+    // TODO:
+    // modes
+    // commands
+    // buffers
+    // read + write
 
-        if (editor->status != TB_OK) {
-            if (editor->status == TB_ERR_POLL &&
-                tb_last_errno() == EINTR) {
-                /* poll was interrupted, maybe by a SIGWINCH; try again */
-                continue;
-            }
-            /* some other error occurred; bail */
-            break;
-        }
-        
+    while (editor->running) {
+        editor->status = tb_peek_event(&ev, 100);
         tb_clear();
 
         switch (ev.type) {
         case TB_EVENT_KEY:
-            if (ev.key == TB_KEY_) {
-                editor->status = -1;
-                return;
-            }
+            editor->status = ev.key ? ev.key : ev.ch;
+            if (ev.key == TB_KEY_ESC) return;
+            tb_printf(0, 0, TB_WHITE, TB_BLACK, "%c", ev.ch);
+            break;
 
-            tb_printf(0, 0, TB_WHITE, TB_BLACK, "%d", ev.key);
-            break;
-        case TB_EVENT_RESIZE:
-            break;
-        case TB_EVENT_MOUSE:
-            break;
         default: break;
         }
 
         _nv_status(editor);
-        
         tb_present();
-        sleep(1);
     }
 }
 
 void nv_render_term(struct nv_editor* editor) {
-    // TODO
+    // TODO:
+    // terminal integration
 }
 
 static struct nv_buff*
@@ -88,6 +77,7 @@ _nv_get_active_buffer(struct nv_editor* editor) {
 
 static void
 _nv_status(struct nv_editor* editor) {
-    struct nv_buff* active = _nv_get_active_buffer(editor);
-    tb_printf(0, editor->height - 1, TB_WHITE, TB_BLACK, "[%d]%s", active->id, active->name);
+    struct nv_buff* active_buffer = _nv_get_active_buffer(editor);
+    tb_printf(0, editor->height - 1, TB_WHITE, TB_BLACK, "[%zu %d]%s",
+                editor->status, active_buffer->id, active_buffer->name);
 }
