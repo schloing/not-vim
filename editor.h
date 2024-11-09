@@ -3,13 +3,14 @@
 
 #include <stdbool.h>
 #define TUI
+#include "vec.h"
 
-#include "general.h"
-#include "not-vim.h"
+typedef struct nv_buff* nv_buff_vec;
 
 struct nv_editor {
     // nv_buff*
-    Vector* buffers;
+    nv_buff_vec buffers;
+    size_t peek;
 
     // rendering tui
 #ifdef TUI
@@ -44,5 +45,7 @@ struct nv_editor {
 
 void nv_editor_init(struct nv_editor* editor);
 void nv_render_term(struct nv_editor* editor);
+void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
+void nv_mainloop(struct nv_editor* editor);
 
 #endif

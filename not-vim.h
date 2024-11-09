@@ -1,8 +1,6 @@
 #ifndef NOT_VIM_H
 #define NOT_VIM_H
 
-#include "editor.h"
-
 enum {
     NV_BUFFTYPE_STDIN    = 1,
     NV_BUFFTYPE_STDOUT   = 2,
