@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #define TB_IMPL
-#include "not-vim.h"
+#include "buffer.h"
 #include "editor.h"
 #include "termbox2.h"
 #include "vec.h"

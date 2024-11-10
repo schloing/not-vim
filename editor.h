@@ -3,35 +3,21 @@
 
 #include <stdbool.h>
 #define TUI
+#include "buffer.h"
 #include "vec.h"
 
 typedef struct nv_buff* nv_buff_vec;
 
 struct nv_editor {
-    // nv_buff*
-    nv_buff_vec buffers;
-    size_t peek;
-
-    // rendering tui
+    nv_buff_vec buffers; // buffers
+    size_t peek;         // index of primary (active) buffer
 #ifdef TUI
-    int  width;
-    int  height;
+    int  width;          // not necessarily termbox window geometry
+    int  height;         // custom wrap width (80 cols) might change this
 #endif 
-
-    // editor status
-    int  status;
-    bool running;
-
-    // config
-    struct nv_conf {
-         int  tab_width;
-         bool expand_tab;
-         bool auto_indent;
-         bool line_numbers;
-         bool show_relative;
-         int  command_delay;
-         int  status_height;
-    } nv_conf;
+    int  status;         // status codes of termbox + notvim operations
+    bool running;        // mainloop
+    struct nv_conf nv_conf; // default config for buffers
 };
 
 // config defaults
@@ -44,9 +30,8 @@ struct nv_editor {
 #define NV_STATUS_HEIGHT 1
 
 void nv_editor_init(struct nv_editor* editor);
-struct nv_buff* nv_buffer_init(char* path);
 void nv_render_term(struct nv_editor* editor);
-void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
 void nv_mainloop(struct nv_editor* editor);
+void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
 
 #endif
