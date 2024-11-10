@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -g -Wall -Wextra
-SOURCES := editor.c main.c vec.c
+SOURCES := editor.c main.c vec.c buffer.c
 OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
 
