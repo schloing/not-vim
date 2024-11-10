@@ -22,14 +22,9 @@ int main(int argc, char** argv) {
         return rv;
     }
 
-    struct nv_buff buff = {
-        .name = argv[1],
-        .type = NV_BUFFTYPE_SOURCE,
-        .file = fopen(argv[1], "r+"),
-    };
-
-    nv_push_buffer(&editor, buff);
-    editor.peek = 0;
+    struct nv_buff* buff = nv_buffer_init(argv[1]);
+    nv_push_buffer(&editor, *buff);
+    editor.peek = buff->id;
    
     editor.width = tb_width();
     editor.height = tb_height();

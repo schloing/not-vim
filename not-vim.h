@@ -12,10 +12,12 @@ enum {
 typedef int nv_buff_t;
 
 struct nv_buff {
-    size_t      id;
-    char*       name;
-    nv_buff_t   type;
-    FILE*       file;
+    size_t      id;       // id for buffer
+    nv_buff_t   type;     // what the buffer shows
+    char*       path;     // path of buffer
+    FILE*       file;     // FILE* if applicable
+    char*       buffer;   // char buffer in memory
+                          // written to file on write
 };
 
 #endif
