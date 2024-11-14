@@ -14,6 +14,9 @@ struct nv_conf {
     bool show_relative;
     int  command_delay;
     int  status_height;
+    bool show_status;
+    bool show_buffer;
+    bool show_headless;
 };
 
 enum {
@@ -33,7 +36,10 @@ struct nv_buff {
     char*       path;     // path of buffer
     FILE*       file;     // FILE* if applicable
     char_vec    buffer;   // char buffer in memory written to file on write
-    struct nv_conf* config; // buffer specific config
+    struct {              // position
+        int     line;
+        int     col;
+    };
 };
 
 struct nv_buff* nv_buffer_init(char* path);
