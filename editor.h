@@ -28,6 +28,13 @@ struct nv_editor {
 #define NV_SHOW_RELATIVE true
 #define NV_COMMAND_DELAY 350
 #define NV_STATUS_HEIGHT 1
+#define NV_SHOW_STATUS   true
+#define NV_SHOW_BUFFER   true
+#define NV_HEADLESS      false
+
+#if NV_HEADLESS
+#undef TUI
+#endif
 
 void nv_editor_init(struct nv_editor* editor);
 void nv_render_term(struct nv_editor* editor);

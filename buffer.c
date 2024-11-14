@@ -39,7 +39,8 @@ struct nv_buff* nv_buffer_init(char* path) {
         return NULL;
     }
 
-    buff->buffer = malloc(sb.st_size + 4096);
+    buff->buffer = vector_create();
+//  buff->buffer = malloc(sb.st_size + 4096);
 
     return buff;
 }
