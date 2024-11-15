@@ -12,10 +12,16 @@ struct nv_buff* nv_buffer_init(char* path) {
     NV_ASSERT(path);
     struct nv_buff* buff = (struct nv_buff*)malloc(sizeof(struct nv_buff));
     NV_ASSERT(buff);
+
 #define NV_BUFFID_UNSET 0
-    buff->id = NV_BUFFID_UNSET;
-    buff->path = path;
-    buff->file = fopen(path, "r+");
+    buff->id     = NV_BUFFID_UNSET;
+#define NV_BUFF_CAP     1024
+    buff->path   = path;
+    buff->buffer = vector_create();
+    vector_reserve(&buff->buffer, NV_BUFF_CAP);
+    buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
+    buff->file   = fopen(path, "r+");
+    NV_ASSERT(buff->file);
    
     struct stat sb;
     fstat(fileno(buff->file), &sb);
@@ -28,6 +34,7 @@ struct nv_buff* nv_buffer_init(char* path) {
     
     case S_IFREG:
         buff->type = NV_BUFFTYPE_SOURCE;
+        fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
         break;
     
     case S_IFSOCK:
@@ -38,9 +45,6 @@ struct nv_buff* nv_buffer_init(char* path) {
         free(buff);
         return NULL;
     }
-
-    buff->buffer = vector_create();
-//  buff->buffer = malloc(sb.st_size + 4096);
 
     return buff;
 }

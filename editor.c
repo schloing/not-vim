@@ -81,10 +81,13 @@ _nv_draw_buffer(struct nv_editor* editor) {
     char linebuff[LINE_BUFF_SIZE];
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        while (fgets(linebuff, LINE_BUFF_SIZE, buffer->file)) {
-            tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%s", linebuff);
-            buffer->line++;
-        }
+        // while (fgets(linebuff, LINE_BUFF_SIZE, buffer->file)) {
+        //     if (buffer->line >= editor->height - 1) continue;
+        //     tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-3d %s", buffer->line + 1, linebuff);
+        //     buffer->line++;
+        // }
+
+        tb_printf(0, 0, TB_WHITE, TB_BLACK, "%s", buffer->buffer);
 
         break;
 
