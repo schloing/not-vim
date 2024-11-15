@@ -31,8 +31,8 @@ void nv_editor_init(struct nv_editor* editor) {
 void nv_mainloop(struct nv_editor* editor) {
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
 
-    _nv_draw_status(editor);
     _nv_draw_buffer(editor);
+    _nv_draw_status(editor);
     tb_present();
 
     editor->running = true;
@@ -53,7 +53,6 @@ _nv_inputloop(struct nv_editor* editor) {
 #define NV_BUFFER_INSERT_CHAR(editor, character)
             NV_BUFFER_INSERT_CHAR(editor, ev.ch);
             break;
-
         default: break;
         }
     }
@@ -79,15 +78,29 @@ _nv_draw_buffer(struct nv_editor* editor) {
     // first draw
 #define LINE_BUFF_SIZE 100
     char linebuff[LINE_BUFF_SIZE];
+    int row = 0;
+
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        // while (fgets(linebuff, LINE_BUFF_SIZE, buffer->file)) {
-        //     if (buffer->line >= editor->height - 1) continue;
-        //     tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-3d %s", buffer->line + 1, linebuff);
-        //     buffer->line++;
-        // }
+        buffer->line = 0;
 
-        tb_printf(0, 0, TB_WHITE, TB_BLACK, "%s", buffer->buffer);
+        while (*buffer->buffer != '\0') {
+            linebuff[row++] = *buffer->buffer;
+            
+            if (*buffer->buffer == '\n') {
+                linebuff[row - 1] = '\0';
+                tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-4d %s", buffer->line, linebuff);
+                row = 0;
+                buffer->line++;
+            }
+
+            buffer->buffer++;
+        }
+
+        if (row > 0) {
+            linebuff[row] = '\0';
+            tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-4d %s", buffer->line, linebuff);
+        }
 
         break;
 
