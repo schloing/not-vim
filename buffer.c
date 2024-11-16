@@ -10,20 +10,21 @@
 #include "vec.h"
 #include "termbox2.h"
 
-struct nv_buff* nv_buffer_init(char* path) {
+void nv_buffer_init(struct nv_buff* buff, char* path) {
     NV_ASSERT(path);
-    struct nv_buff* buff = (struct nv_buff*)malloc(sizeof(struct nv_buff));
     NV_ASSERT(buff);
 
 #define NV_BUFFID_UNSET 0
     buff->id     = NV_BUFFID_UNSET;
 #define NV_BUFF_CAP     1024 * 2
-    buff->path   = path;
-    buff->buffer = vector_create();
-    vector_reserve(&buff->buffer, NV_BUFF_CAP);
+    buff->buffer = malloc(NV_BUFF_CAP);
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
-    buff->file   = fopen(path, "r+");
-    NV_ASSERT(buff->file);
+    buff->lines  = vector_create();
+    
+    buff->path   = path;
+    buff->file   = fopen(buff->path, "r+");
+    // TODO: create file at path (because it does not exist?)
+    if (buff->file == NULL) return;
    
     struct stat sb;
     fstat(fileno(buff->file), &sb);
@@ -45,47 +46,49 @@ struct nv_buff* nv_buffer_init(char* path) {
     
     default:
         free(buff);
-        return NULL;
+        return;
     }
-
-    return buff;
 }
 
 void _nv_load_file_buffer(struct nv_buff* buffer) {
-    int row = 0;
-    buffer->line = 0;
-#define LINE_BUFF_SIZE 256
-    char linebuff[LINE_BUFF_SIZE];
     char* b = buffer->buffer;
+    struct nv_buff_line line = { 0 };
+    struct nv_buff_line* l;
 
-//#define TB_DRAW_LINE(buffer, linebuff) tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-4d %s", buffer->line, linebuff)
-#define TB_DRAW_LINE(buffer, linebuff) tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%s", linebuff)
+    int line_count = 0;
+    int i = 0;
+    while (b[i++] != '\0') {
+        if (b[i] == '\n') {
+            line.end = i;
+            l = vector_add_dst(&buffer->lines); // add line into buffer->lines using temporary pointer
+            l->end   = line.end;
+            l->begin = line.begin;
 
-    while (*b != '\0') {
-        linebuff[row++] = *b;
+            size_t size = line.end - line.begin;
+            char* line_string = malloc(size + 1);
+            memcpy(line_string, b + line.begin, size);
+            line_string[size] = '\0';
+            tb_print(0, line_count, TB_WHITE, TB_BLACK, line_string);
+            free(line_string);
 
-        if (*b == '\n') {
-            linebuff[row - 1] = '\0';
-
-            TB_DRAW_LINE(buffer, linebuff);
-
-            row = 0;
-            buffer->line++;
+            line.end = -1;
+            line.begin = i + 1;
+            line_count++;
         }
-
-        b++;
     }
 
-    if (row > 0) {
-        linebuff[row] = '\0';
-        TB_DRAW_LINE(buffer, linebuff);
-    }
-
-    buffer->loaded = true;
+    l = NULL;
 }
 
 void nv_free_buffers(struct nv_editor* editor) {
     NV_ASSERT(editor->buffers);
+    for (size_t i = 0; i < vector_size(editor->buffers); i++) {
+        if (editor->buffers[i].file != NULL)
+            fclose(editor->buffers[i].file);
+        vector_free(editor->buffers[i].lines);
+        free(editor->buffers[i].buffer);
+        editor->buffers[i].buffer = NULL;
+    }
     vector_free(editor->buffers);
     editor->buffers = NULL;
 }

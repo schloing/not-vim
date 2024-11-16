@@ -9,15 +9,15 @@
 typedef struct nv_buff* nv_buff_vec;
 
 struct nv_editor {
-    nv_buff_vec buffers; // buffers
-    size_t peek;         // index of primary (active) buffer
+    nv_buff_vec buffers;     // buffers
+    size_t      peek;        // index of primary (active) buffer
 #ifdef TUI
-    int  width;          // not necessarily termbox window geometry
-    int  height;         // custom wrap width (80 cols) might change this
-#endif 
-    int  status;         // status codes of termbox + notvim operations
-    bool running;        // mainloop
-    struct nv_conf nv_conf; // default config for buffers
+    int         width;       // not necessarily termbox window geometry
+    int         height;      // custom wrap width (80 cols) might change this
+#endif
+    int         status;      // status codes of termbox + notvim operations
+    bool        running;     // mainloop
+    struct nv_conf nv_conf;  // default config for buffers
 };
 
 // config defaults

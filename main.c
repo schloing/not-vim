@@ -22,15 +22,16 @@ int main(int argc, char** argv) {
         return rv;
     }
 
-    struct nv_buff* buff = nv_buffer_init(argv[1]);
-    nv_push_buffer(&editor, *buff);
-    editor.peek = buff->id;
-   
+    struct nv_buff buff = { 0 };
+    nv_buffer_init(&buff, argv[1]);
+    nv_push_buffer(&editor, buff);
+
+    editor.peek = buff.id;
     editor.width = tb_width();
     editor.height = tb_height();
 
     nv_mainloop(&editor);
-   
+
     tb_shutdown();
     nv_free_buffers(&editor);
     return rv;
