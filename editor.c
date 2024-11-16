@@ -31,6 +31,7 @@ void nv_editor_init(struct nv_editor* editor) {
 void nv_mainloop(struct nv_editor* editor) {
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
 
+    tb_clear();
     _nv_draw_buffer(editor);
     _nv_draw_status(editor);
     tb_present();
@@ -58,10 +59,12 @@ _nv_inputloop(struct nv_editor* editor) {
             editor->height = tb_height();
             editor->width = tb_width();
             editor->buffers[editor->peek].loaded = false; // redraw lines
+            
             tb_clear();
             _nv_draw_buffer(editor);
             _nv_draw_status(editor);
             tb_present();
+
             break;
 
         default: break;
@@ -76,19 +79,29 @@ void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
 
 static struct nv_buff*
 _nv_get_active_buffer(struct nv_editor* editor) {
-    size_t index = editor->peek;
-    // why the fuck was i allocating a new buffer here
-    // fixed
-    struct nv_buff* active = (struct nv_buff*)&editor->buffers[index];
-    return active;
+    struct nv_buff* buffer = (struct nv_buff*)&editor->buffers[editor->peek];
+    editor->current = buffer;
+    return buffer;
 }
 
 static void
 _nv_draw_buffer(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
+    int line_count = 0;
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        if (!buffer->loaded) _nv_load_file_buffer(buffer);
+        if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
+
+        for (int i = 0; i < line_count; i++) {
+            struct nv_buff_line line = buffer->lines[i];
+            size_t size = line.end - line.begin;
+            char* line_string = malloc(size + 1);
+            memcpy(line_string, buffer->buffer + line.begin, size);
+            line_string[size] = '\0';
+            tb_printf(0, i, TB_WHITE, TB_BLACK, "%-4.d %s", i + 1, line_string);
+            free(line_string);
+        }
+
         break;
 
     default:
@@ -99,9 +112,9 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
 static void
 _nv_draw_status(struct nv_editor* editor) {
-    struct nv_buff* active_buffer = _nv_get_active_buffer(editor);
+    struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
-    asprintf(&prompt, "[%zu]%s", active_buffer->id, active_buffer->path);
-    tb_printf(0, editor->height - 1, TB_WHITE, TB_BLACK, "%-*.*s", editor->width, editor->width, prompt);
+    asprintf(&prompt, "[%zu]%s", buffer->id, buffer->path);
+    tb_printf(0, editor->height - 1, TB_BLACK, TB_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }

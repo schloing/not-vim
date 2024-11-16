@@ -49,6 +49,6 @@ struct nv_buff {
 };
 
 void nv_buffer_init(struct nv_buff* buff, char* path);
-void _nv_load_file_buffer(struct nv_buff* buffer);
+void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count);
 
 #endif
