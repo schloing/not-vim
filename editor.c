@@ -20,11 +20,11 @@ void nv_editor_init(struct nv_editor* editor) {
     
     editor->nv_conf = (struct nv_conf){
         .tab_width     = NV_TAB_WIDTH,
-    	.expand_tab    = NV_TAB_WIDTH,
-    	.auto_indent   = NV_AUTO_INDENT,
-    	.line_numbers  = NV_LINE_NUMBERS,
-    	.show_relative = NV_SHOW_RELATIVE,
-    	.command_delay = NV_COMMAND_DELAY,
+        .expand_tab    = NV_TAB_WIDTH,
+        .auto_indent   = NV_AUTO_INDENT,
+        .line_numbers  = NV_LINE_NUMBERS,
+        .show_relative = NV_SHOW_RELATIVE,
+        .command_delay = NV_COMMAND_DELAY,
     };
 }
 
@@ -53,6 +53,17 @@ _nv_inputloop(struct nv_editor* editor) {
 #define NV_BUFFER_INSERT_CHAR(editor, character)
             NV_BUFFER_INSERT_CHAR(editor, ev.ch);
             break;
+
+        case TB_EVENT_RESIZE:
+            editor->height = tb_height();
+            editor->width = tb_width();
+            editor->buffers[editor->peek].loaded = false; // redraw lines
+            tb_clear();
+            _nv_draw_buffer(editor);
+            _nv_draw_status(editor);
+            tb_present();
+            break;
+
         default: break;
         }
     }
@@ -66,42 +77,18 @@ void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
 static struct nv_buff*
 _nv_get_active_buffer(struct nv_editor* editor) {
     size_t index = editor->peek;
-    struct nv_buff* rv = malloc(sizeof(struct nv_buff));
-    struct nv_buff active = (struct nv_buff)editor->buffers[index];
-    memcpy(rv, &active, sizeof(struct nv_buff));
-    return rv;
+    // why the fuck was i allocating a new buffer here
+    // fixed
+    struct nv_buff* active = (struct nv_buff*)&editor->buffers[index];
+    return active;
 }
 
 static void
 _nv_draw_buffer(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    // first draw
-#define LINE_BUFF_SIZE 100
-    char linebuff[LINE_BUFF_SIZE];
-    int row = 0;
-
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        buffer->line = 0;
-
-        while (*buffer->buffer != '\0') {
-            linebuff[row++] = *buffer->buffer;
-            
-            if (*buffer->buffer == '\n') {
-                linebuff[row - 1] = '\0';
-                tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-4d %s", buffer->line, linebuff);
-                row = 0;
-                buffer->line++;
-            }
-
-            buffer->buffer++;
-        }
-
-        if (row > 0) {
-            linebuff[row] = '\0';
-            tb_printf(0, buffer->line, TB_WHITE, TB_BLACK, "%-4d %s", buffer->line, linebuff);
-        }
-
+        if (!buffer->loaded) _nv_load_file_buffer(buffer);
         break;
 
     default:
