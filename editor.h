@@ -10,8 +10,9 @@ typedef struct nv_buff* nv_buff_vec;
 
 struct nv_editor {
     nv_buff_vec buffers;     // buffers
-    size_t      peek;        // index of primary (active) buffer
-#ifdef TUI
+    size_t      peek;        // index of current buffer
+    struct nv_buff* current; // &buffers[peek]
+#ifdef TUI                   // if there is ever a qt/gui version
     int         width;       // not necessarily termbox window geometry
     int         height;      // custom wrap width (80 cols) might change this
 #endif

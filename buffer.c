@@ -50,7 +50,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     }
 }
 
-void _nv_load_file_buffer(struct nv_buff* buffer) {
+void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
     char* b = buffer->buffer;
     struct nv_buff_line line = { 0 };
     struct nv_buff_line* l;
@@ -63,14 +63,6 @@ void _nv_load_file_buffer(struct nv_buff* buffer) {
             l = vector_add_dst(&buffer->lines); // add line into buffer->lines using temporary pointer
             l->end   = line.end;
             l->begin = line.begin;
-
-            size_t size = line.end - line.begin;
-            char* line_string = malloc(size + 1);
-            memcpy(line_string, b + line.begin, size);
-            line_string[size] = '\0';
-            tb_print(0, line_count, TB_WHITE, TB_BLACK, line_string);
-            free(line_string);
-
             line.end = -1;
             line.begin = i + 1;
             line_count++;
@@ -78,6 +70,7 @@ void _nv_load_file_buffer(struct nv_buff* buffer) {
     }
 
     l = NULL;
+    *out_line_count = line_count;
 }
 
 void nv_free_buffers(struct nv_editor* editor) {
