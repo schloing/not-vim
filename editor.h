@@ -40,5 +40,6 @@ void nv_editor_init(struct nv_editor* editor);
 void nv_render_term(struct nv_editor* editor);
 void nv_mainloop(struct nv_editor* editor);
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
+void nv_free_buffers(struct nv_editor* editor);
 
 #endif

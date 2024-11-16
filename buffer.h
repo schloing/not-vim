@@ -37,6 +37,8 @@ struct nv_buff {
     FILE*       file;     // FILE* if applicable
     char_vec    buffer;   // char buffer in memory written to file on write
     size_t      chunk;
+    bool        loaded;
+    struct nv_conf* config;
     struct {              // position
         int     line;
         int     col;
@@ -44,5 +46,6 @@ struct nv_buff {
 };
 
 struct nv_buff* nv_buffer_init(char* path);
+void _nv_load_file_buffer(struct nv_buff* buffer);
 
 #endif

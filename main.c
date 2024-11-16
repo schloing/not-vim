@@ -32,6 +32,6 @@ int main(int argc, char** argv) {
     nv_mainloop(&editor);
    
     tb_shutdown();
-    vector_free(editor.buffers);
+    nv_free_buffers(&editor);
     return rv;
 }
