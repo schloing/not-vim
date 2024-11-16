@@ -19,6 +19,8 @@ struct nv_conf {
     bool show_headless;
 };
 
+typedef int nv_buff_t;
+
 enum {
     NV_BUFFTYPE_STDIN    = 1,
     NV_BUFFTYPE_STDOUT   = 2,
@@ -27,25 +29,26 @@ enum {
     NV_BUFFTYPE_SOURCE   = 16,
 };
 
-typedef int nv_buff_t;
-typedef char* char_vec; // TODO: implement vec.h
+struct nv_buff_line {
+    size_t begin;
+    size_t end;
+};
+
+// vec.h typedefs
+typedef struct nv_buff_line* lines_vec;
 
 struct nv_buff {
     size_t      id;       // id for buffer
     nv_buff_t   type;     // what the buffer shows
     char*       path;     // path of buffer
     FILE*       file;     // FILE* if applicable
-    char_vec    buffer;   // char buffer in memory written to file on write
+    char*       buffer;   // char buffer in memory written to file on write
     size_t      chunk;
     bool        loaded;
-    struct nv_conf* config;
-    struct {              // position
-        int     line;
-        int     col;
-    };
+    lines_vec   lines;
 };
 
-struct nv_buff* nv_buffer_init(char* path);
+void nv_buffer_init(struct nv_buff* buff, char* path);
 void _nv_load_file_buffer(struct nv_buff* buffer);
 
 #endif
