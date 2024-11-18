@@ -22,11 +22,12 @@ struct nv_conf {
 typedef int nv_buff_t;
 
 enum {
-    NV_BUFFTYPE_STDIN    = 1,
-    NV_BUFFTYPE_STDOUT   = 2,
-    NV_BUFFTYPE_BROWSER  = 4,
-    NV_BUFFTYPE_NETWORK  = 8,
-    NV_BUFFTYPE_SOURCE   = 16,
+    NV_BUFFTYPE_STDIN     = 1,
+    NV_BUFFTYPE_STDOUT    = 2,
+    NV_BUFFTYPE_BROWSER   = 4,
+    NV_BUFFTYPE_NETWORK   = 8,
+    NV_BUFFTYPE_SOURCE    = 16,
+    NV_BUFFTYPE_PLAINTEXT = 32,
 };
 
 struct nv_buff_line {

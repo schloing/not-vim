@@ -1,5 +1,6 @@
 CC := gcc
-CFLAGS := -g -Wall -Wextra
+CFLAGS := -g -Wall -Wextra -ldl
+LDFLAGS := -L/usr/lib/ -ltermbox2
 SOURCES := editor.c main.c vec.c buffer.c
 OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
@@ -7,10 +8,10 @@ EXECUTABLE := nv
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ $(LDFLAGS) -o $@
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
