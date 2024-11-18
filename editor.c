@@ -93,6 +93,8 @@ _nv_draw_buffer(struct nv_editor* editor) {
         if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
 
         for (int i = 0; i < line_count; i++) {
+            if (i == editor->height) break; // status bar
+
             struct nv_buff_line line = buffer->lines[i];
             size_t size = line.end - line.begin;
             char* line_string = malloc(size + 1);
@@ -102,6 +104,14 @@ _nv_draw_buffer(struct nv_editor* editor) {
             free(line_string);
         }
 
+        break;
+
+    case NV_BUFFTYPE_PLAINTEXT:
+        tb_print(0, 0, TB_WHITE, TB_BLACK, buffer->buffer);
+        break;
+
+    case NV_BUFFTYPE_BROWSER:
+        tb_print(0, 0, TB_WHITE, TB_BLACK, "netrw");
         break;
 
     default:

@@ -2,7 +2,9 @@ termbox2 for tui
 https://github.com/termbox/termbox2
 
 inspired by
-https://github.com/adsr/mle/
+https://github.com/adsr/mle
 
 vec.c for vector
-by 2024, Mashpoe TODO: url
+https://github.com/Mashpoe/c-vector
+
+gcc -fPIC -shared -o plugload.so plugload.c

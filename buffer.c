@@ -10,25 +10,23 @@
 #include "vec.h"
 #include "termbox2.h"
 
+#define NV_BUFFID_UNSET 0
+#define NV_BUFF_CAP     1024 * 2
+
 void nv_buffer_init(struct nv_buff* buff, char* path) {
-    NV_ASSERT(path);
     NV_ASSERT(buff);
 
-#define NV_BUFFID_UNSET 0
-    buff->id     = NV_BUFFID_UNSET;
-#define NV_BUFF_CAP     1024 * 2
     buff->buffer = malloc(NV_BUFF_CAP);
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
-    
-    buff->path   = path;
-    buff->file   = fopen(buff->path, "r+");
-    // TODO: create file at path (because it does not exist?)
-    if (buff->file == NULL) return;
-   
+  
+    if (path == NULL) return;
+
+    buff->path = path;
+
     struct stat sb;
-    fstat(fileno(buff->file), &sb);
-    
+    if (stat(buff->path, &sb) == -1) return;
+
     switch (sb.st_mode & S_IFMT) {
     case S_IFLNK: // symlink
     case S_IFDIR:
@@ -37,6 +35,9 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     
     case S_IFREG:
         buff->type = NV_BUFFTYPE_SOURCE;
+        buff->file = fopen(buff->path, "r+");
+        if (buff->file == NULL) return;
+
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
         break;
     
@@ -45,7 +46,6 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
         break;
     
     default:
-        free(buff);
         return;
     }
 }
@@ -63,7 +63,7 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
             l = vector_add_dst(&buffer->lines); // add line into buffer->lines using temporary pointer
             l->end   = line.end;
             l->begin = line.begin;
-            line.end = -1;
+            line.end = -1;                      // not necessary
             line.begin = i + 1;
             line_count++;
         }
