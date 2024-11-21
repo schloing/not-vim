@@ -13,16 +13,22 @@
 #define NV_BUFFID_UNSET 0
 #define NV_BUFF_CAP     1024 * 2
 
+bool is_elf(char* buffer) {
+    const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
+    for (int i = 0; i < 4; i++)
+        if (e_ident[i] != buffer[i]) return false;
+    return true;
+}
+
 void nv_buffer_init(struct nv_buff* buff, char* path) {
     NV_ASSERT(buff);
 
-    buff->buffer = malloc(NV_BUFF_CAP);
+    buff->buffer = vector_create();
+    vector_reserve(&buff->buffer, NV_BUFF_CAP);
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
-  
     if (path == NULL) return;
-
-    buff->path = path;
+    buff->path   = path;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -35,10 +41,31 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     
     case S_IFREG:
         buff->type = NV_BUFFTYPE_SOURCE;
-        buff->file = fopen(buff->path, "r+");
+        buff->file = fopen(buff->path, "rb+");
         if (buff->file == NULL) return;
 
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
+
+        if (is_elf(buff->buffer)) {
+            // elf check happens before extension
+            buff->file_format = NV_FILE_FORMAT_BINARY;
+        }
+        else {
+            // TODO
+            break;
+
+            int i = 0;
+            int dot = 0;
+  
+            while (buff->path[i] != '\0') {
+                if (buff->path[i] == '.') dot = i;
+                i++;
+            }
+  
+            // buff->path + dot is extension
+            char* extension = buff->path + dot;
+        }
+
         break;
     
     case S_IFSOCK:
@@ -79,7 +106,7 @@ void nv_free_buffers(struct nv_editor* editor) {
         if (editor->buffers[i].file != NULL)
             fclose(editor->buffers[i].file);
         vector_free(editor->buffers[i].lines);
-        free(editor->buffers[i].buffer);
+        vector_free(editor->buffers[i].buffer);
         editor->buffers[i].buffer = NULL;
     }
     vector_free(editor->buffers);

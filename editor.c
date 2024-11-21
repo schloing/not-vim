@@ -25,23 +25,31 @@ void nv_editor_init(struct nv_editor* editor) {
         .line_numbers  = NV_LINE_NUMBERS,
         .show_relative = NV_SHOW_RELATIVE,
         .command_delay = NV_COMMAND_DELAY,
+        .show_headless = NV_HEADLESS,
     };
 }
 
-void nv_mainloop(struct nv_editor* editor) {
-    tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+static void _nv_redraw_all(struct nv_editor* editor) {
+    if (editor->nv_conf.show_headless) return;
 
     tb_clear();
     _nv_draw_buffer(editor);
     _nv_draw_status(editor);
     tb_present();
+}
 
+void nv_mainloop(struct nv_editor* editor) {
+    tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+
+    _nv_redraw_all(editor);
     editor->running = true;
     _nv_inputloop(editor);
 }
 
 static void
 _nv_inputloop(struct nv_editor* editor) {
+    if (editor->nv_conf.show_headless) return;
+
     struct tb_event ev;
 
     while (editor->running) {
@@ -53,17 +61,15 @@ _nv_inputloop(struct nv_editor* editor) {
             if (ev.key == TB_KEY_ESC) return;
 #define NV_BUFFER_INSERT_CHAR(editor, character)
             NV_BUFFER_INSERT_CHAR(editor, ev.ch);
+
             break;
 
         case TB_EVENT_RESIZE:
             editor->height = tb_height();
             editor->width = tb_width();
             editor->buffers[editor->peek].loaded = false; // redraw lines
-            
-            tb_clear();
-            _nv_draw_buffer(editor);
-            _nv_draw_status(editor);
-            tb_present();
+   
+            _nv_redraw_all(editor);
 
             break;
 
@@ -124,7 +130,7 @@ static void
 _nv_draw_status(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
-    asprintf(&prompt, "[%zu]%s", buffer->id, buffer->path);
+    if (asprintf(&prompt, "[%zu] %s", buffer->id, buffer->path) == -1) return;
     tb_printf(0, editor->height - 1, TB_BLACK, TB_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }

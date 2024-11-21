@@ -47,21 +47,22 @@ int main(int argc, char** argv) {
     struct nv_editor editor = { 0 };
     nv_editor_init(&editor);
 
-    if ((rv = tb_init()) != TB_OK) {
+    if (!editor.nv_conf.show_headless && (rv = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(rv));
         editor.status = rv;
         return rv;
     }
 
-    struct nv_buff buff = { .id = 0 };
+    load_plugload(&editor);
+
+    struct nv_buff buff = { .id = 1 };
+    editor.peek = buff.id;
     nv_buffer_init(&buff, argv[1]);
     nv_push_buffer(&editor, buff);
 
     editor.width = tb_width();
     editor.height = tb_height();
 
-    load_plugload(&editor);
-    editor.peek = 1;
     nv_mainloop(&editor);
 
     tb_shutdown();
