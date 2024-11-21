@@ -30,6 +30,12 @@ enum {
     NV_BUFFTYPE_PLAINTEXT = 32,
 };
 
+enum {
+    NV_FILE_FORMAT_BINARY,
+    NV_FILE_FORMAT_SOURCE,  // lsp + treesitter impl
+    NV_FILE_FORMAT_PLAINTEXT,
+};
+
 struct nv_buff_line {
     size_t begin;
     size_t end;
@@ -39,11 +45,12 @@ struct nv_buff_line {
 typedef struct nv_buff_line* lines_vec;
 
 struct nv_buff {
-    size_t      id;       // id for buffer
-    nv_buff_t   type;     // what the buffer shows
-    char*       path;     // path of buffer
-    FILE*       file;     // FILE* if applicable
-    char*       buffer;   // char buffer in memory written to file on write
+    size_t      id;         // id for buffer
+    nv_buff_t   type;       // what the buffer shows
+    char*       path;       // path of buffer
+    FILE*       file;       // FILE* if applicable
+    size_t      file_format; 
+    char*       buffer;     // char buffer in memory written to file on write
     size_t      chunk;
     bool        loaded;
     lines_vec   lines;
