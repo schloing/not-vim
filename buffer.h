@@ -54,6 +54,10 @@ struct nv_buff {
     size_t      chunk;
     bool        loaded;
     lines_vec   lines;
+    struct {
+        int y;              // row / line
+        int x;              // col
+    } cursor;
 };
 
 void nv_buffer_init(struct nv_buff* buff, char* path);

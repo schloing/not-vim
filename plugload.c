@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "events.h"
 #include "plugin.h"
 #include "termbox2.h"
 
