@@ -29,6 +29,8 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     buff->lines  = vector_create();
     if (path == NULL) return;
     buff->path   = path;
+    buff->cursor.x = 0;
+    buff->cursor.y = 0;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;

@@ -29,12 +29,19 @@ void nv_editor_init(struct nv_editor* editor) {
     };
 }
 
+static void _nv_draw_cursor(struct nv_editor* editor) {
+    struct nv_buff* buffer = _nv_get_active_buffer(editor);
+    tb_print(buffer->cursor.x, buffer->cursor.y, TB_WHITE, TB_BLACK, "▓");
+    tb_present();
+}
+
 static void _nv_redraw_all(struct nv_editor* editor) {
     if (editor->nv_conf.show_headless) return;
 
     tb_clear();
     _nv_draw_buffer(editor);
     _nv_draw_status(editor);
+    _nv_draw_cursor(editor);
     tb_present();
 }
 
@@ -59,6 +66,8 @@ _nv_inputloop(struct nv_editor* editor) {
         case TB_EVENT_KEY:
             editor->status = ev.key ? ev.key : ev.ch;
             if (ev.key == TB_KEY_ESC) return;
+            _nv_redraw_all(editor);
+
 #define NV_BUFFER_INSERT_CHAR(editor, character)
             NV_BUFFER_INSERT_CHAR(editor, ev.ch);
 
