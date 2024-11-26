@@ -8,7 +8,8 @@
 #include "termbox2.h"
 #include "vec.h"
 
-static void _nv_inputloop(struct nv_editor* editor);
+// TODO
+static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
@@ -30,8 +31,9 @@ void nv_editor_init(struct nv_editor* editor) {
 }
 
 static void _nv_draw_cursor(struct nv_editor* editor) {
+#define LINES_COL 4
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    tb_set_cell(buffer->cursor.x, buffer->cursor.y, ' ', TB_BLACK, TB_WHITE);
+    tb_set_cell(LINES_COL + buffer->cursor.x, buffer->cursor.y, ' ', TB_BLACK, TB_WHITE);
     tb_present();
 }
 
@@ -48,14 +50,8 @@ static void _nv_redraw_all(struct nv_editor* editor) {
 void nv_mainloop(struct nv_editor* editor) {
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
 
-    _nv_redraw_all(editor);
     editor->running = true;
-    _nv_inputloop(editor);
-}
-
-static void
-_nv_inputloop(struct nv_editor* editor) {
-    if (editor->nv_conf.show_headless) return;
+    _nv_redraw_all(editor);
 
     struct tb_event ev;
 
@@ -64,60 +60,17 @@ _nv_inputloop(struct nv_editor* editor) {
 
         switch (ev.type) {
         case TB_EVENT_KEY:
-            editor->status = ev.key ? ev.key : ev.ch;
-            if (ev.key == TB_KEY_ESC) return;
-            struct nv_buff* buffer = _nv_get_active_buffer(editor);
-
-#define LINES_COL 4
-
-            switch (ev.ch) {
-            case 'j':
-                {
-                    if (buffer->cursor.y < vector_size(buffer->lines))
-                        buffer->cursor.y += 1;
-
-                    struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-                    size_t eol = line.end - line.begin + LINES_COL;
-
-                    if (buffer->cursor.x >= eol)
-                        buffer->cursor.x = eol;
-                }
-
-                break;
-
-            case 'k':
-                if (buffer->cursor.y > 0)
-                    buffer->cursor.y -= 1;
-               
-                break;
-  
-            case 'h':
-                if (buffer->cursor.x > 0)
-                    buffer->cursor.x -= 1;
-               
-                break;
-           
-            case 'l':
-                {
-                    struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-                    size_t eol = line.end - line.begin + LINES_COL;
-
-                    if (buffer->cursor.x < eol)
-                        buffer->cursor.x += 1;
-                }
-
-                break;
-           }
-
-#define NV_BUFFER_INSERT_CHAR(editor, character)
-            NV_BUFFER_INSERT_CHAR(editor, ev.ch);
+            _nv_get_input(editor, &ev);
 
             _nv_draw_buffer(editor);
             _nv_draw_cursor(editor);
 
             break;
 
+
         case TB_EVENT_RESIZE:
+            if (editor->nv_conf.show_headless) break;
+
             editor->height = tb_height();
             editor->width = tb_width();
             editor->buffers[editor->peek].loaded = false; // redraw lines
@@ -129,6 +82,62 @@ _nv_inputloop(struct nv_editor* editor) {
         default: break;
         }
     }
+}
+
+static void
+_nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
+    if (editor->nv_conf.show_headless) return;
+    editor->status = ev->key ? ev->key : ev->ch;
+    if (ev->key == TB_KEY_ESC) return;
+    struct nv_buff* buffer = _nv_get_active_buffer(editor);
+
+    struct event_key {
+        int ch;
+        int key;
+        int mod;
+    };
+
+    switch (ev->ch) {
+        case 'j':
+        {
+            if (buffer->cursor.y < vector_size(buffer->lines))
+                buffer->cursor.y += 1;
+
+            struct nv_buff_line line = buffer->lines[buffer->cursor.y];
+            size_t eol = line.end - line.begin;
+
+            if (buffer->cursor.x >= eol)
+                buffer->cursor.x = eol;
+        }
+
+            break;
+
+        case 'k':
+            if (buffer->cursor.y > 0)
+                buffer->cursor.y -= 1;
+
+            break;
+
+        case 'h':
+            if (buffer->cursor.x > 0)
+                buffer->cursor.x -= 1;
+
+            break;
+
+        case 'l':
+        {
+            struct nv_buff_line line = buffer->lines[buffer->cursor.y];
+            size_t eol = line.end - line.begin;
+
+            if (buffer->cursor.x < eol)
+                buffer->cursor.x += 1;
+        }
+
+            break;
+    }
+
+#define NV_BUFFER_INSERT_CHAR(editor, character)
+    NV_BUFFER_INSERT_CHAR(editor, ev->ch);
 }
 
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {

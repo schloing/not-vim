@@ -8,10 +8,10 @@ void main(void) {
     tb_print(0, 0, TB_WHITE, TB_BLACK, "plugload");
 }
 
-struct nv_plugin
-_NV_PLUGIN_DESCRIPTOR = {
+struct nv_plugin _NV_PLUGIN_DESCRIPTOR = {
     .name = "plugload",
     .author = "jonkler",
     .iteration = 0,
+    .subs = 0,
     .main = main,
 };
