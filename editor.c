@@ -14,6 +14,10 @@ static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 
+#define TB_256_BLACK 16
+#define TB_256_WHITE 255
+#define TB_256_GREY  249
+
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
 
@@ -30,10 +34,10 @@ void nv_editor_init(struct nv_editor* editor) {
     };
 }
 
-static void _nv_draw_cursor(struct nv_editor* editor) {
 #define LINES_COL 4
+static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    tb_set_cell(LINES_COL + buffer->cursor.x, buffer->cursor.y, ' ', TB_BLACK, TB_WHITE);
+    tb_set_cell(LINES_COL + 1 + buffer->cursor.x, buffer->cursor.y, ' ', TB_256_BLACK, TB_256_WHITE);
     tb_present();
 }
 
@@ -49,6 +53,7 @@ static void _nv_redraw_all(struct nv_editor* editor) {
 
 void nv_mainloop(struct nv_editor* editor) {
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+    tb_set_output_mode(TB_OUTPUT_256);
 
     editor->running = true;
     _nv_redraw_all(editor);
@@ -60,6 +65,8 @@ void nv_mainloop(struct nv_editor* editor) {
 
         switch (ev.type) {
         case TB_EVENT_KEY:
+            if (ev.key == TB_KEY_ESC) return;
+
             _nv_get_input(editor, &ev);
 
             _nv_draw_buffer(editor);
@@ -87,8 +94,6 @@ void nv_mainloop(struct nv_editor* editor) {
 static void
 _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (editor->nv_conf.show_headless) return;
-    editor->status = ev->key ? ev->key : ev->ch;
-    if (ev->key == TB_KEY_ESC) return;
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
     struct event_key {
@@ -98,42 +103,44 @@ _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     };
 
     switch (ev->ch) {
-        case 'j':
-        {
-            if (buffer->cursor.y < vector_size(buffer->lines))
-                buffer->cursor.y += 1;
+    case 'j':
+    {
+        if (buffer->cursor.y < tb_height() - 2)
+            buffer->cursor.y += 1;
 
-            struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-            size_t eol = line.end - line.begin;
+        struct nv_buff_line line = buffer->lines[buffer->cursor.y];
+        size_t eol = line.end - line.begin;
 
-            if (buffer->cursor.x >= eol)
-                buffer->cursor.x = eol;
-        }
+        if (buffer->cursor.x >= eol)
+            buffer->cursor.x = eol;
+        
+        break;
+    }
 
-            break;
 
-        case 'k':
-            if (buffer->cursor.y > 0)
-                buffer->cursor.y -= 1;
+    case 'k':
+        if (buffer->cursor.y > 0)
+            buffer->cursor.y -= 1;
 
-            break;
+        break;
 
-        case 'h':
-            if (buffer->cursor.x > 0)
-                buffer->cursor.x -= 1;
+    case 'h':
+        if (buffer->cursor.x > 0)
+            buffer->cursor.x -= 1;
 
-            break;
+        break;
 
-        case 'l':
-        {
-            struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-            size_t eol = line.end - line.begin;
+    case 'l':
+    {
+        struct nv_buff_line line = buffer->lines[buffer->cursor.y];
+        size_t eol = line.end - line.begin;
 
-            if (buffer->cursor.x < eol)
-                buffer->cursor.x += 1;
-        }
+        if (buffer->cursor.x < eol)
+            buffer->cursor.x += 1;
+        
+        break;
+    }
 
-            break;
     }
 
 #define NV_BUFFER_INSERT_CHAR(editor, character)
@@ -152,13 +159,21 @@ _nv_get_active_buffer(struct nv_editor* editor) {
     return buffer;
 }
 
+static int count_recur(int n) {
+    if (n < 0) return count_recur((n == INT_MIN) ? INT_MAX : -n);
+    if (n < 10) return 1;
+    return 1 + count_recur(n / 10);
+}
+
 static void
 _nv_draw_buffer(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    int line_count = 0;
+
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
+        int line_count, format;
         if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
+        format = count_recur(line_count);
 
         for (int i = 0; i < line_count; i++) {
             if (i == editor->height - 1) break; // status bar
@@ -168,18 +183,18 @@ _nv_draw_buffer(struct nv_editor* editor) {
             char* line_string = malloc(size + 1);
             memcpy(line_string, buffer->buffer + line.begin, size);
             line_string[size] = '\0';
-            tb_printf(0, i, TB_WHITE, TB_BLACK, "%-4.d %s", i + 1, line_string);
+            tb_printf(0, i, TB_256_WHITE, TB_256_BLACK, "%*d %s", format, i + 1, line_string);
             free(line_string);
         }
 
         break;
 
     case NV_BUFFTYPE_PLAINTEXT:
-        tb_print(0, 0, TB_WHITE, TB_BLACK, buffer->buffer);
+        tb_print(0, 0, TB_256_WHITE, TB_256_BLACK, buffer->buffer);
         break;
 
     case NV_BUFFTYPE_BROWSER:
-        tb_print(0, 0, TB_WHITE, TB_BLACK, "netrw");
+        tb_print(0, 0, TB_256_WHITE, TB_256_BLACK, "netrw");
         break;
 
     default:
@@ -193,6 +208,6 @@ _nv_draw_status(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
     if (asprintf(&prompt, "[%zu] %s", buffer->id, buffer->path) == -1) return;
-    tb_printf(0, editor->height - 1, TB_BLACK, TB_WHITE, "%-*.*s", editor->width, editor->width, prompt);
+    tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }
