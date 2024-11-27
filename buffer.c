@@ -11,7 +11,7 @@
 #include "termbox2.h"
 
 #define NV_BUFFID_UNSET 0
-#define NV_BUFF_CAP     1024 * 2
+#define NV_BUFF_CAP     1024 * 16
 
 bool is_elf(char* buffer) {
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
@@ -86,13 +86,15 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
 
     int line_count = 0;
     int i = 0;
+
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
+         
             l = vector_add_dst(&buffer->lines); // add line into buffer->lines using temporary pointer
             l->end   = line.end;
             l->begin = line.begin;
-            line.end = -1;                      // not necessary
+            
             line.begin = i + 1;
             line_count++;
         }
@@ -104,13 +106,16 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
 
 void nv_free_buffers(struct nv_editor* editor) {
     NV_ASSERT(editor->buffers);
+
     for (size_t i = 0; i < vector_size(editor->buffers); i++) {
         if (editor->buffers[i].file != NULL)
             fclose(editor->buffers[i].file);
+   
         vector_free(editor->buffers[i].lines);
         vector_free(editor->buffers[i].buffer);
         editor->buffers[i].buffer = NULL;
     }
+    
     vector_free(editor->buffers);
     editor->buffers = NULL;
 }
