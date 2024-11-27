@@ -48,26 +48,6 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
 
-        if (is_elf(buff->buffer)) {
-            // elf check happens before extension
-            buff->file_format = NV_FILE_FORMAT_BINARY;
-        }
-        else {
-            // TODO
-            break;
-
-            int i = 0;
-            int dot = 0;
-  
-            while (buff->path[i] != '\0') {
-                if (buff->path[i] == '.') dot = i;
-                i++;
-            }
-  
-            // buff->path + dot is extension
-            char* extension = buff->path + dot;
-        }
-
         break;
     
     case S_IFSOCK:

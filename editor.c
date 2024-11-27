@@ -102,21 +102,18 @@ _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
         int mod;
     };
 
+    struct nv_buff_line line = buffer->lines[buffer->cursor.y];
+    size_t eol = line.end - line.begin;
+
     switch (ev->ch) {
     case 'j':
-    {
         if (buffer->cursor.y < tb_height() - 2)
             buffer->cursor.y += 1;
-
-        struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-        size_t eol = line.end - line.begin;
 
         if (buffer->cursor.x >= eol)
             buffer->cursor.x = eol;
         
         break;
-    }
-
 
     case 'k':
         if (buffer->cursor.y > 0)
@@ -131,16 +128,10 @@ _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
         break;
 
     case 'l':
-    {
-        struct nv_buff_line line = buffer->lines[buffer->cursor.y];
-        size_t eol = line.end - line.begin;
-
         if (buffer->cursor.x < eol)
             buffer->cursor.x += 1;
         
         break;
-    }
-
     }
 
 #define NV_BUFFER_INSERT_CHAR(editor, character)

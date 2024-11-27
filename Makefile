@@ -1,5 +1,6 @@
 CC := gcc
-CFLAGS := -g -Wall -Wextra -ldl
+CFLAGS := -g -Wall -Wextra -ldl -O3
+PROD_CFLAGS := -Wall -Wextra -ldl -O3
 LDFLAGS := -L/usr/lib/ -ltermbox2
 SOURCES := editor.c main.c vec.c buffer.c
 OBJECTS := $(SOURCES:.c=.o)
