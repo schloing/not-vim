@@ -41,23 +41,27 @@ struct nv_buff_line {
     size_t end;
 };
 
-// vec.h typedefs
-typedef struct nv_buff_line* lines_vec;
+#define vec_of
+
+struct cursor {
+    int y;
+    int x;
+    int offset;
+    char ch;
+};
 
 struct nv_buff {
-    size_t      id;         // id for buffer
-    nv_buff_t   type;       // what the buffer shows
-    char*       path;       // path of buffer
-    FILE*       file;       // FILE* if applicable
-    size_t      file_format; 
-    char*       buffer;     // char buffer in memory written to file on write
-    size_t      chunk;
-    bool        loaded;
-    lines_vec   lines;
-    struct {
-        int y;              // row / line
-        int x;              // col
-    } cursor;
+    size_t       id;         // id for buffer
+    nv_buff_t    type;       // what the buffer shows
+    char*        path;       // path of buffer
+    FILE*        file;       // FILE* if applicable
+    size_t       file_format; 
+    vec_of char* buffer;     // char buffer in memory written to file on write
+    size_t       chunk;
+    bool         loaded;
+    vec_of struct nv_buff_line* lines;
+    vec_of struct cursor* cursors;
+    int _lines_col_size;
 };
 
 void nv_buffer_init(struct nv_buff* buff, char* path);
