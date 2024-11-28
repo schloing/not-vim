@@ -12,6 +12,7 @@
 
 #define NV_BUFFID_UNSET 0
 #define NV_BUFF_CAP     1024 * 16
+#define NV_CURS_CAP     8
 
 bool is_elf(char* buffer) {
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
@@ -25,12 +26,14 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
     buff->buffer = vector_create();
     vector_reserve(&buff->buffer, NV_BUFF_CAP);
+    buff->cursors = vector_create();
+    vector_reserve(&buff->cursors, NV_CURS_CAP);
+    vector_add(&buff->cursors, (struct cursor) { 0 });
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
+    
     if (path == NULL) return;
     buff->path   = path;
-    buff->cursor.x = 0;
-    buff->cursor.y = 0;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -46,7 +49,16 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
         buff->file = fopen(buff->path, "rb+");
         if (buff->file == NULL) return;
 
-        fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
+        if ((fread(buff->buffer, sizeof(char), buff->chunk, buff->file)) < buff->chunk) {
+            // TODO:
+            ;;;;;
+            ;;;;;               ;;
+            ;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;    ;   ;;
+            ;;;;;;;;;;;;;;;;;;;;;;;;            ;;
+            ;;;;;               ;;                  ;
+            ;;;;;
+        }
 
         break;
     
@@ -92,6 +104,7 @@ void nv_free_buffers(struct nv_editor* editor) {
             fclose(editor->buffers[i].file);
    
         vector_free(editor->buffers[i].lines);
+        vector_free(editor->buffers[i].cursors);
         vector_free(editor->buffers[i].buffer);
         editor->buffers[i].buffer = NULL;
     }
