@@ -34,10 +34,14 @@ void nv_editor_init(struct nv_editor* editor) {
     };
 }
 
-static void _nv_draw_cursor(struct nv_editor* editor, struct cursor cursor) {
+static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    buffer->cursors[0] = cursor;
-    tb_set_cell(buffer->_lines_col_size + cursor.x + 1, cursor.y, ' ', TB_256_BLACK, TB_256_WHITE);
+
+    for (int i = 0; i < (int)vector_size(buffer->cursors); i++) {
+        struct cursor c = buffer->cursors[i];
+        tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+    }
+    
     tb_present();
 }
 
@@ -46,7 +50,7 @@ static void _nv_redraw_all(struct nv_editor* editor) {
 
     tb_clear();
     _nv_draw_buffer(editor);
-    _nv_draw_cursor(editor, (struct cursor) { 0 });
+    _nv_draw_cursor(editor);
     _nv_draw_status(editor);
     tb_present();
 }
@@ -89,54 +93,73 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
-static void
-_nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
-    if (editor->nv_conf.show_headless) return;
+size_t _nv_end_of_line(struct nv_buff_line line) {
+    int end_of_line = line.end - line.begin - 1;
+    return end_of_line > 0 ? end_of_line : 0;
+}
+
+void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction) {
+    struct nv_buff_line line = buffer->lines[cursor->line];
+    size_t end_of_line = _nv_end_of_line(line);
+
+    // move cursor down / up if within screen
+    // otherwise scroll
+    if ((direction > 0 && cursor->y < tb_height()) || (direction < 0 && cursor->y > 0)) {
+        cursor->y += direction;
+        cursor->line += direction;
+    }
+
+    struct nv_buff_line next = buffer->lines[cursor->line];
+    size_t end_of_next = _nv_end_of_line(next);
+
+    // move column if moving to a line with different size
+    if (cursor->x >= end_of_next)
+        cursor->x = end_of_next;
+}
+
+void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
+    struct nv_buff_line line = buffer->lines[cursor->line];
+    size_t end_of_line = _nv_end_of_line(line);
+
+    // move column left / right within line
+    if ((direction > 0 && cursor->x < end_of_line) || (direction < 0 && cursor->x > 0)) {
+        cursor->x += direction;
+    }
+}
+
+static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
+    if (editor->nv_conf.show_headless) 
+        return;
+
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-
-    struct event_key {
-        int ch;
-        int key;
-        int mod;
-    };
-
-    struct cursor cursor = buffer->cursors[0];
-    struct nv_buff_line line = buffer->lines[cursor.y];
-    size_t eol = line.end - line.begin;
+    if (!buffer) return;
+    struct cursor* cursor = &buffer->cursors[0];
+    if (!cursor) return;
 
     switch (ev->ch) {
-    case 'j':
-        if (cursor.y < tb_height() - 2)
-            cursor.y += 1;
-
-        if (cursor.x >= eol)
-            cursor.x = eol;
-        
+    case 'j': 
+        move_vertical(cursor, buffer, 1);
         break;
 
-    case 'k':
-        if (cursor.y > 0)
-            cursor.y -= 1;
-
+    case 'k': 
+        move_vertical(cursor, buffer, -1);
         break;
 
     case 'h':
-        if (cursor.x > 0)
-            cursor.x -= 1;
-
+        move_horizontal(cursor, buffer, -1);
         break;
 
     case 'l':
-        if (cursor.x < eol)
-            cursor.x += 1;
-        
+        move_horizontal(cursor, buffer, 1);
+        break;
+   
+    default:
+#define NV_BUFFER_INSERT_CHAR(editor, character)
+        NV_BUFFER_INSERT_CHAR(editor, ev->ch);
         break;
     }
 
-    _nv_draw_cursor(editor, cursor);
-
-#define NV_BUFFER_INSERT_CHAR(editor, character)
-    NV_BUFFER_INSERT_CHAR(editor, ev->ch);
+    _nv_draw_cursor(editor);
 }
 
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
@@ -173,11 +196,22 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
             struct nv_buff_line line = buffer->lines[i];
             size_t size = line.end - line.begin;
-            char* line_string = malloc(size + 1);
-            memcpy(line_string, buffer->buffer + line.begin, size);
-            line_string[size] = '\0';
+            char* line_string;
+            bool allocated = false;
+            
+            if (size > 0) {
+                line_string = malloc(size + 1);
+                memcpy(line_string, buffer->buffer + line.begin, size);
+                line_string[size] = '\0';
+                allocated = true;
+            } else {
+                line_string = " ";
+            }
+           
             tb_printf(0, i, TB_256_WHITE, TB_256_BLACK, "%*d %s", format, i + 1, line_string);
-            free(line_string);
+          
+            if (allocated)
+                free(line_string);
         }
 
         break;
