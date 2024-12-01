@@ -46,6 +46,7 @@ struct nv_buff_line {
 struct cursor {
     int y;
     int x;
+    int line;
     int offset;
     char ch;
 };
