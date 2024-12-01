@@ -1,22 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "termbox2.h"
 
 #include "assert.h"
 #include "buffer.h"
+#include "color.h"
 #include "editor.h"
-#include "termbox2.h"
 #include "vec.h"
 
-// TODO
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
+static void _nv_get_cursor(struct nv_editor* editor);
+static void _nv_redraw_all(struct nv_editor* editor);
+static size_t _nv_end_of_line(struct nv_buff_line line);
+static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
+static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
+static int count_recur(int n);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
-static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
-
-#define TB_256_BLACK 16
-#define TB_256_WHITE 255
-#define TB_256_GREY  249
 
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
@@ -93,7 +94,7 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
-size_t _nv_end_of_line(struct nv_buff_line line) {
+static size_t _nv_end_of_line(struct nv_buff_line line) {
     int end_of_line = line.end - line.begin - 1;
     return end_of_line > 0 ? end_of_line : 0;
 }
@@ -102,18 +103,20 @@ void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction)
     struct nv_buff_line line = buffer->lines[cursor->line];
     size_t end_of_line = _nv_end_of_line(line);
 
-    // move cursor down / up if within screen
-    // otherwise scroll
-    if ((direction > 0 && cursor->y < tb_height()) || (direction < 0 && cursor->y > 0)) {
+    if ((direction > 0 && cursor->y < tb_height())
+        || (direction < 0 && cursor->y > 0)) {
+        // move cursor down / up if within screen
         cursor->y += direction;
         cursor->line += direction;
+
+        // otherwise scroll
     }
 
     struct nv_buff_line next = buffer->lines[cursor->line];
     size_t end_of_next = _nv_end_of_line(next);
 
     // move column if moving to a line with different size
-    if (cursor->x >= end_of_next)
+    if (cursor->x >= end_of_line || cursor->x >= end_of_next)
         cursor->x = end_of_next;
 }
 
@@ -121,8 +124,9 @@ void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int directio
     struct nv_buff_line line = buffer->lines[cursor->line];
     size_t end_of_line = _nv_end_of_line(line);
 
-    // move column left / right within line
-    if ((direction > 0 && cursor->x < end_of_line) || (direction < 0 && cursor->x > 0)) {
+    if ((direction > 0 && cursor->x < end_of_line)
+        || (direction < 0 && cursor->x > 0)) {
+        // move column left / right within line
         cursor->x += direction;
     }
 }
