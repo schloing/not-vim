@@ -6,6 +6,7 @@
 struct nv_plugin {
     const char* name;
     const char* author;
+    const char* description;
     const int iteration;
     enum nv_event_sub subs;
     void (*main)(void);
