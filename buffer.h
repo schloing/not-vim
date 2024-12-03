@@ -19,9 +19,7 @@ struct nv_conf {
     bool show_headless;
 };
 
-typedef int nv_buff_t;
-
-enum {
+enum nv_buff_t {
     NV_BUFFTYPE_STDIN     = 1,
     NV_BUFFTYPE_STDOUT    = 2,
     NV_BUFFTYPE_BROWSER   = 4,
@@ -41,19 +39,28 @@ struct nv_buff_line {
     size_t end;
 };
 
-#define vec_of
-
 struct cursor {
-    int y;
     int x;
+    int y;
+    int xmem;
     int line;
     int offset;
     char ch;
 };
 
+struct nv_window {
+    int x;
+    int y;
+    int w;
+    int h;
+    size_t buff;
+};
+
+#define vec_of
+
 struct nv_buff {
     size_t       id;         // id for buffer
-    nv_buff_t    type;       // what the buffer shows
+    enum nv_buff_t type;     // what the buffer shows
     char*        path;       // path of buffer
     FILE*        file;       // FILE* if applicable
     size_t       file_format; 
@@ -61,6 +68,7 @@ struct nv_buff {
     size_t       chunk;
     bool         loaded;
     vec_of struct nv_buff_line* lines;
+    int          begin_line;
     vec_of struct cursor* cursors;
     int _lines_col_size;
 };

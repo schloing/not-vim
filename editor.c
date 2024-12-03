@@ -38,11 +38,9 @@ void nv_editor_init(struct nv_editor* editor) {
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
-    for (int i = 0; i < (int)vector_size(buffer->cursors); i++) {
-        struct cursor c = buffer->cursors[i];
-        tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
-    }
-    
+    struct cursor c = buffer->cursors[0];
+    tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+
     tb_present();
 }
 
@@ -72,8 +70,8 @@ void nv_mainloop(struct nv_editor* editor) {
         case TB_EVENT_KEY:
             if (ev.key == TB_KEY_ESC) return;
 
-            _nv_get_input(editor, &ev);
             _nv_draw_buffer(editor);
+            _nv_get_input(editor, &ev);
 
             break;
 
@@ -110,6 +108,7 @@ void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction)
         cursor->line += direction;
 
         // otherwise scroll
+        buffer->begin_line += direction;
     }
 
     struct nv_buff_line next = buffer->lines[cursor->line];
@@ -194,6 +193,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
         if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
         format = count_recur(line_count);
         buffer->_lines_col_size = format;
+//      buffer->begin_line = 0;
 
         for (int i = 0; i < line_count; i++) {
             if (i == editor->height - 1) break; // status bar

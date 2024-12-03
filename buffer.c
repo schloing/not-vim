@@ -26,12 +26,13 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
     buff->buffer = vector_create();
     vector_reserve(&buff->buffer, NV_BUFF_CAP);
+    
     buff->cursors = vector_create();
     vector_reserve(&buff->cursors, NV_CURS_CAP);
     vector_add(&buff->cursors, (struct cursor) { 0 });
+
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
-    
     if (path == NULL) return;
     buff->path   = path;
 
@@ -60,6 +61,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
             ;;;;;
         }
 
+        buff->cursors[0].ch = buff->buffer[0];
         break;
     
     case S_IFSOCK:
