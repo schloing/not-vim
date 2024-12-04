@@ -33,6 +33,8 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
+    buff->begin_line = 0;
+    
     if (path == NULL) return;
     buff->path   = path;
 
