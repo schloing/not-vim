@@ -10,7 +10,6 @@
 #include "vec.h"
 
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
-static void _nv_get_cursor(struct nv_editor* editor);
 static void _nv_redraw_all(struct nv_editor* editor);
 static size_t _nv_end_of_line(struct nv_buff_line line);
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
@@ -37,10 +36,8 @@ void nv_editor_init(struct nv_editor* editor) {
 
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
-
     struct cursor c = buffer->cursors[0];
     tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
-
     tb_present();
 }
 
@@ -99,20 +96,19 @@ static size_t _nv_end_of_line(struct nv_buff_line line) {
 
 void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction) {
     struct nv_buff_line line = buffer->lines[cursor->line];
-    size_t end_of_line = _nv_end_of_line(line);
+    int end_of_line = (int)_nv_end_of_line(line);
 
-    if ((direction > 0 && cursor->y < tb_height())
+    if ((direction > 0 && cursor->y < tb_height() - 1)
         || (direction < 0 && cursor->y > 0)) {
         // move cursor down / up if within screen
         cursor->y += direction;
         cursor->line += direction;
-
-        // otherwise scroll
-        buffer->begin_line += direction;
     }
 
+    buffer->begin_line++;
+
     struct nv_buff_line next = buffer->lines[cursor->line];
-    size_t end_of_next = _nv_end_of_line(next);
+    int end_of_next = (int)_nv_end_of_line(next);
 
     // move column if moving to a line with different size
     if (cursor->x >= end_of_line || cursor->x >= end_of_next)
@@ -121,7 +117,7 @@ void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction)
 
 void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
     struct nv_buff_line line = buffer->lines[cursor->line];
-    size_t end_of_line = _nv_end_of_line(line);
+    int end_of_line = (int)_nv_end_of_line(line);
 
     if ((direction > 0 && cursor->x < end_of_line)
         || (direction < 0 && cursor->x > 0)) {
@@ -142,10 +138,12 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     switch (ev->ch) {
     case 'j': 
         move_vertical(cursor, buffer, 1);
+        _nv_redraw_all(editor);
         break;
 
     case 'k': 
         move_vertical(cursor, buffer, -1);
+        _nv_redraw_all(editor);
         break;
 
     case 'h':
@@ -193,9 +191,8 @@ _nv_draw_buffer(struct nv_editor* editor) {
         if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
         format = count_recur(line_count);
         buffer->_lines_col_size = format;
-//      buffer->begin_line = 0;
 
-        for (int i = 0; i < line_count; i++) {
+        for (int i = buffer->begin_line; i < line_count; i++) {
             if (i == editor->height - 1) break; // status bar
 
             struct nv_buff_line line = buffer->lines[i];
