@@ -78,7 +78,7 @@ void nv_mainloop(struct nv_editor* editor) {
 
             editor->height = tb_height();
             editor->width = tb_width();
-            editor->buffers[editor->peek].loaded = false; // redraw lines
+//          editor->buffers[editor->peek].loaded = false; // redraw lines
    
             _nv_redraw_all(editor);
 
@@ -98,14 +98,15 @@ void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction)
     struct nv_buff_line line = buffer->lines[cursor->line];
     int end_of_line = (int)_nv_end_of_line(line);
 
-    if ((direction > 0 && cursor->y < tb_height() - 1)
-        || (direction < 0 && cursor->y > 0)) {
+    if ((direction > 0 && cursor->y < tb_height() - 2) ||
+        (direction < 0 && cursor->y >= 1)) {
         // move cursor down / up if within screen
         cursor->y += direction;
         cursor->line += direction;
+    } else if (cursor->line > 0 && cursor->line < (int)vector_size(buffer->lines)) {
+        // otherwise scroll if possible
+        buffer->begin_line += direction;
     }
-
-    buffer->begin_line++;
 
     struct nv_buff_line next = buffer->lines[cursor->line];
     int end_of_next = (int)_nv_end_of_line(next);
@@ -138,12 +139,12 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     switch (ev->ch) {
     case 'j': 
         move_vertical(cursor, buffer, 1);
-        _nv_redraw_all(editor);
+        _nv_draw_buffer(editor);
         break;
 
     case 'k': 
         move_vertical(cursor, buffer, -1);
-        _nv_redraw_all(editor);
+        _nv_draw_buffer(editor);
         break;
 
     case 'h':
@@ -183,6 +184,8 @@ static int count_recur(int n) {
 
 static void
 _nv_draw_buffer(struct nv_editor* editor) {
+    tb_clear_region(0, tb_height() - 1);
+
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
     switch (buffer->type) {
@@ -191,8 +194,8 @@ _nv_draw_buffer(struct nv_editor* editor) {
         if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
         format = count_recur(line_count);
         buffer->_lines_col_size = format;
-
-        for (int i = buffer->begin_line; i < line_count; i++) {
+        
+        for (int i = buffer->begin_line; i < tb_height() - 1; i++) {
             if (i == editor->height - 1) break; // status bar
 
             struct nv_buff_line line = buffer->lines[i];
@@ -209,7 +212,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
                 line_string = " ";
             }
            
-            tb_printf(0, i, TB_256_WHITE, TB_256_BLACK, "%*d %s", format, i + 1, line_string);
+            tb_printf(0, i - buffer->begin_line, TB_256_WHITE, TB_256_BLACK, "%*d %s", format, i + 1, line_string);
           
             if (allocated)
                 free(line_string);
