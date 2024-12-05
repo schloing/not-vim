@@ -78,7 +78,6 @@ void nv_mainloop(struct nv_editor* editor) {
 
             editor->height = tb_height();
             editor->width = tb_width();
-//          editor->buffers[editor->peek].loaded = false; // redraw lines
    
             _nv_redraw_all(editor);
 
@@ -94,7 +93,7 @@ static size_t _nv_end_of_line(struct nv_buff_line line) {
     return end_of_line > 0 ? end_of_line : 0;
 }
 
-void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction) {
+void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction) {
     struct nv_buff_line line = buffer->lines[cursor->line];
     int end_of_line = (int)_nv_end_of_line(line);
 
@@ -106,6 +105,8 @@ void move_vertical(struct cursor* cursor, struct nv_buff* buffer, int direction)
     } else if (cursor->line > 0 && cursor->line < (int)vector_size(buffer->lines)) {
         // otherwise scroll if possible
         buffer->begin_line += direction;
+        cursor->line += direction;
+        _nv_draw_buffer(editor);
     }
 
     struct nv_buff_line next = buffer->lines[cursor->line];
@@ -138,13 +139,11 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
 
     switch (ev->ch) {
     case 'j': 
-        move_vertical(cursor, buffer, 1);
-        _nv_draw_buffer(editor);
+        move_vertical(editor, cursor, buffer, 1);
         break;
 
     case 'k': 
-        move_vertical(cursor, buffer, -1);
-        _nv_draw_buffer(editor);
+        move_vertical(editor, cursor, buffer, -1);
         break;
 
     case 'h':
@@ -176,6 +175,7 @@ _nv_get_active_buffer(struct nv_editor* editor) {
     return buffer;
 }
 
+// calculate width of number
 static int count_recur(int n) {
     if (n < 0) return count_recur((n == INT_MIN) ? INT_MAX : -n);
     if (n < 10) return 1;
@@ -190,31 +190,50 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        int line_count, format;
-        if (!buffer->loaded) _nv_load_file_buffer(buffer, &line_count);
-        format = count_recur(line_count);
-        buffer->_lines_col_size = format;
+        int buffer_line_count, line_col_width;
+        size_t top_line, bottom_line;
+
+        if (!buffer->loaded) {
+            _nv_load_file_buffer(buffer, &buffer_line_count);
+            line_col_width = count_recur(buffer_line_count);
+            buffer->_lines_col_size = line_col_width;
+        }
+
+        line_col_width = buffer->_lines_col_size;
+        top_line = buffer->begin_line;
+        bottom_line = buffer->begin_line + tb_height() - 1;
         
-        for (int i = buffer->begin_line; i < tb_height() - 1; i++) {
-            if (i == editor->height - 1) break; // status bar
+        for (size_t i = top_line; i < bottom_line; ++i) {
+            if (i >= editor->height - 1 ||
+                i >= vector_size(buffer->lines)) {
+                // break before status bar position
+                // do not attempt draw beyond line count
+                break;
+            }
 
             struct nv_buff_line line = buffer->lines[i];
-            size_t size = line.end - line.begin;
-            char* line_string;
-            bool allocated = false;
-            
-            if (size > 0) {
-                line_string = malloc(size + 1);
-                memcpy(line_string, buffer->buffer + line.begin, size);
-                line_string[size] = '\0';
-                allocated = true;
+            size_t line_length = line.end - line.begin;
+            char* line_string = NULL;
+
+            if (line_length > 0) {
+                line_string = (char*)malloc(line_length + 1);
+                if (line_string == NULL) break;
+
+                memcpy(line_string, buffer->buffer + line.begin, line_length);
+                line_string[line_length] = '\0';
             } else {
                 line_string = " ";
             }
-           
-            tb_printf(0, i - buffer->begin_line, TB_256_WHITE, TB_256_BLACK, "%*d %s", format, i + 1, line_string);
-          
-            if (allocated)
+
+            tb_printf(40, 0, TB_RED, TB_256_BLACK, "begin_line: %ld\n", buffer->begin_line);
+            tb_printf(40, 1, TB_RED, TB_256_BLACK, "i: %ld\n", i);
+            tb_printf(40, 2, TB_RED, TB_256_BLACK, "top_line: %ld\n", top_line);
+
+            int row = (int)(i - top_line);
+
+            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", line_col_width, (int)(i + 1), line_string);
+
+            if (line_length > 0)
                 free(line_string);
         }
 
