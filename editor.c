@@ -190,51 +190,28 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        int buffer_line_count, line_col_width;
-        size_t top_line, bottom_line;
+        int buffer_line_count;
+        int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
             _nv_load_file_buffer(buffer, &buffer_line_count);
-            line_col_width = count_recur(buffer_line_count);
-            buffer->_lines_col_size = line_col_width;
+            buffer->_lines_col_size = count_recur(buffer_line_count);
         }
 
-        line_col_width = buffer->_lines_col_size;
-        top_line = buffer->begin_line;
-        bottom_line = buffer->begin_line + tb_height() - 1;
-        
-        for (size_t i = top_line; i < bottom_line; ++i) {
-            if (i >= editor->height - 1 ||
-                i >= vector_size(buffer->lines)) {
-                // break before status bar position
-                // do not attempt draw beyond line count
-                break;
-            }
+        for (int row = 0; row < tb_height() - 1; row++) {
+            size_t lineno, linesz;
+            lineno = top + row;
+            if (lineno >= buffer_line_count) return;
 
-            struct nv_buff_line line = buffer->lines[i];
-            size_t line_length = line.end - line.begin;
-            char* line_string = NULL;
-
-            if (line_length > 0) {
-                line_string = (char*)malloc(line_length + 1);
-                if (line_string == NULL) break;
-
-                memcpy(line_string, buffer->buffer + line.begin, line_length);
-                line_string[line_length] = '\0';
-            } else {
-                line_string = " ";
-            }
-
-            tb_printf(40, 0, TB_RED, TB_256_BLACK, "begin_line: %ld\n", buffer->begin_line);
-            tb_printf(40, 1, TB_RED, TB_256_BLACK, "i: %ld\n", i);
-            tb_printf(40, 2, TB_RED, TB_256_BLACK, "top_line: %ld\n", top_line);
-
-            int row = (int)(i - top_line);
-
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", line_col_width, (int)(i + 1), line_string);
-
-            if (line_length > 0)
-                free(line_string);
+            struct nv_buff_line l = buffer->lines[lineno];
+            linesz = l.end - l.begin;
+          
+            char* line = malloc(linesz + 1);
+            memcpy(line, &buffer->buffer[l.begin], linesz);
+            line[linesz] = '\0';
+           
+            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->_lines_col_size, lineno + 1, line);
+            free(line);
         }
 
         break;
