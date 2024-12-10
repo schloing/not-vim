@@ -97,6 +97,7 @@ void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_bu
     struct nv_buff_line line = buffer->lines[cursor->line];
     int end_of_line = (int)_nv_end_of_line(line);
 
+    tb_printf(30, 0, TB_256_WHITE, TB_256_BLACK, "%zu / %zu", cursor->line, vector_size(buffer->lines));
     if ((direction > 0 && cursor->y < tb_height() - 2) ||
         (direction < 0 && cursor->y >= 1)) {
         // move cursor down / up if within screen
@@ -104,7 +105,7 @@ void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_bu
         cursor->line += direction;
     } else if (cursor->line > 0 && cursor->line < (int)vector_size(buffer->lines)) {
         // otherwise scroll if possible
-        buffer->begin_line += direction;
+        buffer->_begin_line += direction;
         cursor->line += direction;
         _nv_draw_buffer(editor);
     }
@@ -190,18 +191,18 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
     switch (buffer->type) {
     case NV_BUFFTYPE_SOURCE:
-        int buffer_line_count;
         int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
-            _nv_load_file_buffer(buffer, &buffer_line_count);
-            buffer->_lines_col_size = count_recur(buffer_line_count);
+            _nv_load_file_buffer(buffer, &buffer->_line_count);
+            buffer->_lines_col_size = count_recur(buffer->_line_count);
+            buffer->loaded = true;
         }
 
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if (lineno >= buffer_line_count) return;
+            if (lineno >= buffer->_line_count) return;
 
             struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
