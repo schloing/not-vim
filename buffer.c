@@ -33,7 +33,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
     buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
     buff->lines  = vector_create();
-    buff->begin_line = 0;
+    buff->_begin_line = 0;
     
     if (path == NULL) return;
     buff->path   = path;
@@ -78,25 +78,19 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
     char* b = buffer->buffer;
     struct nv_buff_line line = { 0 };
-    struct nv_buff_line* l;
-
-    int line_count = 0;
-    int i = 0;
+    int i = 0, line_count = 0;
 
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
-         
-            l = vector_add_dst(&buffer->lines); // add line into buffer->lines using temporary pointer
-            l->end   = line.end;
-            l->begin = line.begin;
-            
+
+            vector_add(&buffer->lines, line);
+
             line.begin = i + 1;
             line_count++;
         }
     }
 
-    l = NULL;
     *out_line_count = line_count;
 }
 

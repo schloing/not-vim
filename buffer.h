@@ -28,7 +28,7 @@ enum nv_buff_t {
     NV_BUFFTYPE_PLAINTEXT = 32,
 };
 
-enum {
+enum nv_buff_f {
     NV_FILE_FORMAT_BINARY,
     NV_FILE_FORMAT_SOURCE,  // lsp + treesitter impl
     NV_FILE_FORMAT_PLAINTEXT,
@@ -46,6 +46,7 @@ struct cursor {
     int line;
     int offset;
     char ch;
+    size_t buff_id;
 };
 
 struct nv_window {
@@ -53,24 +54,25 @@ struct nv_window {
     int y;
     int w;
     int h;
-    size_t buff;
+    size_t buff_id;
 };
 
 #define vec_of
 
 struct nv_buff {
-    size_t       id;         // id for buffer
-    enum nv_buff_t type;     // what the buffer shows
-    char*        path;       // path of buffer
-    FILE*        file;       // FILE* if applicable
-    size_t       file_format; 
-    vec_of char* buffer;     // char buffer in memory written to file on write
-    size_t       chunk;
-    bool         loaded;
+    size_t         id;      // id for buffer
+    enum nv_buff_t type;    // what the buffer shows
+    char*          path;    // path of buffer
+    FILE*          file;    // FILE* if applicable
+    enum nv_buff_f format; 
+    vec_of char*   buffer;  // char buffer in memory written to file on write
+    size_t         chunk;   // bytes to load into buffer at a time
+    bool           loaded;  // is nv_buff_line* lines "calculated"
     vec_of struct nv_buff_line* lines;
-    int          begin_line;
     vec_of struct cursor* cursors;
+    int _begin_line;
     int _lines_col_size;
+    int _line_count;
 };
 
 void nv_buffer_init(struct nv_buff* buff, char* path);
