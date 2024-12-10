@@ -17,6 +17,8 @@ static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
+void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction);
+void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction);
 
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
@@ -64,6 +66,7 @@ void nv_mainloop(struct nv_editor* editor) {
         editor->status = tb_poll_event(&ev);
 
         switch (ev.type) {
+        case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
             if (ev.key == TB_KEY_ESC) return;
 
@@ -71,7 +74,6 @@ void nv_mainloop(struct nv_editor* editor) {
             _nv_get_input(editor, &ev);
 
             break;
-
 
         case TB_EVENT_RESIZE:
             if (editor->nv_conf.show_headless) break;
@@ -97,7 +99,6 @@ void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_bu
     struct nv_buff_line line = buffer->lines[cursor->line];
     int end_of_line = (int)_nv_end_of_line(line);
 
-    tb_printf(30, 0, TB_256_WHITE, TB_256_BLACK, "%zu / %zu", cursor->line, vector_size(buffer->lines));
     if ((direction > 0 && cursor->y < tb_height() - 2) ||
         (direction < 0 && cursor->y >= 1)) {
         // move cursor down / up if within screen
@@ -138,27 +139,44 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     struct cursor* cursor = &buffer->cursors[0];
     if (!cursor) return;
 
-    switch (ev->ch) {
-    case 'j': 
-        move_vertical(editor, cursor, buffer, 1);
-        break;
+    if (ev->type == TB_EVENT_MOUSE) {
+        switch (ev->key) {
+        case TB_KEY_MOUSE_WHEEL_UP:
+            move_vertical(editor, cursor, buffer, -1);
+            break;
 
-    case 'k': 
-        move_vertical(editor, cursor, buffer, -1);
-        break;
+        case TB_KEY_MOUSE_WHEEL_DOWN:
+            move_vertical(editor, cursor, buffer, 1);
+            break;
+        }
+    } else {
+        switch (ev->ch) {
+        case 'j': 
+            move_vertical(editor, cursor, buffer, 1);
+            break;
 
-    case 'h':
-        move_horizontal(cursor, buffer, -1);
-        break;
+        case 'k': 
+            move_vertical(editor, cursor, buffer, -1);
+            break;
 
-    case 'l':
-        move_horizontal(cursor, buffer, 1);
-        break;
-   
-    default:
-#define NV_BUFFER_INSERT_CHAR(editor, character)
-        NV_BUFFER_INSERT_CHAR(editor, ev->ch);
-        break;
+        case 'h':
+            move_horizontal(cursor, buffer, -1);
+            break;
+
+        case 'l':
+            move_horizontal(cursor, buffer, 1);
+            break;
+       
+        default:
+            struct nv_buff_line* line = &buffer->lines[cursor->line];
+            char* dest = buffer->buffer + line->begin + cursor->x + 1;
+            strcpy(dest + 1, dest);
+            *dest = ev->ch;
+            cursor->x++;
+            line->end++;
+
+            break;
+        }
     }
 
     _nv_draw_cursor(editor);
