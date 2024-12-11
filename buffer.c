@@ -77,6 +77,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
 void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
     char* b = buffer->buffer;
+    if (buffer->buffer == NULL) return;
     struct nv_buff_line line = { 0 };
     int i = 0, line_count = 0;
 
@@ -89,6 +90,13 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
             line.begin = i + 1;
             line_count++;
         }
+    }
+   
+    // empty file
+    if (line_count == 0) {
+        line.begin = 0;
+        line.end = 0;
+        line_count = 1;
     }
 
     *out_line_count = line_count;

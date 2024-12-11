@@ -130,6 +130,15 @@ void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int directio
     }
 }
 
+static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, char ch) {
+    struct nv_buff_line* line = &buffer->lines[cursor->line];
+    size_t pos_index = line->begin + cursor->x;
+
+    vector_insert(&buffer->buffer, pos_index, ch);
+    vector_erase(buffer->lines, 0, vector_size(buffer->lines));
+    _nv_load_file_buffer(buffer, &buffer->_line_count);
+}
+
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (editor->nv_conf.show_headless) 
         return;
@@ -168,13 +177,7 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
             break;
        
         default:
-            struct nv_buff_line* line = &buffer->lines[cursor->line];
-            char* dest = buffer->buffer + line->begin + cursor->x + 1;
-            strcpy(dest + 1, dest);
-            *dest = ev->ch;
-            cursor->x++;
-            line->end++;
-
+            _nv_insert_character(buffer, cursor, ev->ch);
             break;
         }
     }
@@ -208,6 +211,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
     switch (buffer->type) {
+    case NV_BUFFTYPE_PLAINTEXT:     
     case NV_BUFFTYPE_SOURCE:
         int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
@@ -224,19 +228,15 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
             struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
-          
+         
             char* line = malloc(linesz + 1);
             memcpy(line, &buffer->buffer[l.begin], linesz);
             line[linesz] = '\0';
-           
+
             tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->_lines_col_size, lineno + 1, line);
             free(line);
         }
 
-        break;
-
-    case NV_BUFFTYPE_PLAINTEXT:
-        tb_print(0, 0, TB_256_WHITE, TB_256_BLACK, buffer->buffer);
         break;
 
     case NV_BUFFTYPE_BROWSER:
