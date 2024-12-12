@@ -4,7 +4,7 @@ https://github.com/termbox/termbox2
 inspired by
 https://github.com/adsr/mle
 
-vec.c for vector
-https://github.com/Mashpoe/c-vector
+vector
+https://github.com/eteran/c-vector/blob/master/cvector.h
 
 gcc -fPIC -shared -o plugload.so plugload.c

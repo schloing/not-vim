@@ -1,8 +1,8 @@
 CC := gcc
-CFLAGS := -g -Wall -Wextra -ldl -O3
-PROD_CFLAGS := -Wall -Wextra -ldl -O3
+CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
+PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
-SOURCES := editor.c main.c vec.c buffer.c
+SOURCES := editor.c main.c buffer.c
 OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
 
