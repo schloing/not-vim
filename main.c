@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define CVECTOR_LOGARITHMIC_GROWTH
+
 #include "buffer.h"
 #include "cvector.h"
 #include "editor.h"

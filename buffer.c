@@ -24,13 +24,12 @@ bool is_elf(char* buffer) {
 void nv_buffer_init(struct nv_buff* buff, char* path) {
     NV_ASSERT(buff);
 
-    cvector_reserve(buff->buffer, NV_BUFF_CAP);
     cvector_push_back(buff->cursors, (struct cursor) { 0 });
-    buff->chunk = cvector_capacity(buff->buffer); // should be NV_BUFF_CAP
     cvector_reserve(buff->lines, NV_LINE_CAP);
     buff->_begin_line = 0;
-    
-    if (path == NULL) return;
+    cvector_reserve(buff->buffer, NV_BUFF_CAP);
+    buff->chunk = cvector_capacity(buff->buffer); // should be NV_BUFF_CAP
+    // TODO: other paths
     buff->path = path;
 
     struct stat sb;
@@ -47,7 +46,9 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
         buff->file = fopen(buff->path, "rb+");
         if (buff->file == NULL) return;
 
-        fread(cvector_begin(buff->buffer), sizeof(char), buff->chunk, buff->file);
+        fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
+        cvector_set_size(buff->buffer, buff->chunk);
+
         buff->cursors[0].ch = buff->buffer[0];
         break;
     

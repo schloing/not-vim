@@ -137,7 +137,7 @@ static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, 
     cursor->x++;
 
     cvector_insert(buffer->buffer, pos_index, ch);
-    cvector_erase(buffer->lines, cvector_size(buffer->lines));
+    cvector_clear(buffer->lines);
 
     _nv_load_file_buffer(buffer, &buffer->_line_count);
 }
@@ -228,7 +228,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if (lineno >= buffer->_line_count) return;
+            if ((int)lineno >= buffer->_line_count) return;
 
             struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
