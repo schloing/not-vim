@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "vec.h"
+#include "cvector.h"
 
 struct nv_conf {
     int  tab_width;
@@ -57,19 +57,19 @@ struct nv_window {
     size_t buff_id;
 };
 
-#define vec_of
-
 struct nv_buff {
     size_t         id;      // id for buffer
     enum nv_buff_t type;    // what the buffer shows
     char*          path;    // path of buffer
     FILE*          file;    // FILE* if applicable
-    enum nv_buff_f format; 
-    vec_of char*   buffer;  // char buffer in memory written to file on write
+    enum nv_buff_f format;
+   
     size_t         chunk;   // bytes to load into buffer at a time
     bool           loaded;  // is nv_buff_line* lines "calculated"
-    vec_of struct nv_buff_line* lines;
-    vec_of struct cursor* cursors;
+    cvector_vector_type(char) buffer;  // char buffer in memory written to file on write
+    cvector_vector_type(struct nv_buff_line) lines;
+    cvector_vector_type(struct cursor) cursors;
+
     int _begin_line;
     int _lines_col_size;
     int _line_count;

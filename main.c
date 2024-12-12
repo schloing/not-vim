@@ -6,10 +6,10 @@
 #include <unistd.h>
 
 #include "buffer.h"
+#include "cvector.h"
 #include "editor.h"
-#include "termbox2.h"
-#include "vec.h"
 #include "plugin.h"
+#include "termbox2.h"
 
 static void load_plugload(struct nv_editor* editor) {
     struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };

@@ -6,13 +6,13 @@
 
 #include "assert.h"
 #include "buffer.h"
+#include "cvector.h"
 #include "editor.h"
-#include "vec.h"
 #include "termbox2.h"
 
 #define NV_BUFFID_UNSET 0
 #define NV_BUFF_CAP     1024 * 16
-#define NV_CURS_CAP     8
+#define NV_LINE_CAP     32
 
 bool is_elf(char* buffer) {
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
@@ -24,19 +24,14 @@ bool is_elf(char* buffer) {
 void nv_buffer_init(struct nv_buff* buff, char* path) {
     NV_ASSERT(buff);
 
-    buff->buffer = vector_create();
-    vector_reserve(&buff->buffer, NV_BUFF_CAP);
-    
-    buff->cursors = vector_create();
-    vector_reserve(&buff->cursors, NV_CURS_CAP);
-    vector_add(&buff->cursors, (struct cursor) { 0 });
-
-    buff->chunk  = vector_capacity(buff->buffer); // should be NV_BUFF_CAP
-    buff->lines  = vector_create();
+    cvector_reserve(buff->buffer, NV_BUFF_CAP);
+    cvector_push_back(buff->cursors, (struct cursor) { 0 });
+    buff->chunk = cvector_capacity(buff->buffer); // should be NV_BUFF_CAP
+    cvector_reserve(buff->lines, NV_LINE_CAP);
     buff->_begin_line = 0;
     
     if (path == NULL) return;
-    buff->path   = path;
+    buff->path = path;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -52,17 +47,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
         buff->file = fopen(buff->path, "rb+");
         if (buff->file == NULL) return;
 
-        if ((fread(buff->buffer, sizeof(char), buff->chunk, buff->file)) < buff->chunk) {
-            // TODO:
-            ;;;;;
-            ;;;;;               ;;
-            ;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;;;;;;;;;;;;;;;;;;    ;   ;;
-            ;;;;;;;;;;;;;;;;;;;;;;;;            ;;
-            ;;;;;               ;;                  ;
-            ;;;;;
-        }
-
+        fread(cvector_begin(buff->buffer), sizeof(char), buff->chunk, buff->file);
         buff->cursors[0].ch = buff->buffer[0];
         break;
     
@@ -85,7 +70,7 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
         if (b[i] == '\n') {
             line.end = i;
 
-            vector_add(&buffer->lines, line);
+            cvector_push_back(buffer->lines, line);
 
             line.begin = i + 1;
             line_count++;
@@ -105,16 +90,16 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
 void nv_free_buffers(struct nv_editor* editor) {
     NV_ASSERT(editor->buffers);
 
-    for (size_t i = 0; i < vector_size(editor->buffers); i++) {
+    for (size_t i = 0; i < cvector_size(editor->buffers); i++) {
         if (editor->buffers[i].file != NULL)
             fclose(editor->buffers[i].file);
    
-        vector_free(editor->buffers[i].lines);
-        vector_free(editor->buffers[i].cursors);
-        vector_free(editor->buffers[i].buffer);
+        cvector_free(editor->buffers[i].lines);
+        cvector_free(editor->buffers[i].cursors);
+        cvector_free(editor->buffers[i].buffer);
         editor->buffers[i].buffer = NULL;
     }
     
-    vector_free(editor->buffers);
+    cvector_free(editor->buffers);
     editor->buffers = NULL;
 }

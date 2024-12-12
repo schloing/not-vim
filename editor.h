@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #define TUI
 #include "buffer.h"
-#include "vec.h"
+#include "cvector.h"
 
 typedef struct nv_buff* nv_buff_vec;
 

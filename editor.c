@@ -6,8 +6,8 @@
 #include "assert.h"
 #include "buffer.h"
 #include "color.h"
+#include "cvector.h"
 #include "editor.h"
-#include "vec.h"
 
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static void _nv_redraw_all(struct nv_editor* editor);
@@ -23,7 +23,7 @@ void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int directio
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
 
-    editor->buffers = vector_create();
+    cvector_reserve(editor->buffers, 8);
     
     editor->nv_conf = (struct nv_conf){
         .tab_width     = NV_TAB_WIDTH,
@@ -104,7 +104,7 @@ void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_bu
         // move cursor down / up if within screen
         cursor->y += direction;
         cursor->line += direction;
-    } else if (cursor->line > 0 && cursor->line < (int)vector_size(buffer->lines)) {
+    } else if (cursor->line > 0 && cursor->line < (int)cvector_size(buffer->lines)) {
         // otherwise scroll if possible
         buffer->_begin_line += direction;
         cursor->line += direction;
@@ -134,8 +134,11 @@ static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, 
     struct nv_buff_line* line = &buffer->lines[cursor->line];
     size_t pos_index = line->begin + cursor->x;
 
-    vector_insert(&buffer->buffer, pos_index, ch);
-    vector_erase(buffer->lines, 0, vector_size(buffer->lines));
+    cursor->x++;
+
+    cvector_insert(buffer->buffer, pos_index, ch);
+    cvector_erase(buffer->lines, cvector_size(buffer->lines));
+
     _nv_load_file_buffer(buffer, &buffer->_line_count);
 }
 
@@ -178,6 +181,7 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
        
         default:
             _nv_insert_character(buffer, cursor, ev->ch);
+            _nv_draw_buffer(editor);
             break;
         }
     }
@@ -186,8 +190,8 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
 }
 
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
-    buffer.id = vector_size(editor->buffers);
-    vector_add(&editor->buffers, buffer);
+    buffer.id = cvector_size(editor->buffers);
+    cvector_push_back(editor->buffers, buffer);
 }
 
 static struct nv_buff*
