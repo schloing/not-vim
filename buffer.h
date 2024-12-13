@@ -44,7 +44,6 @@ struct cursor {
     int y;
     int xmem;
     int line;
-    int offset;
     char ch;
     size_t buff_id;
 };
