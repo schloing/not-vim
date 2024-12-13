@@ -115,8 +115,11 @@ void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_bu
     int end_of_next = (int)_nv_end_of_line(next);
 
     // move column if moving to a line with different size
-    if (cursor->x >= end_of_line || cursor->x >= end_of_next)
+    if (cursor->xmem >= end_of_line || cursor->xmem >= end_of_next) {
         cursor->x = end_of_next;
+    } else {
+        cursor->x = cursor->xmem;
+    }
 }
 
 void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
@@ -128,6 +131,8 @@ void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int directio
         // move column left / right within line
         cursor->x += direction;
     }
+
+    cursor->xmem = cursor->x;
 }
 
 static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, char ch) {
