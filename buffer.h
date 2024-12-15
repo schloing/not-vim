@@ -37,6 +37,7 @@ enum nv_buff_f {
 struct nv_buff_line {
     size_t begin;
     size_t end;
+    size_t length;
 };
 
 struct cursor {

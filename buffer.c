@@ -70,6 +70,7 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
+            line.length = line.end - line.begin - 1;
 
             cvector_push_back(buffer->lines, line);
 

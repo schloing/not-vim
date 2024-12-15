@@ -11,14 +11,14 @@
 
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static void _nv_redraw_all(struct nv_editor* editor);
-static size_t _nv_end_of_line(struct nv_buff_line line);
+static size_t _nv_get_line_length(struct nv_buff_line line);
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
-void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction);
-void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction);
+static void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction);
+static void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction);
 
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
@@ -90,49 +90,41 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
-static size_t _nv_end_of_line(struct nv_buff_line line) {
+static size_t _nv_get_line_length(struct nv_buff_line line) {
     int end_of_line = line.end - line.begin - 1;
     return end_of_line > 0 ? end_of_line : 0;
 }
 
-void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction) {
-    struct nv_buff_line line = buffer->lines[cursor->line];
-    int end_of_line = (int)_nv_end_of_line(line);
+static struct nv_buff_line current_line(struct cursor* cursor, struct nv_buff* buffer) {
+    return buffer->lines[cursor->line + 1];
+}
 
-    if ((direction > 0 && cursor->y < tb_height() - 2) ||
-        (direction < 0 && cursor->y >= 1)) {
-        // move cursor down / up if within screen
+static void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction) {
+    if ((direction > 0 && cursor->y < tb_height() - 2) || (direction < 0 && cursor->y >= 1)) {
         cursor->y += direction;
         cursor->line += direction;
     } else if (cursor->line > 0 && cursor->line < (int)cvector_size(buffer->lines)) {
-        // otherwise scroll if possible
         buffer->_begin_line += direction;
         cursor->line += direction;
         _nv_draw_buffer(editor);
     }
 
-    struct nv_buff_line next = buffer->lines[cursor->line];
-    int end_of_next = (int)_nv_end_of_line(next);
+    // the line we moved to
+    struct nv_buff_line line = current_line(cursor, buffer);
 
-    // move column if moving to a line with different size
-    if (cursor->xmem >= end_of_line || cursor->xmem >= end_of_next) {
-        cursor->x = end_of_next;
-    } else {
+    if (cursor->xmem >= line.length)
+        cursor->x = line.length;
+    else 
         cursor->x = cursor->xmem;
-    }
 }
 
-void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
-    struct nv_buff_line line = buffer->lines[cursor->line];
-    int end_of_line = (int)_nv_end_of_line(line);
+static void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
+    struct nv_buff_line curr_line = buffer->lines[cursor->line];
 
-    if ((direction > 0 && cursor->x < end_of_line)
-        || (direction < 0 && cursor->x > 0)) {
-        // move column left / right within line
-        cursor->x += direction;
+    if ((direction > 0 && cursor->x < (int)_nv_get_line_length(curr_line)) || (direction < 0 && cursor->x > 0)) {
+        cursor->xmem += direction;
+        cursor->x = cursor->xmem;
     }
-
-    cursor->xmem = cursor->x;
 }
 
 static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, char ch) {
