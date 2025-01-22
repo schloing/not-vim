@@ -43,7 +43,7 @@ struct nv_buff_line {
 struct cursor {
     int x;
     int y;
-    int xmem;
+    int xtmp;
     int line;
     char ch;
     size_t buff_id;

@@ -17,8 +17,6 @@ static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
-static void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction);
-static void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction);
 
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
@@ -95,40 +93,16 @@ static size_t _nv_get_line_length(struct nv_buff_line line) {
     return end_of_line > 0 ? end_of_line : 0;
 }
 
-static struct nv_buff_line current_line(struct cursor* cursor, struct nv_buff* buffer) {
-    return buffer->lines[cursor->line + 1];
+struct nv_buff_line* LINE(struct nv_buff* buffer, size_t num) {
+    return &buffer->lines[num];
 }
 
-static void move_vertical(struct nv_editor* editor, struct cursor* cursor, struct nv_buff* buffer, int direction) {
-    if ((direction > 0 && cursor->y < tb_height() - 2) || (direction < 0 && cursor->y >= 1)) {
-        cursor->y += direction;
-        cursor->line += direction;
-    } else if (cursor->line > 0 && cursor->line < (int)cvector_size(buffer->lines)) {
-        buffer->_begin_line += direction;
-        cursor->line += direction;
-        _nv_draw_buffer(editor);
-    }
+#define PREV_LINE(buffer, line) LINE(buffer, line - 1)
+#define CURR_LINE(buffer, line) LINE(buffer, line)
+#define NEXT_LINE(buffer, line) LINE(buffer, line + 1)
 
-    // the line we moved to
-    struct nv_buff_line line = current_line(cursor, buffer);
-
-    if (cursor->xmem >= line.length)
-        cursor->x = line.length;
-    else 
-        cursor->x = cursor->xmem;
-}
-
-static void move_horizontal(struct cursor* cursor, struct nv_buff* buffer, int direction) {
-    struct nv_buff_line curr_line = buffer->lines[cursor->line];
-
-    if ((direction > 0 && cursor->x < (int)_nv_get_line_length(curr_line)) || (direction < 0 && cursor->x > 0)) {
-        cursor->xmem += direction;
-        cursor->x = cursor->xmem;
-    }
-}
-
-static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, char ch) {
-    struct nv_buff_line* line = &buffer->lines[cursor->line];
+static void _nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch) {
+    struct nv_buff_line* line = CURR_LINE(buffer, cursor->line);
     size_t pos_index = line->begin + cursor->x;
 
     cursor->x++;
@@ -137,6 +111,66 @@ static void _nv_insert_character(struct nv_buff* buffer, struct cursor* cursor, 
     cvector_clear(buffer->lines);
 
     _nv_load_file_buffer(buffer, &buffer->_line_count);
+}
+
+static void _nv_clamp_cursor_x(struct nv_buff* buffer, struct cursor* cursor) {
+    struct nv_buff_line* line = CURR_LINE(buffer, cursor->line);
+    size_t line_length = _nv_get_line_length(*line);
+
+    if (cursor->xtmp < 0) {
+        cursor->xtmp = 0;
+    }
+
+    if (cursor->x < 0) {
+        cursor->x = 0;
+    } else if ((size_t)cursor->x > line_length) {
+        cursor->x = (int)line_length;
+    }
+}
+
+static void _nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+    struct nv_buff_line* curr = CURR_LINE(buffer, cursor->line);
+    struct nv_buff_line* next = NEXT_LINE(buffer, cursor->line);
+
+    if (cursor->y <= tb_height() - 3 && cursor->line < buffer->_line_count) {
+        cursor->line++;
+        cursor->y++;
+    } else if (cursor->line >= buffer->_line_count) {
+        cursor->line = buffer->_line_count;
+        // cursor->y same
+    } else {
+        cursor->line++;
+        buffer->_begin_line++;
+    }
+}
+
+static void _nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+    if (cursor->y > 0 && cursor->line > 0) {
+        cursor->line--;
+        cursor->y--;
+    } else if (cursor->line <= 0) {
+        cursor->line = 0;
+        // cursor->y same
+    } else {
+        cursor->line--;
+        buffer->_begin_line--;
+    }
+}
+
+static void _nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+    if (cursor->x > 0)
+        cursor->x--;
+
+    cursor->xtmp = cursor->x;
+}
+
+static void _nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+    struct nv_buff_line* line = LINE(buffer, cursor->line);
+
+    if (cursor->x < _nv_get_line_length(*line)) 
+        cursor->x++;
+    
+    cursor->xtmp = cursor->x;
 }
 
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
@@ -151,38 +185,38 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            move_vertical(editor, cursor, buffer, -1);
+            _nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            move_vertical(editor, cursor, buffer, 1);
+            _nv_cursor_move_down(buffer, cursor, 1);
             break;
         }
     } else {
         switch (ev->ch) {
         case 'j': 
-            move_vertical(editor, cursor, buffer, 1);
+            _nv_cursor_move_down(buffer, cursor, 1);
             break;
 
         case 'k': 
-            move_vertical(editor, cursor, buffer, -1);
+            _nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case 'h':
-            move_horizontal(cursor, buffer, -1);
+            _nv_cursor_move_left(buffer, cursor, 1);
             break;
 
         case 'l':
-            move_horizontal(cursor, buffer, 1);
+            _nv_cursor_move_right(buffer, cursor, 1);
             break;
        
         default:
-            _nv_insert_character(buffer, cursor, ev->ch);
-            _nv_draw_buffer(editor);
+            _nv_cursor_insert_ch(buffer, cursor, ev->ch);
             break;
         }
     }
 
+    _nv_draw_buffer(editor);
     _nv_draw_cursor(editor);
 }
 
