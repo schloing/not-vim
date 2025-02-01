@@ -10,10 +10,6 @@
 #include "editor.h"
 #include "termbox2.h"
 
-#define NV_BUFFID_UNSET 0
-#define NV_BUFF_CAP     1024 * 16
-#define NV_LINE_CAP     32
-
 bool is_elf(char* buffer) {
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
     for (int i = 0; i < 4; i++)
@@ -23,14 +19,18 @@ bool is_elf(char* buffer) {
 
 void nv_buffer_init(struct nv_buff* buff, char* path) {
     NV_ASSERT(buff);
+    cvector_reserve(buff->cursors, NV_CURSOR_CAP);
+    assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
+    buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
 
-    cvector_push_back(buff->cursors, (struct cursor) { 0 });
+    // TODO: load cursor position from some file
+
     cvector_reserve(buff->lines, NV_LINE_CAP);
-    buff->_begin_line = 0;
     cvector_reserve(buff->buffer, NV_BUFF_CAP);
-    buff->chunk = cvector_capacity(buff->buffer); // should be NV_BUFF_CAP
-    // TODO: other paths
+    
+    buff->chunk = NV_BUFF_CAP;
     buff->path = path;
+    buff->_begin_line = 0;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -59,6 +59,18 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     default:
         return;
     }
+}
+
+struct nv_buff_line* currline(struct nv_buff* buff) {
+    return buff->lines[buff->cursors[NV_PRIMARY_CURSOR]->line];
+}
+
+struct nv_buff_line* nextline(struct nv_buff* buff) {
+    return buff->lines[buff->cursors[NV_PRIMARY_CURSOR]->line];
+}
+
+struct nv_buff_line* line(struct nv_buff* buff, int lineno) {
+    return buff->lines[lineno];
 }
 
 void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {

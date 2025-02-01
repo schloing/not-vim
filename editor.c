@@ -6,12 +6,12 @@
 #include "assert.h"
 #include "buffer.h"
 #include "color.h"
+#include "cursor.h"
 #include "cvector.h"
 #include "editor.h"
 
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static void _nv_redraw_all(struct nv_editor* editor);
-static size_t _nv_get_line_length(struct nv_buff_line line);
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
@@ -37,7 +37,7 @@ void nv_editor_init(struct nv_editor* editor) {
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     struct cursor c = buffer->cursors[0];
-    tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+    tb_set_cell(buffer->internal._lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
     tb_present();
 }
 
@@ -88,91 +88,6 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
-static size_t _nv_get_line_length(struct nv_buff_line line) {
-    int end_of_line = line.end - line.begin - 1;
-    return end_of_line > 0 ? end_of_line : 0;
-}
-
-struct nv_buff_line* LINE(struct nv_buff* buffer, size_t num) {
-    return &buffer->lines[num];
-}
-
-#define PREV_LINE(buffer, line) LINE(buffer, line - 1)
-#define CURR_LINE(buffer, line) LINE(buffer, line)
-#define NEXT_LINE(buffer, line) LINE(buffer, line + 1)
-
-static void _nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch) {
-    struct nv_buff_line* line = CURR_LINE(buffer, cursor->line);
-    size_t pos_index = line->begin + cursor->x;
-
-    cursor->x++;
-
-    cvector_insert(buffer->buffer, pos_index, ch);
-    cvector_clear(buffer->lines);
-
-    _nv_load_file_buffer(buffer, &buffer->_line_count);
-}
-
-static void _nv_clamp_cursor_x(struct nv_buff* buffer, struct cursor* cursor) {
-    struct nv_buff_line* line = CURR_LINE(buffer, cursor->line);
-    size_t line_length = _nv_get_line_length(*line);
-
-    if (cursor->xtmp < 0) {
-        cursor->xtmp = 0;
-    }
-
-    if (cursor->x < 0) {
-        cursor->x = 0;
-    } else if ((size_t)cursor->x > line_length) {
-        cursor->x = (int)line_length;
-    }
-}
-
-static void _nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    struct nv_buff_line* curr = CURR_LINE(buffer, cursor->line);
-    struct nv_buff_line* next = NEXT_LINE(buffer, cursor->line);
-
-    if (cursor->y <= tb_height() - 3 && cursor->line < buffer->_line_count) {
-        cursor->line++;
-        cursor->y++;
-    } else if (cursor->line >= buffer->_line_count) {
-        cursor->line = buffer->_line_count;
-        // cursor->y same
-    } else {
-        cursor->line++;
-        buffer->_begin_line++;
-    }
-}
-
-static void _nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    if (cursor->y > 0 && cursor->line > 0) {
-        cursor->line--;
-        cursor->y--;
-    } else if (cursor->line <= 0) {
-        cursor->line = 0;
-        // cursor->y same
-    } else {
-        cursor->line--;
-        buffer->_begin_line--;
-    }
-}
-
-static void _nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    if (cursor->x > 0)
-        cursor->x--;
-
-    cursor->xtmp = cursor->x;
-}
-
-static void _nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    struct nv_buff_line* line = LINE(buffer, cursor->line);
-
-    if (cursor->x < _nv_get_line_length(*line)) 
-        cursor->x++;
-    
-    cursor->xtmp = cursor->x;
-}
-
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (editor->nv_conf.show_headless) 
         return;
@@ -185,33 +100,33 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            _nv_cursor_move_up(buffer, cursor, 1);
+            nv_cursor_move_up(&buffer->internal, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            _nv_cursor_move_down(buffer, cursor, 1);
+            nv_cursor_move_down(&buffer->internal, cursor, 1);
             break;
         }
     } else {
         switch (ev->ch) {
         case 'j': 
-            _nv_cursor_move_down(buffer, cursor, 1);
+            nv_cursor_move_down(&buffer->internal, cursor, 1);
             break;
 
         case 'k': 
-            _nv_cursor_move_up(buffer, cursor, 1);
+            nv_cursor_move_up(&buffer->internal, cursor, 1);
             break;
 
         case 'h':
-            _nv_cursor_move_left(buffer, cursor, 1);
+            nv_cursor_move_left(&buffer->internal, cursor, 1);
             break;
 
         case 'l':
-            _nv_cursor_move_right(buffer, cursor, 1);
+            nv_cursor_move_right(&buffer->internal, cursor, 1);
             break;
        
         default:
-            _nv_cursor_insert_ch(buffer, cursor, ev->ch);
+            nv_cursor_insert_ch(&buffer->internal, cursor, ev->ch);
             break;
         }
     }
@@ -221,7 +136,7 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
 }
 
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
-    buffer.id = cvector_size(editor->buffers);
+    buffer.internal.id = cvector_size(editor->buffers);
     cvector_push_back(editor->buffers, buffer);
 }
 
@@ -245,30 +160,30 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
-    switch (buffer->type) {
+    switch (buffer->internal.type) {
     case NV_BUFFTYPE_PLAINTEXT:     
     case NV_BUFFTYPE_SOURCE:
         int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
-        if (!buffer->loaded) {
-            _nv_load_file_buffer(buffer, &buffer->_line_count);
-            buffer->_lines_col_size = count_recur(buffer->_line_count);
-            buffer->loaded = true;
+        if (!buffer->internal.loaded) {
+            _nv_load_file_buffer(buffer, &buffer->internal._line_count);
+            buffer->internal._lines_col_size = count_recur(buffer->internal._line_count);
+            buffer->internal.loaded = true;
         }
 
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if ((int)lineno >= buffer->_line_count) return;
+            if ((int)lineno >= buffer->internal._line_count) return;
 
-            struct nv_buff_line l = buffer->lines[lineno];
+            struct nv_buff_line l = buffer->internal.lines[lineno];
             linesz = l.end - l.begin;
          
             char* line = malloc(linesz + 1);
-            memcpy(line, &buffer->buffer[l.begin], linesz);
+            memcpy(line, &buffer->internal.buffer[l.begin], linesz);
             line[linesz] = '\0';
 
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->_lines_col_size, lineno + 1, line);
+            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->internal._lines_col_size, lineno + 1, line);
             free(line);
         }
 
@@ -279,7 +194,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
         break;
 
     default:
-        fprintf(stderr, "unsupported bufftype %d\n", buffer->type);
+        fprintf(stderr, "unsupported bufftype %d\n", buffer->internal.type);
         break;
     }
 }
@@ -288,7 +203,7 @@ static void
 _nv_draw_status(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
-    if (asprintf(&prompt, "[%zu] %s", buffer->id, buffer->path) == -1) return;
+    if (asprintf(&prompt, "[%zu] %s", buffer->internal.id, buffer->internal.path) == -1) return;
     tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }
