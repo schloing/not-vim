@@ -1,2 +1,5 @@
 *.o
 ./nv
+.DS_STORE
+.vscode/
+valgrind

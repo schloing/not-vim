@@ -531,7 +531,7 @@ int tb_set_input_mode(int mode);
 
 /* Set the output mode. Termbox has multiple output modes:
  *
- * 1. `TB_OUTPUT_NORMAL`     => [0..8]
+ * 1. `TB_OUTPUT_NORMAL`     => [0.8]
  *
  *    This mode provides 8 different colors:
  *      `TB_BLACK`, `TB_RED`, `TB_GREEN`, `TB_YELLOW`,
@@ -557,36 +557,36 @@ int tb_set_input_mode(int mode);
  *
  *    Example usage: `tb_set_cell(x, y, '@', TB_BLACK | TB_BOLD, TB_RED)`
  *
- * 2. `TB_OUTPUT_256`        => [0..255] + `TB_HI_BLACK`
+ * 2. `TB_OUTPUT_256`        => [0.255] + `TB_HI_BLACK`
  *
  *    In this mode you get 256 distinct colors (plus default):
  *                0x00   (1): `TB_DEFAULT`
  *       `TB_HI_BLACK`   (1): `TB_BLACK` in `TB_OUTPUT_NORMAL`
- *          0x01..0x07   (7): the next 7 colors as in `TB_OUTPUT_NORMAL`
- *          0x08..0x0f   (8): bright versions of the above
- *          0x10..0xe7 (216): 216 different colors
- *          0xe8..0xff  (24): 24 different shades of gray
+ *          0x01.0x07   (7): the next 7 colors as in `TB_OUTPUT_NORMAL`
+ *          0x08.0x0f   (8): bright versions of the above
+ *          0x10.0xe7 (216): 216 different colors
+ *          0xe8.0xff  (24): 24 different shades of gray
  *
  *    All `TB_*` style attributes except `TB_BRIGHT` may be bitwise OR'd as in
  *    `TB_OUTPUT_NORMAL`.
  *
  *    Note `TB_HI_BLACK` must be used for black, as 0x00 represents default.
  *
- * 3. `TB_OUTPUT_216`        => [0..216]
+ * 3. `TB_OUTPUT_216`        => [0.216]
  *
  *    This mode supports the 216-color range of `TB_OUTPUT_256` only, but you
  *    don't need to provide an offset:
  *                0x00   (1): `TB_DEFAULT`
- *          0x01..0xd8 (216): 216 different colors
+ *          0x01.0xd8 (216): 216 different colors
  *
- * 4. `TB_OUTPUT_GRAYSCALE`  => [0..24]
+ * 4. `TB_OUTPUT_GRAYSCALE`  => [0.24]
  *
  *    This mode supports the 24-color range of `TB_OUTPUT_256` only, but you
  *    don't need to provide an offset:
  *                0x00   (1): `TB_DEFAULT`
- *          0x01..0x18  (24): 24 different shades of gray
+ *          0x01.0x18  (24): 24 different shades of gray
  *
- * 5. `TB_OUTPUT_TRUECOLOR`  => [0x000000..0xffffff] + `TB_HI_BLACK`
+ * 5. `TB_OUTPUT_TRUECOLOR`  => [0x000000.0xffffff] + `TB_HI_BLACK`
  *
  *    This mode provides 24-bit color on supported terminals. The format is
  *    0xRRGGBB.

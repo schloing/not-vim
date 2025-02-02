@@ -22,12 +22,9 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
     assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
     buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
-
-    // TODO: load cursor position from some file
-
     cvector_reserve(buff->lines, NV_LINE_CAP);
     cvector_reserve(buff->buffer, NV_BUFF_CAP);
-    
+
     buff->chunk = NV_BUFF_CAP;
     buff->path = path;
     buff->_begin_line = 0;
@@ -62,20 +59,30 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 }
 
 struct nv_buff_line* currline(struct nv_buff* buff) {
-    return buff->lines[buff->cursors[NV_PRIMARY_CURSOR]->line];
+    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
+    return &buff->lines[line];
+}
+
+struct nv_buff_line* prevline(struct nv_buff* buff) {
+    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
+    if ((int)line <= 0) return NULL;
+    return &buff->lines[line - 1];
 }
 
 struct nv_buff_line* nextline(struct nv_buff* buff) {
-    return buff->lines[buff->cursors[NV_PRIMARY_CURSOR]->line];
+    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
+    if (buff->_line_count < (int)line + 1) return NULL;
+    return &buff->lines[line + 1];
 }
 
 struct nv_buff_line* line(struct nv_buff* buff, int lineno) {
-    return buff->lines[lineno];
+    if (lineno < 0 || buff->_line_count < lineno) return NULL;
+    return &buff->lines[lineno];
 }
 
-void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
-    char* b = buffer->buffer;
-    if (buffer->buffer == NULL) return;
+void nv_load_file_buffer(struct nv_buff* buff, int* out_line_count) {
+    char* b = buff->buffer;
+    if (buff->buffer == NULL) return;
     struct nv_buff_line line = { 0 };
     int i = 0, line_count = 0;
 
@@ -84,7 +91,7 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
             line.end = i;
             line.length = line.end - line.begin - 1;
 
-            cvector_push_back(buffer->lines, line);
+            cvector_push_back(buff->lines, line);
 
             line.begin = i + 1;
             line_count++;
@@ -103,15 +110,19 @@ void _nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count) {
 
 void nv_free_buffers(struct nv_editor* editor) {
     NV_ASSERT(editor->buffers);
+    struct nv_buff* buff;
 
     for (size_t i = 0; i < cvector_size(editor->buffers); i++) {
-        if (editor->buffers[i].file != NULL)
-            fclose(editor->buffers[i].file);
+        buff = &editor->buffers[i];
+
+        if (buff->file != NULL)
+            fclose(buff->file);
    
-        cvector_free(editor->buffers[i].lines);
-        cvector_free(editor->buffers[i].cursors);
-        cvector_free(editor->buffers[i].buffer);
-        editor->buffers[i].buffer = NULL;
+        cvector_free(buff->lines);
+        cvector_free(buff->cursors);
+        cvector_free(buff->buffer);
+
+        buff->buffer = NULL;
     }
     
     cvector_free(editor->buffers);
