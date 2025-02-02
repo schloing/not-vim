@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../events.h"
-#include "../../plugin.h"
-#include "../../termbox2.h"
+#include "././events.h"
+#include "././plugin.h"
+#include "././termbox2.h"
 
 static void plugload_open_window() {
     tb_print(1, 1, TB_256_BLACK, 255, "plugload_open_window");

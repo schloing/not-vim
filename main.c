@@ -16,7 +16,7 @@
 
 static void load_plugload(struct nv_editor* editor) {
     struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };
-    nv_buffer_init(&logbuff, NULL);
+    nv_buffer_init(&logbuff, NULL); // FIXME: lbinfo path overwritten with nv_buffer_init path
     nv_push_buffer(editor, logbuff);
 
     void* handle = dlopen("./plugload.so", RTLD_NOW | RTLD_GLOBAL);

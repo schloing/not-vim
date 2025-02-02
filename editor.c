@@ -6,6 +6,7 @@
 #include "assert.h"
 #include "buffer.h"
 #include "color.h"
+#include "cursorhelp.h"
 #include "cursor.h"
 #include "cvector.h"
 #include "editor.h"
@@ -37,7 +38,8 @@ void nv_editor_init(struct nv_editor* editor) {
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     struct cursor c = buffer->cursors[0];
-    tb_set_cell(buffer->info._lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+    struct nv_buff_line line = buffer->lines[c.line];
+    tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
     tb_present();
 }
 
@@ -100,33 +102,33 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            nv_cursor_move_up(&buffer->info, cursor, 1);
+            nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            nv_cursor_move_down(&buffer->info, cursor, 1);
+            nv_cursor_move_down(buffer, cursor, 1);
             break;
         }
     } else {
         switch (ev->ch) {
         case 'j': 
-            nv_cursor_move_down(&buffer->info, cursor, 1);
+            nv_cursor_move_down(buffer, cursor, 1);
             break;
 
         case 'k': 
-            nv_cursor_move_up(&buffer->info, cursor, 1);
+            nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case 'h':
-            nv_cursor_move_left(&buffer->info, cursor, 1);
+            nv_cursor_move_left(buffer, cursor, 1);
             break;
 
         case 'l':
-            nv_cursor_move_right(&buffer->info, cursor, 1);
+            nv_cursor_move_right(buffer, cursor, 1);
             break;
        
         default:
-            nv_cursor_insert_ch(&buffer->info, cursor, ev->ch);
+            nv_cursor_insert_ch(buffer, cursor, ev->ch);
             break;
         }
     }
@@ -136,7 +138,7 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
 }
 
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
-    buffer.info.id = cvector_size(editor->buffers);
+    buffer.id = cvector_size(editor->buffers);
     cvector_push_back(editor->buffers, buffer);
 }
 
@@ -160,30 +162,30 @@ _nv_draw_buffer(struct nv_editor* editor) {
 
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
 
-    switch (buffer->info.type) {
+    switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:     
     case NV_BUFFTYPE_SOURCE:
         int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
-        if (!buffer->info.loaded) {
-            _nv_load_file_buffer(buffer, &buffer->info._line_count);
-            buffer->info._lines_col_size = count_recur(buffer->info._line_count);
-            buffer->info.loaded = true;
+        if (!buffer->loaded) {
+            nv_load_file_buffer(buffer, &buffer->_line_count);
+            buffer->_lines_col_size = count_recur(buffer->_line_count);
+            buffer->loaded = true;
         }
 
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if ((int)lineno >= buffer->info._line_count) return;
+            if ((int)lineno >= buffer->_line_count) return;
 
-            struct nv_buff_line l = buffer->info.lines[lineno];
+            struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
          
             char* line = malloc(linesz + 1);
-            memcpy(line, &buffer->info.buffer[l.begin], linesz);
+            memcpy(line, &buffer->buffer[l.begin], linesz);
             line[linesz] = '\0';
 
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->info._lines_col_size, lineno + 1, line);
+            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->_lines_col_size, lineno + 1, line);
             free(line);
         }
 
@@ -194,7 +196,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
         break;
 
     default:
-        fprintf(stderr, "unsupported bufftype %d\n", buffer->info.type);
+        fprintf(stderr, "unsupported bufftype %d\n", buffer->type);
         break;
     }
 }
@@ -203,7 +205,7 @@ static void
 _nv_draw_status(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
-    if (asprintf(&prompt, "[%zu] %s", buffer->info.id, buffer->info.path) == -1) return;
+    if (asprintf(&prompt, "[%zu] %s", buffer->id, buffer->path) == -1) return;
     tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }
