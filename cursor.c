@@ -9,7 +9,7 @@ static size_t _nv_get_line_length(struct nv_buff_line line) {
 }
 
 
-void nv_cursor_insert_ch(struct nv_buff_internal* buffer, struct cursor* cursor, char ch) {
+void nv_cursor_insert_ch(struct nv_buff_info* buffer, struct cursor* cursor, char ch) {
     struct nv_buff_line* l = line(buffer, cursor->line);
     size_t row = l->begin + cursor->x;
 
@@ -20,7 +20,7 @@ void nv_cursor_insert_ch(struct nv_buff_internal* buffer, struct cursor* cursor,
     cursor->x++;
 }
 
-void nv_cursor_move_down(struct nv_buff_internal* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_down(struct nv_buff_info* buffer, struct cursor* cursor, int amt) {
     struct nv_buff_line* curr = currline(buffer), *next = nextline(buffer);
 
     if (cursor->y <= tb_height() - 3 && cursor->line < buffer->_line_count) {
@@ -35,7 +35,7 @@ void nv_cursor_move_down(struct nv_buff_internal* buffer, struct cursor* cursor,
     }
 }
 
-void nv_cursor_move_up(struct nv_buff_internal* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_up(struct nv_buff_info* buffer, struct cursor* cursor, int amt) {
     if (cursor->y > 0 && cursor->line > 0) {
         cursor->line--;
         cursor->y--;
@@ -48,14 +48,14 @@ void nv_cursor_move_up(struct nv_buff_internal* buffer, struct cursor* cursor, i
     }
 }
 
-void nv_cursor_move_left(struct nv_buff_internal* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_left(struct nv_buff_info* buffer, struct cursor* cursor, int amt) {
     if (cursor->x > 0)
         cursor->x--;
 
     cursor->xtmp = cursor->x;
 }
 
-void nv_cursor_move_right(struct nv_buff_internal* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_right(struct nv_buff_info* buffer, struct cursor* cursor, int amt) {
     struct nv_buff_line* line = LINE(buffer, cursor->line);
 
     if (cursor->x < nv_get_line_length(*line)) 
@@ -64,6 +64,6 @@ void nv_cursor_move_right(struct nv_buff_internal* buffer, struct cursor* cursor
     cursor->xtmp = cursor->x;
 }
 
-struct cursor* nv_primary_cursor(struct nv_buff_internal* buffer) {
+struct cursor* nv_primary_cursor(struct nv_buff_info* buffer) {
     return buffer->cursors[NV_PRIMARY_CURSOR];
 }
