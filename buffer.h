@@ -21,7 +21,7 @@ struct nv_window {
 #define NV_LINE_CAP     32
 
 struct nv_buff {
-    struct nv_buff_internal internal;
+    struct nv_buff_info info;
     cvector_vector_type(struct cursor) cursors;
 };
 

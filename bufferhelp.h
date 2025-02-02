@@ -41,7 +41,7 @@ struct nv_buff_line {
 };
 
 
-struct nv_buff_internal {
+struct nv_buff_info {
     size_t         id;      // id for buffer
     enum nv_buff_t type;    // what the buffer shows
     char*          path;    // path of buffer
