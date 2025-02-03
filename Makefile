@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
+CFLAGS := -ggdb -O0 -Wall -Wextra -ldl -Werror -Wno-unused-parameter
 PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c

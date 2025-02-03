@@ -71,20 +71,20 @@ struct nv_buff_line* prevline(struct nv_buff* buff) {
 
 struct nv_buff_line* nextline(struct nv_buff* buff) {
     size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if (buff->_line_count < (int)line + 1) return NULL;
+    if (buff->_line_count < line + 1) return NULL;
     return &buff->lines[line + 1];
 }
 
-struct nv_buff_line* line(struct nv_buff* buff, int lineno) {
-    if (lineno < 0 || buff->_line_count < lineno) return NULL;
+struct nv_buff_line* line(struct nv_buff* buff, size_t lineno) {
+    if (buff->_line_count < lineno) return NULL;
     return &buff->lines[lineno];
 }
 
-void nv_load_file_buffer(struct nv_buff* buff, int* out_line_count) {
+void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     char* b = buff->buffer;
     if (buff->buffer == NULL) return;
     struct nv_buff_line line = { 0 };
-    int i = 0, line_count = 0;
+    size_t i = 0, line_count = 0;
 
     while (b[i++] != '\0') {
         if (b[i] == '\n') {

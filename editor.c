@@ -11,11 +11,12 @@
 #include "cvector.h"
 #include "editor.h"
 
-static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
-static void _nv_redraw_all(struct nv_editor* editor);
+extern int tb_clear_region(int, int);
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
+static void _nv_redraw_all(struct nv_editor* editor);
+static void _nv_draw_cursor(struct nv_editor* editor);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
 
@@ -38,7 +39,7 @@ void nv_editor_init(struct nv_editor* editor) {
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     struct cursor c = buffer->cursors[0];
-    struct nv_buff_line line = buffer->lines[c.line];
+
     tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
     tb_present();
 }
@@ -99,14 +100,21 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     struct cursor* cursor = &buffer->cursors[0];
     if (!cursor) return;
 
+    editor->inputs[0] = ev->key;
+    editor->inputs[1] = 0;
+
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            nv_cursor_move_up(buffer, cursor, 1);
+            if (buffer->_begin_line > 0)
+                buffer->_begin_line--;
+            // nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            nv_cursor_move_down(buffer, cursor, 1);
+            if (buffer->_begin_line < buffer->_line_count)
+                buffer->_begin_line++;
+            // nv_cursor_move_down(buffer, cursor, 1);
             break;
         }
     } else {
@@ -176,7 +184,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if ((int)lineno >= buffer->_line_count) return;
+            if (lineno >= buffer->_line_count) return;
 
             struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
