@@ -6,6 +6,8 @@
 #include "buffer.h"
 #include "cvector.h"
 
+#define INPUT_BACKLOG_CAP 5
+
 typedef struct nv_buff* nv_buff_vec;
 
 struct nv_editor {
@@ -18,6 +20,7 @@ struct nv_editor {
 #endif
     int         status;      // status codes of termbox + notvim operations
     bool        running;     // mainloop
+    char        inputs[INPUT_BACKLOG_CAP];
     struct nv_conf nv_conf;  // default config for buffers
 };
 

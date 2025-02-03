@@ -62,9 +62,9 @@ struct nv_buff {
     char*           path;
     size_t          chunk;
     bool            loaded;
-    int             _begin_line;
-    int             _lines_col_size;
-    int             _line_count;
+    size_t         _begin_line;
+    size_t         _lines_col_size;
+    size_t         _line_count;
     cvector(char) buffer;
     cvector(struct nv_buff_line) lines;
     cvector(struct cursor) cursors;
@@ -73,9 +73,9 @@ struct nv_buff {
 struct nv_buff_line* currline(struct nv_buff* buff);
 struct nv_buff_line* prevline(struct nv_buff* buff);
 struct nv_buff_line* nextline(struct nv_buff* buff);
-struct nv_buff_line* line(struct nv_buff* buff, int lineno);
+struct nv_buff_line* line(struct nv_buff* buff, size_t lineno);
 size_t nv_get_line_length(struct nv_buff_line line);
 void nv_buffer_init(struct nv_buff* buff, char* path);
-void nv_load_file_buffer(struct nv_buff* buffer, int* out_line_count);
+void nv_load_file_buffer(struct nv_buff* buffer, size_t* out_line_count);
 
 #endif

@@ -2,10 +2,10 @@
 #define CURSOR_H
 
 struct cursor {
-    int x;
-    int y;
-    int line;
-    bool stick; // stick to eol
+    size_t x;
+    size_t xdraw;
+    size_t y;
+    size_t line;
     char ch;
     size_t buff_id;
 };

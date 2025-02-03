@@ -1,5 +1,6 @@
 #include "buffer.h"
 #include "cursor.h"
+#include "termbox2.h"
 
 size_t nv_get_line_length(struct nv_buff_line line) {
     int end_of_line = line.end - line.begin - 1;
@@ -16,13 +17,18 @@ void nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch)
 
     cursor->x++;
 }
+
 static void _nv_clamp_x(struct nv_buff_line* line, struct cursor* cursor) {
-    if (cursor->x > line->length)
-        cursor->stick = true;
+    if (cursor->x > line->length) {
+        cursor->xdraw = line->length;
+        return;
+    }
+
+    cursor->xdraw = cursor->x;
 }
 
 void nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    if (cursor->y <= tb_height() - 3 && cursor->line < buffer->_line_count) {
+    if (cursor->y <= (size_t)tb_height() - 3 && cursor->line < buffer->_line_count) {
         cursor->line++;
         cursor->y++;
     } else if (cursor->line >= buffer->_line_count) {
@@ -61,7 +67,7 @@ void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt)
 void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) {
     struct nv_buff_line* line = currline(buffer);
 
-    if (cursor->x < (int)nv_get_line_length(*line)) 
+    if (cursor->x < nv_get_line_length(*line)) 
         cursor->x++;
     
     // cursor->xtmp = cursor->x;
