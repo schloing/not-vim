@@ -18,6 +18,7 @@ static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void _nv_redraw_all(struct nv_editor* editor);
+static void _nv_draw_windows(struct nv_editor* editor);
 static void _nv_draw_cursor(struct nv_editor* editor);
 static void _nv_draw_buffer(struct nv_editor* editor);
 static void _nv_draw_status(struct nv_editor* editor);
@@ -25,7 +26,7 @@ static void _nv_draw_status(struct nv_editor* editor);
 void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
 
-    cvector_reserve(editor->buffers, 8);
+    cvector_reserve(editor->windows, 8);
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
     
@@ -58,8 +59,9 @@ static void _nv_redraw_all(struct nv_editor* editor) {
     if (editor->nv_conf.show_headless) return;
 
     tb_clear();
-    _nv_draw_buffer(editor);
-    _nv_draw_cursor(editor);
+    _nv_draw_windows(editor);
+//  _nv_draw_buffer(editor);
+//  _nv_draw_cursor(editor);
     _nv_draw_status(editor);
     tb_present();
 }
@@ -79,8 +81,9 @@ void nv_mainloop(struct nv_editor* editor) {
         switch (ev.type) {
         case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
-            _nv_draw_buffer(editor);
-            _nv_get_input(editor, &ev);
+ //         _nv_draw_buffer(editor);
+//          _nv_get_input(editor, &ev);
+            editor->running = false;
 
             break;
 
@@ -99,7 +102,11 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
-static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
+static
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
+void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (editor->nv_conf.show_headless) 
         return;
 
@@ -163,20 +170,21 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
         }
     }
 
-    _nv_draw_buffer(editor);
+//  _nv_draw_buffer(editor);
     _nv_draw_cursor(editor);
 }
 
-void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
-    buffer.id = cvector_size(editor->buffers);
-    cvector_push_back(editor->buffers, buffer);
-}
+//  void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
+//      buffer.id = cvector_size(editor->windows);
+//      cvector_push_back(editor->windows, buffer);
+//  }
 
 static struct nv_buff*
 _nv_get_active_buffer(struct nv_editor* editor) {
-    struct nv_buff* buffer = (struct nv_buff*)&editor->buffers[editor->peek];
-    editor->current = buffer;
-    return buffer;
+//  struct nv_buff* buffer = (struct nv_buff*)&editor->windows[editor->peek];
+//  editor->current = buffer;
+//  return buffer;
+    return NULL;
 }
 
 // calculate width of number
@@ -186,7 +194,22 @@ static int count_recur(int n) {
     return 1 + count_recur(n / 10);
 }
 
+#include "window.h"
+
 static void
+_nv_draw_windows(struct nv_editor* editor) {
+    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
+        struct nv_window window = editor->windows[i];
+        for (int x = 0; x < window.x; x++)
+            for (int y = 0; y < window.y; y++)
+                tb_set_cell(window.x + x, window.y + y, 'h', TB_256_WHITE, TB_256_BLACK);
+    }
+}
+
+static void
+#ifdef __GNUC__
+__attribute__ ((unused))
+#endif
 _nv_draw_buffer(struct nv_editor* editor) {
     tb_clear_region(0, tb_height() - 1);
 
@@ -241,9 +264,9 @@ char* nv_mode_str[NV_MODE_INSERTS + 1]  = {
 
 static void
 _nv_draw_status(struct nv_editor* editor) {
-    struct nv_buff* buffer = _nv_get_active_buffer(editor);
-    char* prompt;
-    if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) == -1) return;
-    tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
-    free(prompt);
+//  struct nv_buff* buffer = _nv_get_active_buffer(editor);
+//  char* prompt;
+//  if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) == -1) return;
+//  tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
+//  free(prompt);
 }
