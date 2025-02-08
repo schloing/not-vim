@@ -2,7 +2,7 @@ CC := gcc
 CFLAGS := -ggdb -O0 -Wall -Wextra -ldl -Werror -Wno-unused-parameter
 PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
-SOURCES := editor.c main.c buffer.c cursor.c
+SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
 

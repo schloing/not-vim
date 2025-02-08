@@ -109,22 +109,22 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
 }
 
 void nv_free_buffers(struct nv_editor* editor) {
-    NV_ASSERT(editor->buffers);
-    struct nv_buff* buff;
+    NV_ASSERT(editor->windows);
+//  struct nv_buff* buff;
 
-    for (size_t i = 0; i < cvector_size(editor->buffers); i++) {
-        buff = &editor->buffers[i];
+    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
+//      buff = &editor->windows[i];
 
-        if (buff->file != NULL)
-            fclose(buff->file);
-   
-        cvector_free(buff->lines);
-        cvector_free(buff->cursors);
-        cvector_free(buff->buffer);
-
-        buff->buffer = NULL;
+//      if (buff->file != NULL)
+//          fclose(buff->file);
+// 
+//      cvector_free(buff->lines);
+//      cvector_free(buff->cursors);
+//      cvector_free(buff->buffer);
+//
+//      buff->buffer = NULL;
     }
     
-    cvector_free(editor->buffers);
-    editor->buffers = NULL;
+    cvector_free(editor->windows);
+    editor->windows = NULL;
 }

@@ -13,17 +13,18 @@
 #include "editor.h"
 #include "plugin.h"
 #include "termbox2.h"
+#include "window.h"
 
 static void load_plugload(struct nv_editor* editor) {
-    struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };
-    nv_buffer_init(&logbuff, NULL); // FIXME: lbinfo path overwritten with nv_buffer_init path
-    nv_push_buffer(editor, logbuff);
+//  struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };
+//  nv_buffer_init(&logbuff, NULL); // FIXME: lbinfo path overwritten with nv_buffer_init path
+//  nv_push_buffer(editor, logbuff);
 
     void* handle = dlopen("./plugload.so", RTLD_NOW | RTLD_GLOBAL);
 
     if (!handle) {
         // plugload.so not found?
-        sprintf(logbuff.buffer, "plugin load failed: %s\n", dlerror());
+//      sprintf(logbuff.buffer, "plugin load failed: %s\n", dlerror());
         return;
     }
 
@@ -31,12 +32,12 @@ static void load_plugload(struct nv_editor* editor) {
 
     if (!plugload) {
         // _NV_PLUGIN_DESCRIPTOR wasn't defined
-        sprintf(logbuff.buffer, "could not find symbol _NV_PLUGIN_DESCRIPTOR: %s\n", dlerror());
+//      sprintf(logbuff.buffer, "could not find symbol _NV_PLUGIN_DESCRIPTOR: %s\n", dlerror());
         goto call_dlclose;
     }
 
-    sprintf(logbuff.buffer, "successfully loaded %s: %s v%d\n",
-            plugload->author, plugload->name, plugload->iteration);
+//  sprintf(logbuff.buffer, "successfully loaded %s: %s v%d\n",
+//          plugload->author, plugload->name, plugload->iteration);
 
 //  plugload->main();
 
@@ -58,10 +59,16 @@ int main(int argc, char** argv) {
 
     load_plugload(&editor);
 
-    struct nv_buff buff = { .id = 1 };
-    editor.peek = buff.id;
-    nv_buffer_init(&buff, argv[1]);
-    nv_push_buffer(&editor, buff);
+    for (int i = 1; i < argc; i++) {
+        struct nv_window window = { .buff_id = i };
+        nv_buffer_init(&window.buff, argv[i]);
+        nv_open_window(&editor, &window);
+    }
+
+//  struct nv_buff buff = { .id = 1 };
+//  editor.peek = buff.id;
+//  nv_buffer_init(&buff, argv[1]);
+//  nv_push_buffer(&editor, buff);
 
     editor.width = tb_width();
     editor.height = tb_height();
