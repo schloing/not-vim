@@ -2,10 +2,9 @@
 #define CURSOR_H
 
 struct cursor {
-    size_t x;
-    size_t xdraw;
-    size_t y;
-    size_t line;
+    int x;
+    int y;
+    int line;
     char ch;
     size_t buff_id;
 };

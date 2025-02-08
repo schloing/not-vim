@@ -4,22 +4,30 @@
 #include <stdbool.h>
 #define TUI
 #include "buffer.h"
+#include "window.h"
 #include "cvector.h"
 
 #define INPUT_BACKLOG_CAP 5
 
-typedef struct nv_buff* nv_buff_vec;
+typedef enum {
+    NV_MODE_NAVIGATE,
+    NV_MODE_INSERT,
+    NV_MODE_HIGHLIGHT,
+    NV_MODE_INSERTS, // insert*
+} nv_mode;
+
+extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
-    nv_buff_vec buffers;     // buffers
-    size_t      peek;        // index of current buffer
-    struct nv_buff* current; // &buffers[peek]
+    cvector(struct nv_window) buffers;
+    struct nv_buff* current;
 #ifdef TUI                   // if there is ever a qt/gui version
-    int         width;       // not necessarily termbox window geometry
-    int         height;      // custom wrap width (80 cols) might change this
+    int         width;
+    int         height;
 #endif
-    int         status;      // status codes of termbox + notvim operations
-    bool        running;     // mainloop
+    nv_mode     mode;
+    int         status;
+    bool        running;
     char        inputs[INPUT_BACKLOG_CAP];
     struct nv_conf nv_conf;  // default config for buffers
 };

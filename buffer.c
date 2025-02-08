@@ -27,7 +27,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
 
     buff->chunk = NV_BUFF_CAP;
     buff->path = path;
-    buff->_begin_line = 0;
+    buff->top_line = 0;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -71,12 +71,12 @@ struct nv_buff_line* prevline(struct nv_buff* buff) {
 
 struct nv_buff_line* nextline(struct nv_buff* buff) {
     size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if (buff->_line_count < line + 1) return NULL;
+    if (buff->line_count < line + 1) return NULL;
     return &buff->lines[line + 1];
 }
 
 struct nv_buff_line* line(struct nv_buff* buff, size_t lineno) {
-    if (buff->_line_count < lineno) return NULL;
+    if (buff->line_count < lineno) return NULL;
     return &buff->lines[lineno];
 }
 
