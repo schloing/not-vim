@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +16,7 @@ extern int tb_clear_region(int, int);
 static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
+static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void _nv_redraw_all(struct nv_editor* editor);
 static void _nv_draw_cursor(struct nv_editor* editor);
 static void _nv_draw_buffer(struct nv_editor* editor);
@@ -24,6 +26,8 @@ void nv_editor_init(struct nv_editor* editor) {
     NV_ASSERT(editor);
 
     cvector_reserve(editor->buffers, 8);
+
+    editor->mode = (nv_mode)NV_MODE_NAVIGATE;
     
     editor->nv_conf = (struct nv_conf){
         .tab_width     = NV_TAB_WIDTH,
@@ -36,11 +40,17 @@ void nv_editor_init(struct nv_editor* editor) {
     };
 }
 
+static void _nv_set_mode(struct nv_editor* editor, nv_mode mode) {
+    editor->mode = mode;
+    _nv_draw_status(editor);
+}
+
 static void _nv_draw_cursor(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     struct cursor c = buffer->cursors[0];
-
-    tb_set_cell(buffer->_lines_col_size + c.x + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+    int row = line(buffer, c.line)->length;
+    int effective_row = (c.x > row ? row : c.x) < 0 ? 0 : (c.x > row ? row : c.x); // FIXME
+    tb_set_cell(buffer->linecol_size + effective_row + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
     tb_present();
 }
 
@@ -69,8 +79,6 @@ void nv_mainloop(struct nv_editor* editor) {
         switch (ev.type) {
         case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
-            if (ev.key == TB_KEY_ESC) return;
-
             _nv_draw_buffer(editor);
             _nv_get_input(editor, &ev);
 
@@ -106,38 +114,52 @@ static void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            if (buffer->_begin_line > 0)
-                buffer->_begin_line--;
+            if (buffer->top_line > 0)
+                buffer->top_line--;
             // nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            if (buffer->_begin_line < buffer->_line_count)
-                buffer->_begin_line++;
+            if (buffer->top_line < buffer->line_count)
+                buffer->top_line++;
             // nv_cursor_move_down(buffer, cursor, 1);
             break;
         }
     } else {
-        switch (ev->ch) {
-        case 'j': 
-            nv_cursor_move_down(buffer, cursor, 1);
-            break;
+        if (editor->mode == NV_MODE_INSERT) {
+            if (isprint(ev->ch))
+                nv_cursor_insert_ch(buffer, cursor, ev->ch);
+            else {
+                switch (ev->key) {
+                    case TB_KEY_ESC:
+                        _nv_set_mode(editor, NV_MODE_NAVIGATE);
+                }
+            }
+        }
+        else {
+            if (ev->key == TB_KEY_ESC) editor->running = false;
 
-        case 'k': 
-            nv_cursor_move_up(buffer, cursor, 1);
-            break;
+            switch (ev->ch) {
+            case 'i':
+                _nv_set_mode(editor, NV_MODE_INSERT);
+                break;
 
-        case 'h':
-            nv_cursor_move_left(buffer, cursor, 1);
-            break;
+            case 'j': 
+                nv_cursor_move_down(buffer, cursor, 1);
+                break;
 
-        case 'l':
-            nv_cursor_move_right(buffer, cursor, 1);
-            break;
-       
-        default:
-            nv_cursor_insert_ch(buffer, cursor, ev->ch);
-            break;
+            case 'k': 
+                nv_cursor_move_up(buffer, cursor, 1);
+                break;
+
+            case 'h':
+                nv_cursor_move_left(buffer, cursor, 1);
+                break;
+
+            case 'l':
+                nv_cursor_move_right(buffer, cursor, 1);
+                break;
+            }
         }
     }
 
@@ -176,15 +198,15 @@ _nv_draw_buffer(struct nv_editor* editor) {
         int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
-            nv_load_file_buffer(buffer, &buffer->_line_count);
-            buffer->_lines_col_size = count_recur(buffer->_line_count);
+            nv_load_file_buffer(buffer, &buffer->line_count);
+            buffer->linecol_size = count_recur(buffer->line_count);
             buffer->loaded = true;
         }
 
         for (int row = 0; row < tb_height() - 1; row++) {
             size_t lineno, linesz;
             lineno = top + row;
-            if (lineno >= buffer->_line_count) return;
+            if (lineno >= buffer->line_count) return;
 
             struct nv_buff_line l = buffer->lines[lineno];
             linesz = l.end - l.begin;
@@ -193,7 +215,7 @@ _nv_draw_buffer(struct nv_editor* editor) {
             memcpy(line, &buffer->buffer[l.begin], linesz);
             line[linesz] = '\0';
 
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->_lines_col_size, lineno + 1, line);
+            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, lineno + 1, line);
             free(line);
         }
 
@@ -209,11 +231,19 @@ _nv_draw_buffer(struct nv_editor* editor) {
     }
 }
 
+// extern char* nv_mode_str
+char* nv_mode_str[NV_MODE_INSERTS + 1]  = {
+    "NAV",
+    "INS",
+    "HIGH",
+    "INS*",
+};
+
 static void
 _nv_draw_status(struct nv_editor* editor) {
     struct nv_buff* buffer = _nv_get_active_buffer(editor);
     char* prompt;
-    if (asprintf(&prompt, "[%zu] %s", buffer->id, buffer->path) == -1) return;
+    if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) == -1) return;
     tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s", editor->width, editor->width, prompt);
     free(prompt);
 }

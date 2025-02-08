@@ -21,7 +21,7 @@ struct nv_conf {
     bool show_headless;
 };
 
-enum nv_buff_t {
+enum nv_bufftype {
     NV_BUFFTYPE_STDIN     = 1,
     NV_BUFFTYPE_STDOUT    = 2,
     NV_BUFFTYPE_BROWSER   = 4,
@@ -30,7 +30,7 @@ enum nv_buff_t {
     NV_BUFFTYPE_PLAINTEXT = 32,
 };
 
-enum nv_buff_f {
+enum nv_bufffmt {
     NV_FILE_FORMAT_BINARY,
     NV_FILE_FORMAT_SOURCE,  // lsp + treesitter impl
     NV_FILE_FORMAT_PLAINTEXT,
@@ -42,30 +42,23 @@ struct nv_buff_line {
     size_t length;
 };
 
-struct nv_window {
-    int x;
-    int y;
-    int w;
-    int h;
-    size_t buff_id;
-};
-
 #define NV_BUFFID_UNSET 0
 #define NV_BUFF_CAP     1024 * 16
 #define NV_LINE_CAP     32
 
 struct nv_buff {
-    size_t          id;
-    enum nv_buff_t  type;
-    enum nv_buff_f  format;
-    FILE*           file;
-    char*           path;
-    size_t          chunk;
-    bool            loaded;
-    size_t         _begin_line;
-    size_t         _lines_col_size;
-    size_t         _line_count;
-    cvector(char) buffer;
+    enum nv_bufftype type;
+    enum nv_bufffmt  format;
+    FILE*  file;
+    char*  path;
+    size_t chunk;
+    bool   loaded;
+    struct {
+        size_t top_line;
+        size_t linecol_size;
+        size_t line_count;
+    };
+    cvector(char)  buffer;
     cvector(struct nv_buff_line) lines;
     cvector(struct cursor) cursors;
 };
