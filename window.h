@@ -9,7 +9,7 @@ struct nv_window {
     int padding;
     int color;
     size_t buff_id;
-    struct nv_buff buff;
+    struct nv_buff buffer;
 };
 
 #endif

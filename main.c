@@ -61,14 +61,9 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; i++) {
         struct nv_window window = { .buff_id = i };
-        nv_buffer_init(&window.buff, argv[i]);
-        nv_open_window(&editor, &window);
+        nv_buffer_init(&window.buffer, argv[i]);
+        nv_open_window(&editor, window);
     }
-
-//  struct nv_buff buff = { .id = 1 };
-//  editor.peek = buff.id;
-//  nv_buffer_init(&buff, argv[1]);
-//  nv_push_buffer(&editor, buff);
 
     editor.width = tb_width();
     editor.height = tb_height();
