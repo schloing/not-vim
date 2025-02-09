@@ -20,7 +20,7 @@ static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void _nv_redraw_all(struct nv_editor* editor);
 static void _nv_draw_windows(struct nv_editor* editor);
 static void _nv_draw_cursor(struct nv_editor* editor);
-static void _nv_draw_buffer(struct nv_editor* editor);
+static void _nv_draw_buffer(struct nv_window* window);
 static void _nv_draw_status(struct nv_editor* editor);
 
 void nv_editor_init(struct nv_editor* editor) {
@@ -200,9 +200,16 @@ static void
 _nv_draw_windows(struct nv_editor* editor) {
     for (size_t i = 0; i < cvector_size(editor->windows); i++) {
         struct nv_window window = editor->windows[i];
-        for (int x = 0; x < window.x; x++)
-            for (int y = 0; y < window.y; y++)
-                tb_set_cell(window.x + x, window.y + y, 'h', TB_256_WHITE, TB_256_BLACK);
+        for (int x = 0; x < window.w; x++) {
+            for (int y = 0; y < window.h; y++) {
+#ifdef UNIMPL
+                if (x < window.padding || x > window.x + window.w + window.padding)
+                    tb_set_cell(window.x + x, window.y + y, ' ', TB_256_WHITE, TB_256_BLACK);
+                else
+#endif
+                    tb_set_cell(window.x + x, window.y + y, ' ', TB_256_BLACK, TB_256_WHITE);
+            }
+        }
     }
 }
 
@@ -210,10 +217,10 @@ static void
 #ifdef __GNUC__
 __attribute__ ((unused))
 #endif
-_nv_draw_buffer(struct nv_editor* editor) {
+_nv_draw_buffer(struct nv_window* window) {
     tb_clear_region(0, tb_height() - 1);
-
-    struct nv_buff* buffer = _nv_get_active_buffer(editor);
+    if (!window) return;
+    struct nv_buff* buffer = &window->buffer;
 
     switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:     

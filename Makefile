@@ -15,7 +15,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $^ $(LDFLAGS) -o $@
 
 debug:
-	gdb --args ./$(EXECUTABLE) main.c
+	gdb --args ./$(EXECUTABLE) main.c window.c
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
@@ -24,6 +24,6 @@ valgrind:
 	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind" ./$(EXECUTABLE) main.c
 
 run: $(EXECUTABLE)
-	./$(EXECUTABLE) main.c
+	./$(EXECUTABLE) main.c window.c
 
 .PHONY: all clean run valgrind
