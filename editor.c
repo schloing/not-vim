@@ -60,8 +60,6 @@ static void _nv_redraw_all(struct nv_editor* editor) {
 
     tb_clear();
     _nv_draw_windows(editor);
-//  _nv_draw_buffer(editor);
-//  _nv_draw_cursor(editor);
     _nv_draw_status(editor);
     tb_present();
 }
@@ -200,16 +198,7 @@ static void
 _nv_draw_windows(struct nv_editor* editor) {
     for (size_t i = 0; i < cvector_size(editor->windows); i++) {
         struct nv_window window = editor->windows[i];
-        for (int x = 0; x < window.w; x++) {
-            for (int y = 0; y < window.h; y++) {
-#ifdef UNIMPL
-                if (x < window.padding || x > window.x + window.w + window.padding)
-                    tb_set_cell(window.x + x, window.y + y, ' ', TB_256_WHITE, TB_256_BLACK);
-                else
-#endif
-                    tb_set_cell(window.x + x, window.y + y, ' ', TB_256_BLACK, TB_256_WHITE);
-            }
-        }
+        _nv_draw_buffer(&window);
     }
 }
 
@@ -233,7 +222,7 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
-        for (int row = 0; row < tb_height() - 1; row++) {
+        for (int row = window->y; row < window->y + window->h; row++) {
             size_t lineno, linesz;
             lineno = top + row;
             if (lineno >= buffer->line_count) return;
@@ -243,7 +232,13 @@ _nv_draw_buffer(struct nv_window* window) {
          
             char* line = malloc(linesz + 1);
             memcpy(line, &buffer->buffer[l.begin], linesz);
-            line[linesz] = '\0';
+
+            if (linesz > (size_t)window->w) {
+                linesz = (size_t)window->w;
+                line[window->w] = '\n';
+            } else {
+                line[linesz] = '\0';
+            }
 
             tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, lineno + 1, line);
             free(line);
