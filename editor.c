@@ -214,7 +214,7 @@ _nv_draw_buffer(struct nv_window* window) {
     switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:     
     case NV_BUFFTYPE_SOURCE:
-        int top = buffer->cursors[0].line - buffer->cursors[0].y;
+//      int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
             nv_load_file_buffer(buffer, &buffer->line_count);
@@ -222,26 +222,35 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
+        char* lbuf = malloc(window->w);
+        int idx = 0;
+
         for (int row = window->y; row < window->y + window->h; row++) {
-            size_t lineno, linesz;
-            lineno = top + row;
-            if (lineno >= buffer->line_count) return;
+            struct nv_buff_line* line = &buffer->lines[idx++];
+            size_t lsz = line->length > (size_t)window->w ? (size_t)window->w : line->length;
+            memcpy(lbuf, &buffer->buffer[line->begin], lsz);
+            if (line->length > (size_t)window->w) {
+                int iters = line->length % window->w;
+                struct nv_buff_line nl = { 0 };
 
-            struct nv_buff_line l = buffer->lines[lineno];
-            linesz = l.end - l.begin;
-         
-            char* line = malloc(linesz + 1);
-            memcpy(line, &buffer->buffer[l.begin], linesz);
+                for (int i = 0; i < iters; i++) {
+                    nl = (struct nv_buff_line) {
+                        .begin = i * window->w,
+                        .end = line->length - window->w * i
+                    };
+                
+                    nl.length = nl.end - nl.begin;
 
-            if (linesz > (size_t)window->w) {
-                linesz = (size_t)window->w;
-                line[window->w] = '\n';
+                    char* l = &lbuf[nl.begin];
+                    char b4 = l[nl.end];
+                    l[nl.end] = 0;
+                    tb_printf(0, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, '.', l);
+                    l[nl.end] = b4;
+                }
             } else {
-                line[linesz] = '\0';
+                lbuf[lsz] = 0;
+                tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
             }
-
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, lineno + 1, line);
-            free(line);
         }
 
         break;
