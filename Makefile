@@ -4,6 +4,7 @@ PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
+NVARGS := main.c
 EXECUTABLE := nv
 
 all: $(EXECUTABLE)
@@ -15,15 +16,15 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $^ $(LDFLAGS) -o $@
 
 debug:
-	gdb --args ./$(EXECUTABLE) main.c window.c
+	gdb --args ./$(EXECUTABLE) $(NVARGS)
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
 
 valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind" ./$(EXECUTABLE) main.c
+	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind" ./$(EXECUTABLE) $(NVARGS)
 
 run: $(EXECUTABLE)
-	./$(EXECUTABLE) main.c window.c
+	./$(EXECUTABLE) $(NVARGS)
 
 .PHONY: all clean run valgrind
