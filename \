@@ -203,6 +203,9 @@ _nv_draw_windows(struct nv_editor* editor) {
 }
 
 static void
+#ifdef __GNUC__
+__attribute__ ((unused))
+#endif
 _nv_draw_buffer(struct nv_window* window) {
     tb_clear_region(0, tb_height() - 1);
     if (!window) return;
@@ -219,7 +222,7 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
-        char* lbuf = calloc(window->w, sizeof(char));
+        char* lbuf = malloc(window->w);
         int idx = 0;
 
         for (int row = window->y; row < window->y + window->h; row++) {
@@ -229,19 +232,21 @@ _nv_draw_buffer(struct nv_window* window) {
 
             if (line->length > (size_t)window->w) {
                 tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf); // print l0
-                int iters = line->length / window->w;
+                int iters = line->length % window->w;
                 struct nv_buff_line nl = { 0 };
 
-                for (int i = 1; i <= iters; i++) {
+                for (int i = 1; i < iters; i++) {
                     nl = (struct nv_buff_line) {
-                        .begin = line->begin + i * window->w,
-                        .length = line->length - i * window->w
+                        .begin = i * window->w,
+                        .end = i * window->w + lsz - i * window->w
                     };
 
-                    if (i * window->w > (int)line->length) break;
-                    memcpy(lbuf, &buffer->buffer[nl.begin], nl.length);
-                    lbuf[nl.length] = '\0';
-                    tb_printf(0, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+                    memcpy(lbuf, &buffer->buffer[nl.begin], window->length);
+
+                    tb_printf(0, row += i, TB_256_WHITE, TB_256_BLACK, "begin:%d end:%d", nl.begin, nl.end);
+
+//                  lbuf[nl.length] = '\0';
+//                  tb_printf(0, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, '.', lbuf + nl.begin);
                 }
             } else {
                 lbuf[lsz] = 0;
