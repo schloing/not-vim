@@ -18,6 +18,7 @@ static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void _nv_redraw_all(struct nv_editor* editor);
+static void _nv_draw_background(struct nv_editor* editor);
 static void _nv_draw_windows(struct nv_editor* editor);
 static void _nv_draw_cursor(struct nv_editor* editor);
 static void _nv_draw_buffer(struct nv_window* window);
@@ -58,7 +59,7 @@ static void _nv_draw_cursor(struct nv_editor* editor) {
 static void _nv_redraw_all(struct nv_editor* editor) {
     if (editor->nv_conf.show_headless) return;
 
-    tb_clear();
+    _nv_draw_background(editor); // clear
     _nv_draw_windows(editor);
     _nv_draw_status(editor);
     tb_present();
@@ -98,6 +99,11 @@ void nv_mainloop(struct nv_editor* editor) {
         default: break;
         }
     }
+}
+
+static void _nv_draw_background(struct nv_editor* editor) {
+    tb_set_clear_attrs(TB_256_WHITE, TB_256_BLACK);
+    tb_clear();
 }
 
 static
@@ -204,7 +210,6 @@ _nv_draw_windows(struct nv_editor* editor) {
 
 static void
 _nv_draw_buffer(struct nv_window* window) {
-    tb_clear_region(0, tb_height() - 1);
     if (!window) return;
     struct nv_buff* buffer = &window->buffer;
 
@@ -221,6 +226,7 @@ _nv_draw_buffer(struct nv_window* window) {
 
         char* lbuf = calloc(window->w, sizeof(char));
         int idx = 0;
+        window->w -= buffer->linecol_size + 1;
 
         for (int row = window->y; row < window->y + window->h; row++) {
             struct nv_buff_line* line = &buffer->lines[idx++];
@@ -228,7 +234,7 @@ _nv_draw_buffer(struct nv_window* window) {
             memcpy(lbuf, &buffer->buffer[line->begin], lsz);
 
             if (line->length > (size_t)window->w) {
-                tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf); // print l0
+                tb_printf(window->x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf); // print l0
                 int iters = line->length / window->w;
                 struct nv_buff_line nl = { 0 };
 
@@ -241,13 +247,15 @@ _nv_draw_buffer(struct nv_window* window) {
                     if (i * window->w > (int)line->length) break;
                     memcpy(lbuf, &buffer->buffer[nl.begin], nl.length);
                     lbuf[nl.length] = '\0';
-                    tb_printf(0, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+                    tb_printf(window->x, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
                 }
             } else {
                 lbuf[lsz] = 0;
-                tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
+                tb_printf(window->x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
             }
         }
+
+        free(lbuf);
 
         break;
 

@@ -9,6 +9,8 @@
 #include "cvector.h"
 
 struct nv_conf {
+    int  bg;
+    int  fg;
     int  tab_width;
     bool expand_tab;
     bool auto_indent;
