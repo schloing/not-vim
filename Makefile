@@ -4,8 +4,9 @@ PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
-NVARGS := main.c
+NVARGS := main.c editor.c
 EXECUTABLE := nv
+GDBSERVER_PORT := 1234
 
 all: $(EXECUTABLE)
 
@@ -16,7 +17,10 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $^ $(LDFLAGS) -o $@
 
 debug:
-	gdb --args ./$(EXECUTABLE) $(NVARGS)
+	gdb -ex "target remote $(GDBSERVER_PORT)" --args ./$(EXECUTABLE) $(NVARGS)
+
+gdbserver:
+	gdbserver :$(GDBSERVER_PORT) ./$(EXECUTABLE) $(NVARGS)
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
