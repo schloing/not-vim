@@ -19,7 +19,7 @@ typedef enum {
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
-    cvector(struct nv_window) windows;
+    struct nv_window* window;
     struct nv_buff* current;
 #ifdef TUI                   // if there is ever a qt/gui version
     int         width;
@@ -52,7 +52,6 @@ void nv_editor_init(struct nv_editor* editor);
 void nv_render_term(struct nv_editor* editor);
 void nv_mainloop(struct nv_editor* editor);
 void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
-void nv_free_buffers(struct nv_editor* editor);
 void nv_open_window(struct nv_editor* editor, struct nv_window window);
 
 #endif

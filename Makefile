@@ -5,6 +5,7 @@ LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
 NVARGS := main.c editor.c
+VALGRINDARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind" 
 EXECUTABLE := nv
 GDBSERVER_PORT := 1234
 
@@ -26,7 +27,7 @@ clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
 
 valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind" ./$(EXECUTABLE) $(NVARGS)
+	valgrind $(VALGRINDARGS) ./$(EXECUTABLE) $(NVARGS)
 
 run: $(EXECUTABLE)
 	./$(EXECUTABLE) $(NVARGS)

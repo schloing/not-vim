@@ -11,39 +11,8 @@
 #include "cursor.h"
 #include "cvector.h"
 #include "editor.h"
-#include "plugin.h"
 #include "termbox2.h"
 #include "window.h"
-
-static void load_plugload(struct nv_editor* editor) {
-//  struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };
-//  nv_buffer_init(&logbuff, NULL); // FIXME: lbinfo path overwritten with nv_buffer_init path
-//  nv_push_buffer(editor, logbuff);
-
-    void* handle = dlopen("./plugload.so", RTLD_NOW | RTLD_GLOBAL);
-
-    if (!handle) {
-        // plugload.so not found?
-//      sprintf(logbuff.buffer, "plugin load failed: %s\n", dlerror());
-        return;
-    }
-
-    struct nv_plugin* plugload = (struct nv_plugin*)dlsym(handle, "_NV_PLUGIN_DESCRIPTOR");
-
-    if (!plugload) {
-        // _NV_PLUGIN_DESCRIPTOR wasn't defined
-//      sprintf(logbuff.buffer, "could not find symbol _NV_PLUGIN_DESCRIPTOR: %s\n", dlerror());
-        goto call_dlclose;
-    }
-
-//  sprintf(logbuff.buffer, "successfully loaded %s: %s v%d\n",
-//          plugload->author, plugload->name, plugload->iteration);
-
-//  plugload->main();
-
-call_dlclose:
-    dlclose(handle);
-}
 
 int main(int argc, char** argv) {
     int rv = 0;
@@ -57,12 +26,13 @@ int main(int argc, char** argv) {
         return rv;
     }
 
-    load_plugload(&editor);
-
     for (int i = 1; i < argc; i++) {
-        struct nv_window window = { .buff_id = i };
-        nv_buffer_init(&window.buffer, argv[i]);
-        nv_open_window(&editor, window);
+        struct nv_window* window = nv_find_empty_window(editor.window);
+        if (!window) {
+            tb_shutdown();
+            return -1;
+        }
+        nv_open_window(&editor, *window);
     }
 
     editor.width = tb_width();
@@ -71,6 +41,6 @@ int main(int argc, char** argv) {
     nv_mainloop(&editor);
 
     tb_shutdown();
-    nv_free_buffers(&editor);
+    nv_free_windows(editor.window);
     return rv;
 }

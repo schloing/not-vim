@@ -4,7 +4,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "assert.h"
 #include "buffer.h"
 #include "cvector.h"
 #include "editor.h"
@@ -18,7 +17,7 @@ bool is_elf(char* buffer) {
 }
 
 void nv_buffer_init(struct nv_buff* buff, char* path) {
-    NV_ASSERT(buff);
+    if (!buff) return;
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
     assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
     buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
@@ -108,23 +107,15 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     *out_line_count = line_count;
 }
 
-void nv_free_buffers(struct nv_editor* editor) {
-    NV_ASSERT(editor->windows);
-//  struct nv_buff* buff;
+void nv_free_buffer(struct nv_buff* buff) {
+    if (!buff) return;
 
-    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
-//      buff = &editor->windows[i];
+    if (buff->file) 
+        fclose(buff->file);
 
-//      if (buff->file != NULL)
-//          fclose(buff->file);
-// 
-//      cvector_free(buff->lines);
-//      cvector_free(buff->cursors);
-//      cvector_free(buff->buffer);
-//
-//      buff->buffer = NULL;
-    }
-    
-    cvector_free(editor->windows);
-    editor->windows = NULL;
+    cvector_free(buff->cursors);
+    cvector_free(buff->lines);
+    cvector_free(buff->buffer);
+    free(buff);
+    buff = NULL;
 }
