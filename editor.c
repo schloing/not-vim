@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include "termbox2.h"
 
-#include "assert.h"
 #include "buffer.h"
 #include "color.h"
 #include "cursorhelp.h"
@@ -25,11 +24,10 @@ static void _nv_draw_buffer(struct nv_window* window);
 static void _nv_draw_status(struct nv_editor* editor);
 
 void nv_editor_init(struct nv_editor* editor) {
-    NV_ASSERT(editor);
-
-    cvector_reserve(editor->windows, 8);
+    if (!editor) return;
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
+    editor->window = nv_window_init();
     
     editor->nv_conf = (struct nv_conf){
         .tab_width     = NV_TAB_WIDTH,
@@ -107,7 +105,7 @@ static void _nv_draw_background(struct nv_editor* editor) {
 }
 
 static
-#ifdef __GNUC__
+ #ifdef __GNUC__
 __attribute__((unused))
 #endif
 void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
@@ -202,16 +200,19 @@ static int count_recur(int n) {
 
 static void
 _nv_draw_windows(struct nv_editor* editor) {
-    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
-        struct nv_window window = editor->windows[i];
-        _nv_draw_buffer(&window);
-    }
+//  for (size_t i = 0; i < cvector_size(editor->windows); i++) {
+//      struct nv_window window = editor->windows[i];
+//      _nv_draw_buffer(&window);
+//  }
 }
 
 static void
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 _nv_draw_buffer(struct nv_window* window) {
     if (!window) return;
-    struct nv_buff* buffer = &window->buffer;
+    struct nv_buff* buffer = window->buffer;
 
     switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:     
