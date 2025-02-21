@@ -199,11 +199,16 @@ static int count_recur(int n) {
 #include "window.h"
 
 static void
-_nv_draw_windows(struct nv_editor* editor) {
-//  for (size_t i = 0; i < cvector_size(editor->windows); i++) {
-//      struct nv_window window = editor->windows[i];
-//      _nv_draw_buffer(&window);
-//  }
+_nv_draw_windows(struct nv_window* root) {
+    if (!root) return;
+
+    if (!root->active) {
+        _nv_draw_windows(root->left);
+        _nv_draw_windows(root->right);
+        return;
+    }
+
+    _nv_draw_buffer(root);
 }
 
 static void
