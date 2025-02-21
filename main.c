@@ -28,17 +28,22 @@ int main(int argc, char** argv) {
 
     editor.width = tb_width();
     editor.height = tb_height();
-    editor.window->max_w = editor.width;
-    editor.window->max_h = editor.height;
+    editor.window->wd.w = editor.width;
+    editor.window->wd.h = editor.height;
 
     for (int i = 1; i < argc; i++) {
         struct nv_window* window = nv_find_empty_window(editor.window);
         nv_redistribute(window->parent);
+
         if (!window) {
             tb_shutdown();
             return -1;
         }
-        nv_open_window(&editor, *window);
+
+        if (!window->buffer)
+            window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+
+        nv_buffer_init(window->buffer, argv[i]);
     }
 
     nv_mainloop(&editor);
