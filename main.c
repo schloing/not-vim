@@ -23,11 +23,17 @@ int main(int argc, char** argv) {
     if (!editor.nv_conf.show_headless && (rv = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(rv));
         editor.status = rv;
-        return rv;
+        goto clean_up;
     }
+
+    editor.width = tb_width();
+    editor.height = tb_height();
+    editor.window->max_w = editor.width;
+    editor.window->max_h = editor.height;
 
     for (int i = 1; i < argc; i++) {
         struct nv_window* window = nv_find_empty_window(editor.window);
+        nv_redistribute(window->parent);
         if (!window) {
             tb_shutdown();
             return -1;
@@ -35,11 +41,9 @@ int main(int argc, char** argv) {
         nv_open_window(&editor, *window);
     }
 
-    editor.width = tb_width();
-    editor.height = tb_height();
-
     nv_mainloop(&editor);
 
+clean_up:
     tb_shutdown();
     nv_free_windows(editor.window);
     return rv;
