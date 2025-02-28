@@ -9,6 +9,8 @@
 #include "cvector.h"
 
 struct nv_conf {
+    int  bg;
+    int  fg;
     int  tab_width;
     bool expand_tab;
     bool auto_indent;
@@ -63,12 +65,14 @@ struct nv_buff {
     cvector(struct cursor) cursors;
 };
 
+void nv_buffer_init(struct nv_buff* buff, char* path);
+void nv_buffer_open_file(struct nv_buff* buff, char* path);
+void nv_load_file_buffer(struct nv_buff* buffer, size_t* out_line_count);
+void nv_free_buffer(struct nv_buff* buff);
+size_t nv_get_line_length(struct nv_buff_line line);
 struct nv_buff_line* currline(struct nv_buff* buff);
 struct nv_buff_line* prevline(struct nv_buff* buff);
 struct nv_buff_line* nextline(struct nv_buff* buff);
 struct nv_buff_line* line(struct nv_buff* buff, size_t lineno);
-size_t nv_get_line_length(struct nv_buff_line line);
-void nv_buffer_init(struct nv_buff* buff, char* path);
-void nv_load_file_buffer(struct nv_buff* buffer, size_t* out_line_count);
 
 #endif

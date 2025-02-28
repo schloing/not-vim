@@ -4,7 +4,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "assert.h"
 #include "buffer.h"
 #include "cvector.h"
 #include "editor.h"
@@ -17,17 +16,9 @@ bool is_elf(char* buffer) {
     return true;
 }
 
-void nv_buffer_init(struct nv_buff* buff, char* path) {
-    NV_ASSERT(buff);
-    cvector_reserve(buff->cursors, NV_CURSOR_CAP);
-    assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
-    buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
-    cvector_reserve(buff->lines, NV_LINE_CAP);
-    cvector_reserve(buff->buffer, NV_BUFF_CAP);
-
-    buff->chunk = NV_BUFF_CAP;
-    buff->path = path;
-    buff->top_line = 0;
+void nv_buffer_open_file(struct nv_buff* buff, char* path) {
+    if (!buff || !path) return;
+    if (!buff->cursors || !buff->buffer) return;
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) return;
@@ -56,6 +47,21 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     default:
         return;
     }
+}
+
+void nv_buffer_init(struct nv_buff* buff, char* path) {
+    if (!buff) return;
+    cvector_reserve(buff->cursors, NV_CURSOR_CAP);
+    assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
+    buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
+    cvector_reserve(buff->lines, NV_LINE_CAP);
+    cvector_reserve(buff->buffer, NV_BUFF_CAP);
+
+    buff->chunk = NV_BUFF_CAP;
+    buff->path = path;
+    buff->top_line = 0;
+
+    nv_buffer_open_file(buff, path);
 }
 
 struct nv_buff_line* currline(struct nv_buff* buff) {
@@ -89,7 +95,7 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
-            line.length = line.end - line.begin - 1;
+            line.length = line.end - line.begin;
 
             cvector_push_back(buff->lines, line);
 
@@ -108,23 +114,15 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     *out_line_count = line_count;
 }
 
-void nv_free_buffers(struct nv_editor* editor) {
-    NV_ASSERT(editor->windows);
-//  struct nv_buff* buff;
+void nv_free_buffer(struct nv_buff* buff) {
+    if (!buff) return;
 
-    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
-//      buff = &editor->windows[i];
+    if (buff->file) 
+        fclose(buff->file);
 
-//      if (buff->file != NULL)
-//          fclose(buff->file);
-// 
-//      cvector_free(buff->lines);
-//      cvector_free(buff->cursors);
-//      cvector_free(buff->buffer);
-//
-//      buff->buffer = NULL;
-    }
-    
-    cvector_free(editor->windows);
-    editor->windows = NULL;
+    cvector_free(buff->cursors);
+    cvector_free(buff->lines);
+    cvector_free(buff->buffer);
+    free(buff);
+    buff = NULL;
 }

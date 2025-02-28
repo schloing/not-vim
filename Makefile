@@ -4,7 +4,10 @@ PROD_CFLAGS := -ggdb -O0 -Wall -Wextra -ldl
 LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
+NVARGS := main.c editor.c
+VALGRINDARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind" 
 EXECUTABLE := nv
+GDBSERVER_PORT := 1234
 
 all: $(EXECUTABLE)
 
@@ -15,15 +18,18 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $^ $(LDFLAGS) -o $@
 
 debug:
-	gdb --args ./$(EXECUTABLE) main.c window.c
+	gdb -ex "target remote $(GDBSERVER_PORT)" --args ./$(EXECUTABLE) $(NVARGS)
+
+gdbserver:
+	gdbserver :$(GDBSERVER_PORT) ./$(EXECUTABLE) $(NVARGS)
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE)
 
 valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind" ./$(EXECUTABLE) main.c
+	valgrind $(VALGRINDARGS) ./$(EXECUTABLE) $(NVARGS)
 
 run: $(EXECUTABLE)
-	./$(EXECUTABLE) main.c window.c
+	./$(EXECUTABLE) $(NVARGS)
 
 .PHONY: all clean run valgrind
