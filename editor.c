@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include "termbox2.h"
 
-#include "assert.h"
 #include "buffer.h"
 #include "color.h"
 #include "cursorhelp.h"
@@ -18,17 +17,19 @@ static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void _nv_redraw_all(struct nv_editor* editor);
-static void _nv_draw_windows(struct nv_editor* editor);
+static void _nv_draw_background(struct nv_editor* editor);
+static void _nv_draw_windows(struct nv_window* window);
 static void _nv_draw_cursor(struct nv_editor* editor);
 static void _nv_draw_buffer(struct nv_window* window);
 static void _nv_draw_status(struct nv_editor* editor);
 
 void nv_editor_init(struct nv_editor* editor) {
-    NV_ASSERT(editor);
-
-    cvector_reserve(editor->windows, 8);
+    if (!editor) return;
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
+    editor->window = nv_window_init();
+    editor->window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+    editor->window->active = false;
     
     editor->nv_conf = (struct nv_conf){
         .tab_width     = NV_TAB_WIDTH,
@@ -58,8 +59,8 @@ static void _nv_draw_cursor(struct nv_editor* editor) {
 static void _nv_redraw_all(struct nv_editor* editor) {
     if (editor->nv_conf.show_headless) return;
 
-    tb_clear();
-    _nv_draw_windows(editor);
+    _nv_draw_background(editor); // clear
+    _nv_draw_windows(editor->window);
     _nv_draw_status(editor);
     tb_present();
 }
@@ -79,8 +80,8 @@ void nv_mainloop(struct nv_editor* editor) {
         switch (ev.type) {
         case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
- //         _nv_draw_buffer(editor);
-//          _nv_get_input(editor, &ev);
+            _nv_draw_windows(editor->window);
+            _nv_get_input(editor, &ev);
             editor->running = false;
 
             break;
@@ -100,8 +101,13 @@ void nv_mainloop(struct nv_editor* editor) {
     }
 }
 
+static void _nv_draw_background(struct nv_editor* editor) {
+    tb_set_clear_attrs(TB_256_WHITE, TB_256_BLACK);
+    tb_clear();
+}
+
 static
-#ifdef __GNUC__
+ #ifdef __GNUC__
 __attribute__((unused))
 #endif
 void _nv_get_input(struct nv_editor* editor, struct tb_event* ev) {
@@ -195,26 +201,30 @@ static int count_recur(int n) {
 #include "window.h"
 
 static void
-_nv_draw_windows(struct nv_editor* editor) {
-    for (size_t i = 0; i < cvector_size(editor->windows); i++) {
-        struct nv_window window = editor->windows[i];
-        _nv_draw_buffer(&window);
+_nv_draw_windows(struct nv_window* root) {
+    if (!root) return;
+
+    if (!root->active) {
+        _nv_draw_windows(root->left);
+        _nv_draw_windows(root->right);
+        return;
     }
+
+    _nv_draw_buffer(root);
 }
 
 static void
 #ifdef __GNUC__
-__attribute__ ((unused))
+__attribute__((unused))
 #endif
 _nv_draw_buffer(struct nv_window* window) {
-    tb_clear_region(0, tb_height() - 1);
     if (!window) return;
-    struct nv_buff* buffer = &window->buffer;
+    struct nv_buff* buffer = window->buffer;
 
     switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:     
     case NV_BUFFTYPE_SOURCE:
-        int top = buffer->cursors[0].line - buffer->cursors[0].y;
+//      int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
             nv_load_file_buffer(buffer, &buffer->line_count);
@@ -222,27 +232,38 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
-        for (int row = window->y; row < window->y + window->h; row++) {
-            size_t lineno, linesz;
-            lineno = top + row;
-            if (lineno >= buffer->line_count) return;
+        char* lbuf = calloc(window->w, sizeof(char));
+        int idx = 0;
+        window->w -= buffer->linecol_size + 1;
 
-            struct nv_buff_line l = buffer->lines[lineno];
-            linesz = l.end - l.begin;
-         
-            char* line = malloc(linesz + 1);
-            memcpy(line, &buffer->buffer[l.begin], linesz);
+        for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
+            struct nv_buff_line* line = &buffer->lines[idx++];
+            size_t lsz = line->length > (size_t)window->wd.w ? (size_t)window->w : line->length;
+            memcpy(lbuf, &buffer->buffer[line->begin], lsz);
 
-            if (linesz > (size_t)window->w) {
-                linesz = (size_t)window->w;
-                line[window->w] = '\n';
+            if (line->length > (size_t)window->wd.w) {
+                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf); // print l0
+                int iters = line->length / window->wd.w;
+                struct nv_buff_line nl = { 0 };
+
+                for (int i = 1; i <= iters; i++) {
+                    nl = (struct nv_buff_line) {
+                        .begin = line->begin + i * window->wd.w,
+                        .length = line->length - i * window->wd.w
+                    };
+
+                    if (i * window->wd.w > (int)line->length) break;
+                    memcpy(lbuf, &buffer->buffer[nl.begin], nl.length);
+                    lbuf[nl.length] = '\0';
+                    tb_printf(window->wd.x, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+                }
             } else {
-                line[linesz] = '\0';
+                lbuf[lsz] = 0;
+                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
             }
-
-            tb_printf(0, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, lineno + 1, line);
-            free(line);
         }
+
+        free(lbuf);
 
         break;
 
