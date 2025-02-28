@@ -11,39 +11,8 @@
 #include "cursor.h"
 #include "cvector.h"
 #include "editor.h"
-#include "plugin.h"
 #include "termbox2.h"
 #include "window.h"
-
-static void load_plugload(struct nv_editor* editor) {
-//  struct nv_buff logbuff = { .path = "logs", .type = NV_BUFFTYPE_PLAINTEXT };
-//  nv_buffer_init(&logbuff, NULL); // FIXME: lbinfo path overwritten with nv_buffer_init path
-//  nv_push_buffer(editor, logbuff);
-
-    void* handle = dlopen("./plugload.so", RTLD_NOW | RTLD_GLOBAL);
-
-    if (!handle) {
-        // plugload.so not found?
-//      sprintf(logbuff.buffer, "plugin load failed: %s\n", dlerror());
-        return;
-    }
-
-    struct nv_plugin* plugload = (struct nv_plugin*)dlsym(handle, "_NV_PLUGIN_DESCRIPTOR");
-
-    if (!plugload) {
-        // _NV_PLUGIN_DESCRIPTOR wasn't defined
-//      sprintf(logbuff.buffer, "could not find symbol _NV_PLUGIN_DESCRIPTOR: %s\n", dlerror());
-        goto call_dlclose;
-    }
-
-//  sprintf(logbuff.buffer, "successfully loaded %s: %s v%d\n",
-//          plugload->author, plugload->name, plugload->iteration);
-
-//  plugload->main();
-
-call_dlclose:
-    dlclose(handle);
-}
 
 int main(int argc, char** argv) {
     int rv = 0;
@@ -54,23 +23,33 @@ int main(int argc, char** argv) {
     if (!editor.nv_conf.show_headless && (rv = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(rv));
         editor.status = rv;
-        return rv;
-    }
-
-    load_plugload(&editor);
-
-    for (int i = 1; i < argc; i++) {
-        struct nv_window window = { .buff_id = i };
-        nv_buffer_init(&window.buffer, argv[i]);
-        nv_open_window(&editor, window);
+        goto clean_up;
     }
 
     editor.width = tb_width();
     editor.height = tb_height();
+    editor.window->wd.w = editor.width;
+    editor.window->wd.h = editor.height;
+
+    for (int i = 1; i < argc; i++) {
+        struct nv_window* window = nv_find_empty_window(editor.window);
+        nv_redistribute(window->parent);
+
+        if (!window) {
+            tb_shutdown();
+            return -1;
+        }
+
+        if (!window->buffer)
+            window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+
+        nv_buffer_init(window->buffer, argv[i]);
+    }
 
     nv_mainloop(&editor);
 
+clean_up:
     tb_shutdown();
-    nv_free_buffers(&editor);
+    nv_free_windows(editor.window);
     return rv;
 }
