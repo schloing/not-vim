@@ -9,48 +9,64 @@
 #include "editor.h"
 #include "termbox2.h"
 
-bool is_elf(char* buffer) {
+bool is_elf(const char* buffer)
+{
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
-    for (int i = 0; i < 4; i++)
-        if (e_ident[i] != buffer[i]) return false;
+    for (int i = 0; i < 4; i++) {
+        if (e_ident[i] != buffer[i]) {
+            return false;
+        }
+    }
     return true;
 }
 
-void nv_buffer_open_file(struct nv_buff* buff, char* path) {
-    if (!buff || !path) return;
-    if (!buff->cursors || !buff->buffer) return;
+void nv_buffer_open_file(struct nv_buff* buff, const char* path)
+{
+    if (!buff || !path) {
+        return;
+    }
+    if (!buff->cursors || !buff->buffer) {
+        return;
+    }
 
     struct stat sb;
-    if (stat(buff->path, &sb) == -1) return;
+    if (stat(buff->path, &sb) == -1) {
+        return;
+    }
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFLNK: // symlink
     case S_IFDIR:
         buff->type = NV_BUFFTYPE_BROWSER;
         break;
-    
+
     case S_IFREG:
         buff->type = NV_BUFFTYPE_SOURCE;
         buff->file = fopen(buff->path, "rb+");
-        if (buff->file == NULL) return;
+        if (buff->file == NULL) {
+            return;
+        }
 
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
         cvector_set_size(buff->buffer, buff->chunk);
 
         buff->cursors[0].ch = buff->buffer[0];
         break;
-    
+
     case S_IFSOCK:
         buff->type = NV_BUFFTYPE_NETWORK;
         break;
-    
+
     default:
         return;
     }
 }
 
-void nv_buffer_init(struct nv_buff* buff, char* path) {
-    if (!buff) return;
+void nv_buffer_init(struct nv_buff* buff, char* path)
+{
+    if (!buff) {
+        return;
+    }
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
     assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
     buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
@@ -64,33 +80,47 @@ void nv_buffer_init(struct nv_buff* buff, char* path) {
     nv_buffer_open_file(buff, path);
 }
 
-struct nv_buff_line* currline(struct nv_buff* buff) {
+struct nv_buff_line* currline(struct nv_buff* buff)
+{
     size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
     return &buff->lines[line];
 }
 
-struct nv_buff_line* prevline(struct nv_buff* buff) {
+struct nv_buff_line* prevline(struct nv_buff* buff)
+{
     size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if ((int)line <= 0) return NULL;
+    if ((int)line <= 0) {
+        return NULL;
+    }
     return &buff->lines[line - 1];
 }
 
-struct nv_buff_line* nextline(struct nv_buff* buff) {
+struct nv_buff_line* nextline(struct nv_buff* buff)
+{
     size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if (buff->line_count < line + 1) return NULL;
+    if (buff->line_count < line + 1) {
+        return NULL;
+    }
     return &buff->lines[line + 1];
 }
 
-struct nv_buff_line* line(struct nv_buff* buff, size_t lineno) {
-    if (buff->line_count < lineno) return NULL;
+struct nv_buff_line* line(struct nv_buff* buff, size_t lineno)
+{
+    if (buff->line_count < lineno) {
+        return NULL;
+    }
     return &buff->lines[lineno];
 }
 
-void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
+void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
+{
     char* b = buff->buffer;
-    if (!b) return;
+    if (!b) {
+        return;
+    }
     struct nv_buff_line line = { 0 };
-    size_t i = 0, line_count = 0;
+    size_t i = 0;
+    size_t line_count = 0;
 
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
@@ -103,7 +133,7 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
             line_count++;
         }
     }
-   
+
     // empty file
     if (line_count == 0) {
         line.begin = 0;
@@ -114,11 +144,15 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     *out_line_count = line_count;
 }
 
-void nv_free_buffer(struct nv_buff* buff) {
-    if (!buff) return;
+void nv_free_buffer(struct nv_buff* buff)
+{
+    if (!buff) {
+        return;
+    }
 
-    if (buff->file)
+    if (buff->file) {
         fclose(buff->file);
+    }
 
     cvector_free(buff->cursors);
     cvector_free(buff->lines);
