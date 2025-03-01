@@ -30,10 +30,13 @@ int main(int argc, char** argv) {
     editor.height = tb_height();
     editor.window->wd.w = editor.width;
     editor.window->wd.h = editor.height;
+    editor.window->active = false;
 
     for (int i = 1; i < argc; i++) {
         struct nv_window* window = nv_find_empty_window(editor.window);
-        nv_redistribute(window->parent);
+
+        if (window->parent)
+            nv_redistribute(window->parent);
 
         if (!window) {
             tb_shutdown();
