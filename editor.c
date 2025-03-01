@@ -232,13 +232,13 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
-        char* lbuf = calloc(window->w, sizeof(char));
+        char* lbuf = calloc(window->wd.w, sizeof(char));
         int idx = 0;
-        window->w -= buffer->linecol_size + 1;
+        window->wd.w -= buffer->linecol_size + 1;
 
         for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
             struct nv_buff_line* line = &buffer->lines[idx++];
-            size_t lsz = line->length > (size_t)window->wd.w ? (size_t)window->w : line->length;
+            size_t lsz = line->length > (size_t)window->wd.w ? (size_t)window->wd.w : line->length;
             memcpy(lbuf, &buffer->buffer[line->begin], lsz);
 
             if (line->length > (size_t)window->wd.w) {

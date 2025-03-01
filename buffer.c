@@ -117,7 +117,7 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
 void nv_free_buffer(struct nv_buff* buff) {
     if (!buff) return;
 
-    if (buff->file) 
+    if (buff->file)
         fclose(buff->file);
 
     cvector_free(buff->cursors);
