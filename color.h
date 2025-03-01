@@ -5,6 +5,6 @@
 #undef TB_256_BLACK
 #define TB_256_BLACK 16
 #define TB_256_WHITE 255
-#define TB_256_GREY  249
+#define TB_256_GREY 249
 
 #endif

@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #define TUI
 #include "buffer.h"
-#include "window.h"
 #include "cvector.h"
+#include "window.h"
 
 #define INPUT_BACKLOG_CAP 5
 
@@ -21,28 +21,28 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 struct nv_editor {
     struct nv_window* window;
     struct nv_buff* current;
-#ifdef TUI                   // if there is ever a qt/gui version
-    int         width;
-    int         height;
+#ifdef TUI // if there is ever a qt/gui version
+    int width;
+    int height;
 #endif
-    nv_mode     mode;
-    int         status;
-    bool        running;
-    char        inputs[INPUT_BACKLOG_CAP];
-    struct nv_conf nv_conf;  // default config for buffers
+    nv_mode mode;
+    int status;
+    bool running;
+    char inputs[INPUT_BACKLOG_CAP];
+    struct nv_conf nv_conf; // default config for buffers
 };
 
 // config defaults
-#define NV_TAB_WIDTH     4
-#define NV_EXPAND_TAB    true
-#define NV_AUTO_INDENT   true
-#define NV_LINE_NUMBERS  true
+#define NV_TAB_WIDTH 4
+#define NV_EXPAND_TAB true
+#define NV_AUTO_INDENT true
+#define NV_LINE_NUMBERS true
 #define NV_SHOW_RELATIVE true
 #define NV_COMMAND_DELAY 350
 #define NV_STATUS_HEIGHT 1
-#define NV_SHOW_STATUS   true
-#define NV_SHOW_BUFFER   true
-#define NV_HEADLESS      false
+#define NV_SHOW_STATUS true
+#define NV_SHOW_BUFFER true
+#define NV_HEADLESS false
 
 #if NV_HEADLESS
 #undef TUI
