@@ -20,6 +20,7 @@ void nv_free_windows(struct nv_window* root) {
     if (!root) return;
 
     nv_free_buffer(root->buffer);
+    root->buffer = NULL;
     nv_free_windows(root->left);
     nv_free_windows(root->right);
     
@@ -41,48 +42,55 @@ static struct nv_window* _nv_assign_child(struct nv_window* root, struct nv_wind
 struct nv_window* nv_find_empty_window(struct nv_window* root) {
     if (!root) {
         root = (struct nv_window*)nv_window_init();
+        if (!root) return NULL;
         root->buffer = NULL;
         root->parent = NULL;
         root->active = true;
         return root;
     }
 
-    if (!root->active) // root window is allocated but not active
+    if (!root->active) { // root window is allocated but not active
+        root->active = true;
         return root;
+    }
 
     return _nv_assign_child(root, &root->left) ? root->left : _nv_assign_child(root, &root->right);
 }
 
 void nv_redistribute(struct nv_window* root) {
     if (!root) return;
-    struct nv_window** forked = NULL;
-    struct nv_window* other;
+    struct nv_window* new = nv_window_init();
+    if (!new) return;
+    (void)memcpy(new, root, sizeof(struct nv_window));
+    struct nv_window* other = NULL;
     
-    if (!root->left) {
-        forked = &root->left;
+    if (!root->left)
         other = root->right;
-    }
 
-    if (!root->right) {
-        forked = &root->right;
+    if (!root->right)
         other = root->left;
-    }
 
-    if (!forked) {
-        *forked = root;
-        (*forked)->h = 10;
-        (*forked)->w = 5;
-        (*forked)->wd.x = root->wd.x;
-        (*forked)->wd.y = root->wd.y;
-        (*forked)->wd.w = (int)root->wd.w / 2; // half
-        (*forked)->wd.h = root->wd.h;
+    if (root->active) {
+        new->w          = 5;
+        new->h          = 10;
+        new->wd.x       = root->wd.x;
+        new->wd.y       = root->wd.y;
+        new->wd.w       = (int)root->wd.w / 2;          // half
+        new->wd.h       = root->wd.h;
 
-        other->w = 5;
-        other->h = 10;
-        other->wd.x = (*forked)->wd.x + (*forked)->wd.w;
-        other->wd.y = (*forked)->wd.y;
-        other->wd.w = (int)root->wd.w / 2; // half
-        other->wd.h = (int)root->wd.h;
+        other->w        = 5;
+        other->h        = 10;
+        other->wd.x     = new->wd.x + new->wd.w;
+        other->wd.y     = new->wd.y;
+        other->wd.w     = (int)root->wd.w - new->wd.w;  // also half
+        other->wd.h     = (int)root->wd.h;
+
+        root->left      = other;
+        root->right     = new;
+        root->buffer    = NULL;  // root->buffer copied to root->right
+                                 // not setting to NULL leads to double free
+        root->active    = false;
+
     }
 
     root = NULL;
