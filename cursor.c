@@ -1,8 +1,9 @@
-#include "buffer.h"
 #include "cursor.h"
+#include "buffer.h"
 #include "termbox2.h"
 
-void nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch) {
+void nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch)
+{
     struct nv_buff_line* l = line(buffer, cursor->line);
     size_t row = l->begin + cursor->x;
 
@@ -13,28 +14,27 @@ void nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch)
     cursor->x++;
 }
 
-void nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt)
+{
     if (cursor->y < (int)buffer->line_count) {
         cursor->y++;
         cursor->line++;
     }
 }
 
-void nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt) {
+void nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt)
+{
     if (cursor->y > 0) {
         cursor->y--;
         cursor->line--;
     }
 }
 
-void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    cursor->x--;
-}
+void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt) { cursor->x--; }
 
-void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) {
-    cursor->x++;
-}
+void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) { cursor->x++; }
 
-struct cursor* nv_primary_cursor(struct nv_buff* buffer) {
+struct cursor* nv_primary_cursor(struct nv_buff* buffer)
+{
     return &buffer->cursors[NV_PRIMARY_CURSOR];
 }
