@@ -16,13 +16,24 @@
 #include <stdlib.h> /* for free */
 #define cvector_clib_free free
 #endif
-#ifndef cvector_clib_malloc
-#include <stdlib.h> /* for malloc */
-#define cvector_clib_malloc malloc
-#endif
 #ifndef cvector_clib_calloc
 #include <stdlib.h> /* for calloc */
 #define cvector_clib_calloc calloc
+#endif
+#ifndef cvector_clib_malloc
+#include <stdlib.h> /* for malloc */
+
+#ifndef MALLOC_STYLE_CALLOC
+#define MALLOC_STYLE_CALLOC
+
+#define malloc_style_calloc(size) cvector_clib_calloc(size, 1)
+
+#endif
+
+#define cvector_clib_malloc(size) malloc_style_calloc(size)
+
+// FIXME:
+// #define cvector_clib_malloc malloc
 #endif
 #ifndef cvector_clib_realloc
 #include <stdlib.h> /* for realloc */

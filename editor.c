@@ -232,24 +232,24 @@ _nv_draw_buffer(struct nv_window* window) {
             buffer->loaded = true;
         }
 
-        char* lbuf = calloc(window->w, sizeof(char));
+        char* lbuf = calloc(window->wd.w, sizeof(char));
         int idx = 0;
-        window->w -= buffer->linecol_size + 1;
+        window->wd.w -= buffer->linecol_size + 1;
 
         for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
             struct nv_buff_line* line = &buffer->lines[idx++];
-            size_t lsz = line->length > (size_t)window->wd.w ? (size_t)window->w : line->length;
-            memcpy(lbuf, &buffer->buffer[line->begin], lsz);
-
+            size_t lbuf_memcpy_size = line->length > (size_t)window->wd.w ? (size_t)window->wd.w : line->length;
+            memcpy(lbuf, &buffer->buffer[line->begin], lbuf_memcpy_size);
+            // wrap lines if line length is bigger than window width
             if (line->length > (size_t)window->wd.w) {
-                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf); // print l0
+                // print line[0...window width]
+                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
                 int iters = line->length / window->wd.w;
                 struct nv_buff_line nl = { 0 };
-
                 for (int i = 1; i <= iters; i++) {
                     nl = (struct nv_buff_line) {
                         .begin = line->begin + i * window->wd.w,
-                        .length = line->length - i * window->wd.w
+                        .length = i * window->wd.w
                     };
 
                     if (i * window->wd.w > (int)line->length) break;
@@ -258,7 +258,7 @@ _nv_draw_buffer(struct nv_window* window) {
                     tb_printf(window->wd.x, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
                 }
             } else {
-                lbuf[lsz] = 0;
+                lbuf[lbuf_memcpy_size] = 0;
                 tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
             }
         }
