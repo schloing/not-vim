@@ -88,7 +88,7 @@ struct nv_buff_line* line(struct nv_buff* buff, size_t lineno) {
 
 void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count) {
     char* b = buff->buffer;
-    if (buff->buffer == NULL) return;
+    if (!b) return;
     struct nv_buff_line line = { 0 };
     size_t i = 0, line_count = 0;
 
