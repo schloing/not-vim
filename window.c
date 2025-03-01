@@ -71,24 +71,26 @@ void nv_redistribute(struct nv_window* root) {
         other = root->left;
 
     if (root->active) {
-        new->w = 5;
-        new->h = 10;
-        new->wd.x = root->wd.x;
-        new->wd.y = root->wd.y;
-        new->wd.w = (int)root->wd.w / 2; // half
-        new->wd.h = root->wd.h;
+        new->w          = 5;
+        new->h          = 10;
+        new->wd.x       = root->wd.x;
+        new->wd.y       = root->wd.y;
+        new->wd.w       = (int)root->wd.w / 2;          // half
+        new->wd.h       = root->wd.h;
 
-        other->w = 5;
-        other->h = 10;
-        other->wd.x = new->wd.x + new->wd.w;
-        other->wd.y = new->wd.y;
-        other->wd.w = (int)root->wd.w - new->wd.w; // also half
-        other->wd.h = (int)root->wd.h;
+        other->w        = 5;
+        other->h        = 10;
+        other->wd.x     = new->wd.x + new->wd.w;
+        other->wd.y     = new->wd.y;
+        other->wd.w     = (int)root->wd.w - new->wd.w;  // also half
+        other->wd.h     = (int)root->wd.h;
 
-        root->left = other;
-        root->right = new;
+        root->left      = other;
+        root->right     = new;
+        root->buffer    = NULL;  // root->buffer copied to root->right
+                                 // not setting to NULL leads to double free
+        root->active    = false;
 
-        root->active = false;
     }
 
     root = NULL;
