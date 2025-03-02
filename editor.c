@@ -32,7 +32,8 @@ void nv_editor_init(struct nv_editor* editor)
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
     editor->window = nv_window_init();
     editor->window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
-    editor->window->active = false;
+    editor->window->draw_buffer = true;
+    editor->window->draw_children = false;
 
     editor->nv_conf = (struct nv_conf) {
         .tab_width = NV_TAB_WIDTH,
@@ -234,11 +235,11 @@ static void nv_draw_windows(struct nv_window* root)
         return;
     }
 
-    if (!root->active) {
-        nv_draw_windows(root->left);
-        nv_draw_windows(root->right);
-        return;
-    }
+//  if (!root->active) {
+//      nv_draw_windows(root->left);
+//      nv_draw_windows(root->right);
+//      return;
+//  }
 
     nv_draw_buffer(root);
 }
