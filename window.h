@@ -11,10 +11,9 @@ struct nv_window_desc {
 };
 
 struct nv_window {
-    int w;
-    int h;
     int padding;
-    bool active;
+    bool draw_buffer;
+    bool draw_children;
     struct nv_window_desc wd;
     struct nv_window* parent;
     struct nv_window* left;
