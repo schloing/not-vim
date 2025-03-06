@@ -10,6 +10,7 @@
 #include "cursorhelp.h"
 #include "cvector.h"
 #include "editor.h"
+#include "window.h"
 
 extern int tb_clear_region(int, int);
 static void nv_get_input(struct nv_editor* editor, struct tb_event* ev);
@@ -227,19 +228,17 @@ static int count_recur(int n)
     return 1 + count_recur(n / 10);
 }
 
-#include "window.h"
-
 static void nv_draw_windows(struct nv_window* root)
 {
     if (!root) {
         return;
     }
 
-//  if (!root->active) {
-//      nv_draw_windows(root->left);
-//      nv_draw_windows(root->right);
-//      return;
-//  }
+    if (root->draw_children) {
+        nv_draw_windows(root->left);
+        nv_draw_windows(root->right);
+        return;
+    }
 
     nv_draw_buffer(root);
 }
@@ -250,15 +249,16 @@ static void
 #endif
     nv_draw_buffer(struct nv_window* window)
 {
-    if (!window) {
+    if (!window || !window->draw_buffer || !window->buffer) {
         return;
     }
+
     struct nv_buff* buffer = window->buffer;
 
     switch (buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:
     case NV_BUFFTYPE_SOURCE:
-        //      int top = buffer->cursors[0].line - buffer->cursors[0].y;
+        // int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!buffer->loaded) {
             nv_load_file_buffer(buffer, &buffer->line_count);

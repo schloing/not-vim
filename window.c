@@ -36,42 +36,56 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 {
     if (!root) {
         root = nv_window_init();
-        root->parent = NULL;    // caller sets parent
-        root->draw_buffer = false;
+        root->parent = NULL; // caller sets parent
+        root->draw_buffer = true;
         root->draw_children = false;
         root->buffer = NULL;
         return root;
     }
 
-    if (root->draw_buffer) {
-        struct nv_window* tmp;
-        tmp = nv_find_empty_window(root->left);
-        if (tmp) goto set_parent;
-        tmp = nv_find_empty_window(root->right);
-set_parent:
-        if (!tmp) goto exit_statement;
-        tmp->parent = root;
+    if (!root->draw_children) {
+        root->left = nv_find_empty_window(root->left);
+
         if (!root->left) {
-            root->left = tmp;
+            return NULL;
+        }
+
+        root->left->parent = root;
+
+        if (root->draw_buffer && root->buffer) {
             root->right = nv_window_init();
             (void)memcpy(root->right, root, sizeof(struct nv_window));
-            root->right = root;
+            root->right->buffer = root->buffer;
+            root->buffer = NULL;
+            root->right->parent = root;
+            root->right->left = NULL;
+            root->right->right = NULL;
+            root->right->draw_buffer = true;
+            root->right->draw_children = false;
         }
-        if (!root->right) {
-            root->right = tmp;
-            root->left = nv_window_init();
-            (void)memcpy(root->left, root, sizeof(struct nv_window));
-            root->left = root;
-        }
-        root->draw_buffer = false;
+
         root->draw_children = true;
+        root->draw_buffer = false;
+        return root->left;
     }
 
-exit_statement:
     return NULL;
 }
 
 void nv_redistribute(struct nv_window* root)
 {
+    if (!root) {
+        return;
+    }
 
+    if (root->right && root->left) {
+        root->left->wd.x = root->wd.x;
+        root->left->wd.w = root->wd.w / 2;
+        root->left->wd.h = root->wd.h;
+        root->right->wd.x = root->wd.x + root->left->wd.w;
+        root->right->wd.w = root->wd.w - root->left->wd.w;
+        root->right->wd.h = root->wd.h;
+        nv_redistribute(root->right);
+        nv_redistribute(root->left);
+    }
 }

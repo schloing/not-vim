@@ -67,6 +67,7 @@ void nv_buffer_init(struct nv_buff* buff, char* path)
     if (!buff) {
         return;
     }
+
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
     assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
     buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
