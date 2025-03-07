@@ -43,6 +43,11 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         return root;
     }
 
+    if (root->draw_buffer && !root->buffer) {
+        // first caller has to call nv_buffer_init
+        root->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+    }
+
     if (!root->draw_children) {
         root->left = nv_find_empty_window(root->left);
 
@@ -56,7 +61,6 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
             root->right = nv_window_init();
             (void)memcpy(root->right, root, sizeof(struct nv_window));
             root->right->buffer = root->buffer;
-            root->buffer = NULL;
             root->right->parent = root;
             root->right->left = NULL;
             root->right->right = NULL;
@@ -66,10 +70,11 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 
         root->draw_children = true;
         root->draw_buffer = false;
+        root->buffer = NULL;
         return root->left;
     }
 
-    return NULL;
+    return nv_find_empty_window(root->right);
 }
 
 void nv_redistribute(struct nv_window* root)
