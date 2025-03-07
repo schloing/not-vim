@@ -11,8 +11,10 @@ struct nv_window* nv_window_init()
 {
     struct nv_window* window = (struct nv_window*)calloc(1, sizeof(struct nv_window));
     window->buffer = NULL;
-    window->left = NULL;
+    window->draw_buffer = true;
+    window->draw_children = false;
     window->parent = NULL;
+    window->left = NULL;
     window->right = NULL;
     return window;
 }
@@ -46,6 +48,7 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
     if (root->draw_buffer && !root->buffer) {
         // first caller has to call nv_buffer_init
         root->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+        return root;
     }
 
     if (!root->draw_children) {

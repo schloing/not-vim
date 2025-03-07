@@ -29,6 +29,7 @@ int main(int argc, char** argv)
 
     editor.width = tb_width();
     editor.height = tb_height();
+    editor.window = nv_window_init();
     editor.window->wd.w = editor.width;
     editor.window->wd.h = editor.height;
 

@@ -31,10 +31,6 @@ void nv_editor_init(struct nv_editor* editor)
     }
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
-    editor->window = nv_window_init();
-    editor->window->buffer = NULL;
-    editor->window->draw_buffer = true;
-    editor->window->draw_children = false;
 
     editor->nv_conf = (struct nv_conf) {
         .tab_width = NV_TAB_WIDTH,
