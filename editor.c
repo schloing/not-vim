@@ -32,7 +32,7 @@ void nv_editor_init(struct nv_editor* editor)
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
     editor->window = nv_window_init();
-    editor->window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+    editor->window->buffer = NULL;
     editor->window->draw_buffer = true;
     editor->window->draw_children = false;
 
@@ -121,12 +121,8 @@ static void nv_draw_background(struct nv_editor* editor)
     tb_clear();
 }
 
-static
-#ifdef __GNUC__
-    __attribute__((unused))
-#endif
-    void
-    nv_get_input(struct nv_editor* editor, struct tb_event* ev)
+// FIXME:
+static void nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 {
     if (editor->nv_conf.show_headless) {
         return;
@@ -203,11 +199,7 @@ static
     nv_draw_cursor(editor);
 }
 
-//  void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer) {
-//      buffer.id = cvector_size(editor->windows);
-//      cvector_push_back(editor->windows, buffer);
-//  }
-
+// FIXME
 static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor)
 {
     //  struct nv_buff* buffer = (struct nv_buff*)&editor->windows[editor->peek];
@@ -243,11 +235,7 @@ static void nv_draw_windows(struct nv_window* root)
     nv_draw_buffer(root);
 }
 
-static void
-#ifdef __GNUC__
-    __attribute__((unused))
-#endif
-    nv_draw_buffer(struct nv_window* window)
+static void nv_draw_buffer(struct nv_window* window)
 {
     if (!window || !window->draw_buffer || !window->buffer) {
         return;
@@ -277,8 +265,7 @@ static void
             // wrap lines if line length is bigger than window width
             if (line->length > (size_t)window->wd.w) {
                 // print line[0...window width]
-                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s",
-                    buffer->linecol_size, idx, lbuf);
+                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
                 int iters = line->length / window->wd.w;
                 struct nv_buff_line nl = { 0 };
                 for (int i = 1; i <= iters; i++) {
