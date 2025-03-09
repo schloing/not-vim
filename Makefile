@@ -5,7 +5,7 @@ LDFLAGS := -L/usr/local/lib -ltermbox2
 SOURCES := editor.c main.c buffer.c cursor.c window.c
 OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
-EXECUTABLE_ARGS := main.c editor.c
+EXECUTABLE_ARGS := main.c editor.c editor.h termbox2.h
 VALGRIND_ARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind" 
 CLANG_TIDY_CHECKS := bugprone-*,readability-*,modernize-*,performance-*,portability-*,clang-analyzer-*
 CLANG_FORMAT_STYLE := WebKit
