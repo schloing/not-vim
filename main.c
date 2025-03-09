@@ -46,8 +46,9 @@ int main(int argc, char** argv)
         }
 
         if (window->draw_buffer) {
-            if (!window->buffer)
+            if (!window->buffer) {
                 window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+            }
 
             nv_buffer_init(window->buffer, argv[i]);
         }

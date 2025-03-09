@@ -252,39 +252,35 @@ static void nv_draw_buffer(struct nv_window* window)
 
         char* lbuf = calloc(window->wd.w, sizeof(char));
         int idx = 0;
-        window->wd.w -= buffer->linecol_size + 1;
+        size_t max_width = window->wd.w - (buffer->linecol_size + 1);
 
         for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
             struct nv_buff_line* line = &buffer->lines[idx++];
-            size_t lbuf_memcpy_size = line->length > (size_t)window->wd.w ? (size_t)window->wd.w : line->length;
-            memcpy(lbuf, &buffer->buffer[line->begin], lbuf_memcpy_size);
-            // wrap lines if line length is bigger than window width
-            if (line->length > (size_t)window->wd.w) {
-                // print line[0...window width]
-                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
-                int iters = line->length / window->wd.w;
-                struct nv_buff_line nl = { 0 };
-                for (int i = 1; i <= iters; i++) {
-                    nl = (struct nv_buff_line) { .begin = line->begin + i * window->wd.w,
-                        .length = i * window->wd.w };
+            size_t copy_size = (line->length > max_width) ? max_width : line->length;
+            memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
+            lbuf[copy_size] = 0;
+            tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
 
-                    if (i * window->wd.w > (int)line->length) {
+            if (line->length > max_width) {
+                size_t num_wraps = line->length / window->wd.w;
+
+                for (size_t i = 1; i <= num_wraps; i++) {
+                    size_t offset = i * max_width;
+
+                    if (offset >= line->length) {
                         break;
                     }
-                    memcpy(lbuf, &buffer->buffer[nl.begin], nl.length);
-                    lbuf[nl.length] = '\0';
-                    tb_printf(window->wd.x, row += i, TB_256_WHITE, TB_256_BLACK, "%*c %s",
-                        buffer->linecol_size, ' ', lbuf);
+
+                    size_t wrap_size = (line->length - offset > max_width) ? max_width : line->length - offset;
+                    memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
+                    lbuf[wrap_size] = '\0';
+
+                    tb_printf(window->wd.x, ++row, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
                 }
-            } else {
-                lbuf[lbuf_memcpy_size] = 0;
-                tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s",
-                    buffer->linecol_size, idx, lbuf);
             }
         }
 
         free(lbuf);
-
         break;
 
     case NV_BUFFTYPE_BROWSER:

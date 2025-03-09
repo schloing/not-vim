@@ -62,7 +62,7 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 
         if (root->draw_buffer && root->buffer) {
             root->right = nv_window_init();
-            (void)memcpy(root->right, root, sizeof(struct nv_window));
+            memcpy(root->right, root, sizeof(struct nv_window));
             root->right->buffer = root->buffer;
             root->right->parent = root;
             root->right->left = NULL;
@@ -74,6 +74,7 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         root->draw_children = true;
         root->draw_buffer = false;
         root->buffer = NULL;
+        root->descendants += 2;
         return root->left;
     }
 
