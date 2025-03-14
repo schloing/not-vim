@@ -7,7 +7,7 @@ OBJECTS := $(SOURCES:.c=.o)
 EXECUTABLE := nv
 EXECUTABLE_ARGS := main.c editor.c editor.h termbox2.h
 VALGRIND_ARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind" 
-CLANG_TIDY_CHECKS := bugprone-*,readability-*,modernize-*,performance-*,portability-*,clang-analyzer-*
+CLANG_TIDY_CHECKS := bugprone-*,readability-*,modernize-*,performance-*,portability-*,clang-analyzer-*,cert-*,cppcoreguidelines-*
 CLANG_FORMAT_STYLE := WebKit
 
 $(EXECUTABLE): $(OBJECTS)
