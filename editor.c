@@ -19,7 +19,7 @@ static int count_recur(int n);
 static void nv_set_mode(struct nv_editor* editor, nv_mode mode);
 static void nv_redraw_all(struct nv_editor* editor);
 static void nv_draw_background(struct nv_editor* editor);
-static void nv_draw_windows(struct nv_window* window);
+static void nv_draw_windows(struct nv_window* root);
 static void nv_draw_cursor(struct nv_editor* editor);
 static void nv_draw_buffer(struct nv_window* window);
 static void nv_draw_status(struct nv_editor* editor);

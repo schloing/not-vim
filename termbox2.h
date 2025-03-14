@@ -31,7 +31,7 @@ SOFTWARE.
 #endif
 
 #ifndef _DEFAULT_SOURCE
-#define _DEFAULT_SOURCE
+#define DEFAULT_SOURCE
 #endif
 
 #include <errno.h>
@@ -160,7 +160,7 @@ extern "C" {
 #define TB_KEY_BACKSPACE2 0x7f
 #define TB_KEY_CTRL_8 0x7f // clash with 'BACKSPACE2'
 
-#define tb_key_i(i) 0xffff - (i)
+#define tb_key_i(i) (0xffff - (i))
 /* Terminal-dependent key constants (`tb_event.key`) and terminfo caps */
 /* BEGIN codegen h */
 /* Produced by ./codegen.sh on Tue, 03 Sep 2024 04:17:47 +0000 */
@@ -323,28 +323,28 @@ extern "C" {
  * `tb_init`.
  */
 #define TB_OK 0
-#define TB_ERR -1
-#define TB_ERR_NEED_MORE -2
-#define TB_ERR_INIT_ALREADY -3
-#define TB_ERR_INIT_OPEN -4
-#define TB_ERR_MEM -5
-#define TB_ERR_NO_EVENT -6
-#define TB_ERR_NO_TERM -7
-#define TB_ERR_NOT_INIT -8
-#define TB_ERR_OUT_OF_BOUNDS -9
-#define TB_ERR_READ -10
-#define TB_ERR_RESIZE_IOCTL -11
-#define TB_ERR_RESIZE_PIPE -12
-#define TB_ERR_RESIZE_SIGACTION -13
-#define TB_ERR_POLL -14
-#define TB_ERR_TCGETATTR -15
-#define TB_ERR_TCSETATTR -16
-#define TB_ERR_UNSUPPORTED_TERM -17
-#define TB_ERR_RESIZE_WRITE -18
-#define TB_ERR_RESIZE_POLL -19
-#define TB_ERR_RESIZE_READ -20
-#define TB_ERR_RESIZE_SSCANF -21
-#define TB_ERR_CAP_COLLISION -22
+#define TB_ERR (-1)
+#define TB_ERR_NEED_MORE (-2)
+#define TB_ERR_INIT_ALREADY (-3)
+#define TB_ERR_INIT_OPEN (-4)
+#define TB_ERR_MEM (-5)
+#define TB_ERR_NO_EVENT (-6)
+#define TB_ERR_NO_TERM (-7)
+#define TB_ERR_NOT_INIT (-8)
+#define TB_ERR_OUT_OF_BOUNDS (-9)
+#define TB_ERR_READ (-10)
+#define TB_ERR_RESIZE_IOCTL (-11)
+#define TB_ERR_RESIZE_PIPE (-12)
+#define TB_ERR_RESIZE_SIGACTION (-13)
+#define TB_ERR_POLL (-14)
+#define TB_ERR_TCGETATTR (-15)
+#define TB_ERR_TCSETATTR (-16)
+#define TB_ERR_UNSUPPORTED_TERM (-17)
+#define TB_ERR_RESIZE_WRITE (-18)
+#define TB_ERR_RESIZE_POLL (-19)
+#define TB_ERR_RESIZE_READ (-20)
+#define TB_ERR_RESIZE_SSCANF (-21)
+#define TB_ERR_CAP_COLLISION (-22)
 
 #define TB_ERR_SELECT TB_ERR_POLL
 #define TB_ERR_RESIZE_SELECT TB_ERR_RESIZE_POLL

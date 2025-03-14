@@ -1,5 +1,5 @@
-#ifndef BUFFER_H
-#define BUFFER_H
+#ifndef NV_BUFFER_H
+#define NV_BUFFER_H
 
 #include <stdbool.h>
 #include <stdio.h>

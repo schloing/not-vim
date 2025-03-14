@@ -1,5 +1,5 @@
-#ifndef COLOR_H
-#define COLOR_H
+#ifndef NV_COLOR_H
+#define NV_COLOR_H
 
 // https://www.ditig.com/publications/256-colors-cheat-sheet#xterm-non-system-colors
 #undef TB_256_BLACK
