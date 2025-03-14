@@ -69,10 +69,10 @@ void nv_buffer_init(struct nv_buff* buff, char* path)
     }
 
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
-    assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR);
+    static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
     buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
-    cvector_reserve(buff->lines, NV_LINE_CAP);
-    cvector_reserve(buff->buffer, NV_BUFF_CAP);
+    cvector_reserve(buff->lines, (size_t)NV_LINE_CAP);
+    cvector_reserve(buff->buffer, (size_t)NV_BUFF_CAP);
 
     buff->chunk = NV_BUFF_CAP;
     buff->path = path;
@@ -152,7 +152,8 @@ void nv_free_buffer(struct nv_buff* buff)
     }
 
     if (buff->file) {
-        fclose(buff->file);
+        (void)fclose(buff->file);
+        buff->file = NULL;
     }
 
     cvector_free(buff->cursors);

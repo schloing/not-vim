@@ -1,5 +1,5 @@
-#ifndef WINDOW
-#define WINDOW
+#ifndef NV_WINDOW_H
+#define NV_WINDOW_H
 
 struct nv_window;
 

@@ -338,10 +338,10 @@ typedef struct cvector_metadata_t {
  */
 #define cvector_swap(vec, other, type)                 \
     do {                                               \
-        if (vec && other) {                            \
+        if ((vec) && (other)) {                            \
             cvector_vector_type(type) cv_swap__ = vec; \
-            vec = other;                               \
-            other = cv_swap__;                         \
+            (vec) = other;                               \
+            (other) = cv_swap__;                         \
         }                                              \
     } while (0)
 

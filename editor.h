@@ -1,5 +1,5 @@
-#ifndef EDITOR_H
-#define EDITOR_H
+#ifndef NV_EDITOR_H
+#define NV_EDITOR_H
 
 #include <stdbool.h>
 #define TUI
@@ -7,7 +7,7 @@
 #include "cvector.h"
 #include "window.h"
 
-#define INPUT_BACKLOG_CAP 5
+#define NV_INPUT_BACKLOG_CAP 5
 
 typedef enum {
     NV_MODE_NAVIGATE,
@@ -28,7 +28,7 @@ struct nv_editor {
     nv_mode mode;
     int status;
     bool running;
-    char inputs[INPUT_BACKLOG_CAP];
+    char inputs[NV_INPUT_BACKLOG_CAP];
     struct nv_conf nv_conf; // default config for buffers
 };
 

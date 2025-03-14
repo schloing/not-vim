@@ -1,5 +1,5 @@
-#ifndef CURSOR_H
-#define CURSOR_H
+#ifndef NV_CURSOR_H
+#define NV_CURSOR_H
 
 #include <stddef.h>
 

@@ -78,12 +78,18 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         return root->left;
     }
 
-    return nv_find_empty_window(root->right);
+    struct nv_window* right = nv_find_empty_window(root->right);
+
+    if (right) {
+        right->parent = root;
+    }
+
+    return right;
 }
 
 void nv_redistribute(struct nv_window* root)
 {
-    if (!root) {
+    if (!root || !root->draw_children) {
         return;
     }
 
@@ -96,5 +102,16 @@ void nv_redistribute(struct nv_window* root)
         root->right->wd.h = root->wd.h;
         nv_redistribute(root->right);
         nv_redistribute(root->left);
+        return;
     }
+
+    struct nv_window* window = root->right == NULL ? root->left : root->right;
+
+    if (!window) {
+        return;
+    }
+
+    window->wd.x = root->wd.x;
+    window->wd.w = root->wd.w;
+    window->wd.h = root->wd.h;
 }
