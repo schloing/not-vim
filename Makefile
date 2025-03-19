@@ -1,7 +1,7 @@
 CC := gcc
-CFLAGS := -ggdb -O0 -Wall -Wextra -Werror -Wno-unused-parameter -D_POSIX_C_SOURCE=200809L
+CFLAGS := -ggdb -O0 -Wall -Wextra -Werror -Wno-unused-parameter -D_DEFAULT_SOURCE
 LDFLAGS := -L/usr/local/lib -ltermbox2 -ldl
-SRC := editor.c main.c buffer.c cursor.c window.c
+SRC := editor.c main.c buffer.c nvlua.c cursor.c window.c
 OBJ := $(SRC:.c=.o)
 EXEC := nv
 
@@ -9,7 +9,7 @@ CLANG_TIDY_CHECKS := bugprone-*,readability-*,modernize-*,performance-*,portabil
 CLANG_FORMAT_STYLE := WebKit
 VALGRIND_ARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind"
 
-# modifies CFLAGS
+# modifies LDFLAGS
 -include deps.mk
 
 $(EXEC): $(OBJ)

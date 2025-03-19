@@ -5,7 +5,10 @@
 #define NV_GAP_MINIBUF_SIZE 1024
 
 struct nv_gap_buf {
-
+    size_t size;
+    size_t cursor;
+    size_t gap_end;
+    char* buffer;
 };
 
 #endif
