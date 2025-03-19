@@ -3,3 +3,4 @@ nv
 .DS_STORE
 .vscode/
 valgrind
+deps.mk
