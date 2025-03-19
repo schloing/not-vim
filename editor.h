@@ -20,16 +20,15 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
     struct nv_window* window;
-    struct nv_buff* current;
-#ifdef TUI // if there is ever a qt/gui version
-    int width;
-    int height;
-#endif
+    size_t active_window_index;
     nv_mode mode;
+    size_t width;
+    size_t height;
     int status;
     bool running;
+    bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
-    struct nv_conf nv_conf; // default config for buffers
+    struct nv_conf nv_conf;
 };
 
 // config defaults
