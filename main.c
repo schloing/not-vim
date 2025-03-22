@@ -45,7 +45,7 @@ int main(int argc, char** argv)
             nv_redistribute(window->parent);
         }
 
-        if (window->draw_buffer) {
+        if (window->show) {
             if (!window->buffer) {
                 window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
             }

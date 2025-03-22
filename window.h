@@ -12,8 +12,8 @@ struct nv_window_desc {
 
 struct nv_window {
     int padding;
-    bool draw_buffer;
-    bool draw_children;
+    bool show;
+    bool has_children;
     size_t descendants;
     struct nv_window_desc wd;
     struct nv_window* parent;

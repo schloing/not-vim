@@ -7,6 +7,7 @@
 #include "buffer.h"
 #include "cvector.h"
 #include "editor.h"
+#include "error.h"
 #include "termbox2.h"
 
 bool is_elf(const char* buffer)
@@ -20,18 +21,16 @@ bool is_elf(const char* buffer)
     return true;
 }
 
-void nv_buffer_open_file(struct nv_buff* buff, const char* path)
+int nv_buffer_open_file(struct nv_buff* buff, const char* path)
 {
-    if (!buff || !path) {
-        return;
-    }
-    if (!buff->cursors || !buff->buffer) {
-        return;
+    if (!buff || !path ||
+        !buff->cursors || !buff->buffer) {
+        return NV_ERR_NOT_INIT;
     }
 
     struct stat sb;
     if (stat(buff->path, &sb) == -1) {
-        return;
+        return NV_ERR;
     }
 
     switch (sb.st_mode & S_IFMT) {
@@ -43,8 +42,9 @@ void nv_buffer_open_file(struct nv_buff* buff, const char* path)
     case S_IFREG:
         buff->type = NV_BUFFTYPE_SOURCE;
         buff->file = fopen(buff->path, "rb+");
+
         if (buff->file == NULL) {
-            return;
+            return NV_ERR;
         }
 
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
@@ -58,14 +58,16 @@ void nv_buffer_open_file(struct nv_buff* buff, const char* path)
         break;
 
     default:
-        return;
+        return NV_ERR;
     }
+
+    return NV_OK;
 }
 
-void nv_buffer_init(struct nv_buff* buff, char* path)
+int nv_buffer_init(struct nv_buff* buff, char* path)
 {
     if (!buff) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
     cvector_reserve(buff->cursors, NV_CURSOR_CAP);
@@ -78,7 +80,8 @@ void nv_buffer_init(struct nv_buff* buff, char* path)
     buff->path = path;
     buff->top_line = 0;
 
-    nv_buffer_open_file(buff, path);
+    (void)nv_buffer_open_file(buff, path);
+    return NV_OK;
 }
 
 struct nv_buff_line* currline(struct nv_buff* buff)
@@ -113,12 +116,14 @@ struct nv_buff_line* line(struct nv_buff* buff, size_t lineno)
     return &buff->lines[lineno];
 }
 
-void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
+int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
 {
     char* b = buff->buffer;
+
     if (!b) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
+    
     struct nv_buff_line line = { 0 };
     size_t i = 0;
     size_t line_count = 0;
@@ -143,12 +148,13 @@ void nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
     }
 
     *out_line_count = line_count;
+    return NV_OK;
 }
 
-void nv_free_buffer(struct nv_buff* buff)
+int nv_free_buffer(struct nv_buff* buff)
 {
     if (!buff) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
     if (buff->file) {
@@ -161,4 +167,5 @@ void nv_free_buffer(struct nv_buff* buff)
     cvector_free(buff->buffer);
     free(buff);
     buff = NULL;
+    return NV_OK;
 }
