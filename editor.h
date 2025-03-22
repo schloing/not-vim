@@ -47,10 +47,10 @@ struct nv_editor {
 #undef TUI
 #endif
 
-void nv_editor_init(struct nv_editor* editor);
-void nv_render_term(struct nv_editor* editor);
 void nv_mainloop(struct nv_editor* editor);
-void nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
-void nv_open_window(struct nv_editor* editor, struct nv_window window);
+int nv_editor_init(struct nv_editor* editor);
+int nv_render_term(struct nv_editor* editor);
+int nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
+int nv_open_window(struct nv_editor* editor, struct nv_window window);
 
 #endif

@@ -10,24 +10,25 @@
 #include "cursorhelp.h"
 #include "cvector.h"
 #include "editor.h"
+#include "error.h"
 #include "window.h"
 
 extern int tb_clear_region(int, int);
-static void nv_get_input(struct nv_editor* editor, struct tb_event* ev);
+static int nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
 static void nv_set_mode(struct nv_editor* editor, nv_mode mode);
+static void nv_draw_cursor(struct nv_editor* editor);
 static void nv_redraw_all(struct nv_editor* editor);
 static void nv_draw_background(struct nv_editor* editor);
-static void nv_draw_windows(struct nv_window* root);
-static void nv_draw_cursor(struct nv_editor* editor);
-static void nv_draw_buffer(struct nv_window* window);
-static void nv_draw_status(struct nv_editor* editor);
+static int nv_draw_windows(struct nv_window* root);
+static int nv_draw_buffer(struct nv_window* window);
+static int nv_draw_status(struct nv_editor* editor);
 
-void nv_editor_init(struct nv_editor* editor)
+int nv_editor_init(struct nv_editor* editor)
 {
     if (!editor) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
@@ -41,6 +42,8 @@ void nv_editor_init(struct nv_editor* editor)
         .command_delay = NV_COMMAND_DELAY,
         .show_headless = NV_HEADLESS,
     };
+
+    return NV_OK;
 }
 
 static void nv_set_mode(struct nv_editor* editor, nv_mode mode)
@@ -118,20 +121,18 @@ static void nv_draw_background(struct nv_editor* editor)
 }
 
 // FIXME:
-static void nv_get_input(struct nv_editor* editor, struct tb_event* ev)
+static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 {
     if (editor->nv_conf.show_headless) {
-        return;
+        return NV_OK;
     }
 
     struct nv_buff* buffer = nv_get_active_buffer(editor);
-    if (!buffer) {
-        return;
+    if (!buffer || !buffer->cursors) {
+        return NV_ERR_NOT_INIT;
     }
+
     struct cursor* cursor = &buffer->cursors[0];
-    if (!cursor) {
-        return;
-    }
 
     editor->inputs[0] = ev->key;
     editor->inputs[1] = 0;
@@ -193,6 +194,7 @@ static void nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 
     //  _nv_draw_buffer(editor);
     nv_draw_cursor(editor);
+    return NV_OK;
 }
 
 // FIXME
@@ -216,25 +218,26 @@ static int count_recur(int n)
     return 1 + count_recur(n / 10);
 }
 
-static void nv_draw_windows(struct nv_window* root)
+static int nv_draw_windows(struct nv_window* root)
 {
     if (!root) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
-    if (root->draw_children) {
+    if (root->has_children) {
         nv_draw_windows(root->left);
         nv_draw_windows(root->right);
-        return;
+        return NV_OK;
     }
 
     nv_draw_buffer(root);
+    return NV_OK;
 }
 
-static void nv_draw_buffer(struct nv_window* window)
+static int nv_draw_buffer(struct nv_window* window)
 {
-    if (!window || !window->draw_buffer || !window->buffer) {
-        return;
+    if (!window || !window->show || !window->buffer) {
+        return NV_ERR_NOT_INIT;
     }
 
     struct nv_buff* buffer = window->buffer;
@@ -291,6 +294,8 @@ static void nv_draw_buffer(struct nv_window* window)
         fprintf(stderr, "unsupported bufftype %d\n", buffer->type);
         break;
     }
+
+    return NV_OK;
 }
 
 // extern char* nv_mode_str
@@ -301,11 +306,12 @@ char* nv_mode_str[NV_MODE_INSERTS + 1] = {
     "INS*",
 };
 
-static void nv_draw_status(struct nv_editor* editor)
+static int nv_draw_status(struct nv_editor* editor)
 {
     //  struct nv_buff* buffer = _nv_get_active_buffer(editor);
     //  char* prompt;
     //  if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) ==
     //  -1) return; tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s",
     //  editor->width, editor->width, prompt); free(prompt);
+    return NV_OK;
 }
