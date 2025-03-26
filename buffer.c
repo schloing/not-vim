@@ -23,8 +23,7 @@ bool is_elf(const char* buffer)
 
 int nv_buffer_open_file(struct nv_buff* buff, const char* path)
 {
-    if (!buff || !path ||
-        !buff->cursors || !buff->buffer) {
+    if (!buff || !path || !buff->cursors || !buff->buffer) {
         return NV_ERR_NOT_INIT;
     }
 
@@ -123,7 +122,7 @@ int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
     if (!b) {
         return NV_ERR_NOT_INIT;
     }
-    
+
     struct nv_buff_line line = { 0 };
     size_t i = 0;
     size_t line_count = 0;
