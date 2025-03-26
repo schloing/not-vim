@@ -32,6 +32,7 @@ int main(int argc, char** argv)
     editor.window = nv_window_init();
     editor.window->wd.w = editor.width;
     editor.window->wd.h = editor.height;
+    editor.window->split = HORIZONTAL; // initial split is HORIZONTAL
 
     for (int i = 1; i < argc; i++) {
         struct nv_window* window = nv_find_empty_window(editor.window);
@@ -42,7 +43,8 @@ int main(int argc, char** argv)
         }
 
         if (window->parent) {
-            nv_redistribute(window->parent);
+            (void)nv_redistribute(window->parent);
+            window->split = window->parent->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
         }
 
         if (window->show) {

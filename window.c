@@ -4,6 +4,7 @@
 
 #include "buffer.h"
 #include "editor.h"
+#include "error.h"
 #include "termbox2.h"
 #include "window.h"
 
@@ -92,10 +93,12 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 
 static void nv_set_widths(struct nv_window* root, struct nv_window* left, struct nv_window* right)
 {
-    bool left_block = false;
+//  bool left_block = false;
+    enum nv_split_kind split = root->parent ? root->parent->split : HORIZONTAL;
 
-    if (left->show && !left->has_children) {
+/*  if (left->show && !left->has_children) {
         left->wd.x = root->wd.x;
+        left->wd.y = root->wd.y;
         left->wd.w = root->wd.w / 2;
         left->wd.h = root->wd.h;
         left_block = true;
@@ -103,32 +106,50 @@ static void nv_set_widths(struct nv_window* root, struct nv_window* left, struct
 
     if (right->show && !right->has_children) {
         right->wd.x = left_block ? root->wd.x + left->wd.w : root->wd.x;
+        right->wd.y = left_block ? root->wd.y + left->wd.y : root->wd.y;
         right->wd.w = left_block ? root->wd.w - left->wd.w : root->wd.w;
         right->wd.h = root->wd.h;
+    }   */
+
+    if (left->show && !left->has_children) {
+        left->wd.x = root->wd.x;
+        left->wd.y = root->wd.y;
+        left->wd.w = split == HORIZONTAL ? root->wd.w / 2 : root->wd.w;
+        left->wd.h = split == VERTICAL ? root->wd.h / 2 : root->wd.h;
+//      left_block = true;
+    }
+
+    if (right->show && !right->has_children) {
+        right->wd.x = split == HORIZONTAL ? root->wd.x + left->wd.w : root->wd.x;
+        right->wd.y = split == VERTICAL ? root->wd.y + left->wd.h : root->wd.y;
+        right->wd.w = split == HORIZONTAL ? root->wd.w - left->wd.w : root->wd.w;
+        right->wd.h = split == VERTICAL ? root->wd.h - left->wd.h : root->wd.h;
     }
 }
 
-void nv_redistribute(struct nv_window* root)
+int nv_redistribute(struct nv_window* root)
 {
     if (!root) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
     if (root->right && root->left) {
         nv_set_widths(root, root->left, root->right);
         nv_redistribute(root->right);
         nv_redistribute(root->left);
-        return;
+        return NV_OK;
     }
 
     struct nv_window* window = root->right == NULL ? root->left : root->right;
-
     if (!window) {
-        return;
+        // FIXME: NV_ERR or NV_ERR_NOT_INIT?
+        return NV_ERR_NOT_INIT;
     }
 
     window->wd.x = root->wd.x;
     window->wd.y = root->wd.y;
     window->wd.w = root->wd.w;
     window->wd.h = root->wd.h;
+
+    return NV_OK;
 }
