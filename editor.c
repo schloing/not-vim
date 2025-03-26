@@ -14,16 +14,17 @@
 #include "window.h"
 
 extern int tb_clear_region(int, int);
-static int nv_get_input(struct nv_editor* editor, struct tb_event* ev);
-static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor);
-static int count_recur(int n);
-static void nv_set_mode(struct nv_editor* editor, nv_mode mode);
-static void nv_draw_cursor(struct nv_editor* editor);
-static void nv_redraw_all(struct nv_editor* editor);
-static void nv_draw_background(struct nv_editor* editor);
-static int nv_draw_windows(struct nv_window* root);
-static int nv_draw_buffer(struct nv_window* window);
-static int nv_draw_status(struct nv_editor* editor);
+static int _nv_get_input(struct nv_editor* editor, struct tb_event* ev);
+static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor);
+static int _count_recur(int n);
+static void _nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
+static void _nv_set_mode(struct nv_editor* editor, nv_mode mode);
+static void _nv_draw_cursor(struct nv_editor* editor);
+static void _nv_redraw_all(struct nv_editor* editor);
+static void _nv_draw_background(struct nv_editor* editor);
+static int _nv_draw_windows(struct nv_window* root);
+static int _nv_draw_buffer(struct nv_window* window);
+static int _nv_draw_status(struct nv_editor* editor);
 
 int nv_editor_init(struct nv_editor* editor)
 {
@@ -46,15 +47,15 @@ int nv_editor_init(struct nv_editor* editor)
     return NV_OK;
 }
 
-static void nv_set_mode(struct nv_editor* editor, nv_mode mode)
+static void _nv_set_mode(struct nv_editor* editor, nv_mode mode)
 {
     editor->mode = mode;
-    nv_draw_status(editor);
+    _nv_draw_status(editor);
 }
 
-static void nv_draw_cursor(struct nv_editor* editor)
+static void _nv_draw_cursor(struct nv_editor* editor)
 {
-    struct nv_buff* buffer = nv_get_active_buffer(editor);
+    struct nv_buff* buffer = _nv_get_active_buffer(editor);
     struct cursor c = buffer->cursors[0];
     int row = line(buffer, c.line)->length;
     int effective_row = (c.x > row ? row : c.x) < 0 ? 0 : (c.x > row ? row : c.x); // FIXME
@@ -62,15 +63,15 @@ static void nv_draw_cursor(struct nv_editor* editor)
     tb_present();
 }
 
-static void nv_redraw_all(struct nv_editor* editor)
+static void _nv_redraw_all(struct nv_editor* editor)
 {
     if (editor->nv_conf.show_headless) {
         return;
     }
 
-    nv_draw_background(editor); // clear
-    nv_draw_windows(editor->window);
-    nv_draw_status(editor);
+    _nv_draw_background(editor); // clear
+    _nv_draw_windows(editor->window);
+    _nv_draw_status(editor);
     tb_present();
 }
 
@@ -80,7 +81,7 @@ void nv_mainloop(struct nv_editor* editor)
     tb_set_output_mode(TB_OUTPUT_256);
 
     editor->running = true;
-    nv_redraw_all(editor);
+    _nv_redraw_all(editor);
 
     struct tb_event ev;
 
@@ -90,8 +91,8 @@ void nv_mainloop(struct nv_editor* editor)
         switch (ev.type) {
         case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
-            nv_draw_windows(editor->window);
-            nv_get_input(editor, &ev);
+            _nv_draw_windows(editor->window);
+            _nv_get_input(editor, &ev);
             editor->running = false;
 
             break;
@@ -104,7 +105,7 @@ void nv_mainloop(struct nv_editor* editor)
             editor->height = tb_height();
             editor->width = tb_width();
 
-            nv_redraw_all(editor);
+            _nv_redraw_all(editor);
 
             break;
 
@@ -114,20 +115,20 @@ void nv_mainloop(struct nv_editor* editor)
     }
 }
 
-static void nv_draw_background(struct nv_editor* editor)
+static void _nv_draw_background(struct nv_editor* editor)
 {
     tb_set_clear_attrs(TB_256_WHITE, TB_256_BLACK);
     tb_clear();
 }
 
 // FIXME:
-static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
+static int _nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 {
     if (editor->nv_conf.show_headless) {
         return NV_OK;
     }
 
-    struct nv_buff* buffer = nv_get_active_buffer(editor);
+    struct nv_buff* buffer = _nv_get_active_buffer(editor);
     if (!buffer || !buffer->cursors) {
         return NV_ERR_NOT_INIT;
     }
@@ -160,7 +161,7 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
             } else {
                 switch (ev->key) {
                 case TB_KEY_ESC:
-                    nv_set_mode(editor, NV_MODE_NAVIGATE);
+                    _nv_set_mode(editor, NV_MODE_NAVIGATE);
                 }
             }
         } else {
@@ -170,7 +171,7 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 
             switch (ev->ch) {
             case 'i':
-                nv_set_mode(editor, NV_MODE_INSERT);
+                _nv_set_mode(editor, NV_MODE_INSERT);
                 break;
 
             case 'j':
@@ -193,12 +194,12 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
     }
 
     //  _nv_draw_buffer(editor);
-    nv_draw_cursor(editor);
+    _nv_draw_cursor(editor);
     return NV_OK;
 }
 
 // FIXME
-static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor)
+static struct nv_buff* _nv_get_active_buffer(struct nv_editor* editor)
 {
     //  struct nv_buff* buffer = (struct nv_buff*)&editor->windows[editor->peek];
     //  editor->current = buffer;
@@ -207,34 +208,73 @@ static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor)
 }
 
 // calculate width of number
-static int count_recur(int n)
+static int _count_recur(int n)
 {
     if (n < 0) {
-        return count_recur((n == INT_MIN) ? INT_MAX : -n);
+        return _count_recur((n == INT_MIN) ? INT_MAX : -n);
     }
     if (n < 10) {
         return 1;
     }
-    return 1 + count_recur(n / 10);
+    return 1 + _count_recur(n / 10);
 }
 
-static int nv_draw_windows(struct nv_window* root)
+static int _nv_draw_windows(struct nv_window* root)
 {
     if (!root) {
         return NV_ERR_NOT_INIT;
     }
 
     if (root->has_children) {
-        nv_draw_windows(root->left);
-        nv_draw_windows(root->right);
+        _nv_draw_windows(root->left);
+        _nv_draw_windows(root->right);
         return NV_OK;
     }
 
-    nv_draw_buffer(root);
+    _nv_draw_buffer(root);
     return NV_OK;
 }
 
-static int nv_draw_buffer(struct nv_window* window)
+static void _nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
+{
+    char* lbuf = calloc(window->wd.w, sizeof(char));
+    size_t line_no = 0;
+    size_t max_width = window->wd.w - (buffer->linecol_size + 1);
+
+    for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
+        if (line_no > buffer->line_count) {
+            continue;
+        }
+
+        struct nv_buff_line* line = &buffer->lines[line_no++];
+        size_t copy_size = (line->length > max_width) ? max_width : line->length;
+        memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
+        lbuf[copy_size] = 0;
+        tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
+
+        if (line->length > max_width) {
+            size_t num_wraps = line->length / window->wd.w;
+
+            for (size_t i = 1; i <= num_wraps; i++) {
+                size_t offset = i * max_width;
+
+                if (offset >= line->length) {
+                    break;
+                }
+
+                size_t wrap_size = (line->length - offset > max_width) ? max_width : line->length - offset;
+                memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
+                lbuf[wrap_size] = '\0';
+
+                tb_printf(window->wd.x, ++row, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+            }
+        }
+    }
+
+    free(lbuf);
+}
+
+static int _nv_draw_buffer(struct nv_window* window)
 {
     if (!window || !window->show || !window->buffer) {
         return NV_ERR_NOT_INIT;
@@ -249,41 +289,11 @@ static int nv_draw_buffer(struct nv_window* window)
 
         if (!buffer->loaded) {
             nv_load_file_buffer(buffer, &buffer->line_count);
-            buffer->linecol_size = count_recur(buffer->line_count);
+            buffer->linecol_size = _count_recur(buffer->line_count);
             buffer->loaded = true;
         }
 
-        char* lbuf = calloc(window->wd.w, sizeof(char));
-        int idx = 0;
-        size_t max_width = window->wd.w - (buffer->linecol_size + 1);
-
-        for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
-            struct nv_buff_line* line = &buffer->lines[idx++];
-            size_t copy_size = (line->length > max_width) ? max_width : line->length;
-            memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
-            lbuf[copy_size] = 0;
-            tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, idx, lbuf);
-
-            if (line->length > max_width) {
-                size_t num_wraps = line->length / window->wd.w;
-
-                for (size_t i = 1; i <= num_wraps; i++) {
-                    size_t offset = i * max_width;
-
-                    if (offset >= line->length) {
-                        break;
-                    }
-
-                    size_t wrap_size = (line->length - offset > max_width) ? max_width : line->length - offset;
-                    memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
-                    lbuf[wrap_size] = '\0';
-
-                    tb_printf(window->wd.x, ++row, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
-                }
-            }
-        }
-
-        free(lbuf);
+        _nv_draw_buffer_within_window(window, buffer);
         break;
 
     case NV_BUFFTYPE_BROWSER:
@@ -306,9 +316,9 @@ char* nv_mode_str[NV_MODE_INSERTS + 1] = {
     "INS*",
 };
 
-static int nv_draw_status(struct nv_editor* editor)
+static int _nv_draw_status(struct nv_editor* editor)
 {
-    //  struct nv_buff* buffer = _nv_get_active_buffer(editor);
+    //  struct nv_buff* buffer = __nv_get_active_buffer(editor);
     //  char* prompt;
     //  if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) ==
     //  -1) return; tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s",
