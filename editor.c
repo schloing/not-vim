@@ -250,20 +250,27 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
    
     size_t line_no = 0;
     size_t max_width = window->wd.w - (buffer->linecol_size + 1);
+    struct nv_buff_line* line = NULL;
+    size_t copy_size = 0;
 
     for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
         if (line_no > buffer->line_count) {
             continue;
         }
 
-        struct nv_buff_line* line = &buffer->lines[line_no++];
-        size_t copy_size = (line->length > max_width) ? max_width : line->length;
+        line = &buffer->lines[line_no++];
+
+        if (!line) {
+            return;
+        }
+        
+        copy_size = (line->length > max_width) ? max_width : line->length;
         memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
-        lbuf[copy_size] = 0;
+        lbuf[copy_size] = '\0';
         tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
 
         if (line->length > max_width) {
-            size_t num_wraps = line->length / window->wd.w;
+            size_t num_wraps = line->length / max_width;
 
             for (size_t i = 1; i <= num_wraps; i++) {
                 size_t offset = i * max_width;

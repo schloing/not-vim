@@ -14,6 +14,7 @@ for dep in "${DEPENDENCIES[@]}"; do
     if pkg-config --exists $dep; then
         LDFLAGS="LDFLAGS += $(pkg-config --cflags --libs $dep)"
         echo "$LDFLAGS" >> deps.mk
+        make
     else
         echo "pkg-config unable to find $dep"
         exit 1
