@@ -1,16 +1,17 @@
 CC := gcc
 CFLAGS := -ggdb -O0 -Wall -Wextra -Werror -Wno-unused-parameter -D_DEFAULT_SOURCE
-LDFLAGS := -L/usr/local/lib -ltermbox2 -ldl
+LDFLAGS := -L/usr/local/lib/ -ltermbox2 -ldl
 SRC := editor.c main.c buffer.c nvlua.c cursor.c window.c
 OBJ := $(SRC:.c=.o)
 EXEC := nv
+DEPS_MK := deps.mk
 
 CLANG_TIDY_CHECKS := bugprone-*,readability-*,modernize-*,performance-*,portability-*,clang-analyzer-*,cert-*,cppcoreguidelines-*
 CLANG_FORMAT_STYLE := WebKit
 VALGRIND_ARGS := -s --track-origins=yes --leak-check=full --show-leak-kinds=all --log-file="valgrind"
 
 # modifies LDFLAGS
--include deps.mk
+-include $(DEPS_MK)
 
 $(EXEC): $(OBJ)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
@@ -45,6 +46,11 @@ lint: tidy format
 .PHONY: clean
 clean:
 	rm -f $(OBJ) $(EXEC)
+
+.PHONY: deps
+deps:
+	rm -f $(DEPS_MK)
+	bash install_deps.sh
 
 .PHONY: all
 all: $(EXEC)

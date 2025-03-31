@@ -13,11 +13,6 @@
 
 #include "nvlua.h"
 
-static const struct luaL_Reg libnv[] = {
-    { "dir", NULL },
-    { NULL, NULL } /* sentinel */
-};
-
 static void nv_read_dotnv(char* path)
 {
 }
@@ -48,7 +43,7 @@ static void nv_open_plugin(char* path)
 
 int luaopen_mylib(lua_State* L)
 {
-    luaL_openlib(L, "libnv", libnv, 0);
+    luaL_openlibs(L);
     return 1;
 }
 
@@ -56,7 +51,7 @@ int main2(void)
 {
     char buff[256];
     int error = 0;
-    lua_State* L = lua_open(); /* opens Lua */
+    lua_State* L = luaL_newstate(); /* opens Lua */
     luaopen_base(L); /* opens the basic library */
     luaopen_table(L); /* opens the table library */
     luaopen_io(L); /* opens the I/O library */
