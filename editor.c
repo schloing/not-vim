@@ -77,6 +77,10 @@ static void nv_redraw_all(struct nv_editor* editor)
 
 void nv_mainloop(struct nv_editor* editor)
 {
+    if (editor->running) {
+        return;
+    }
+
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
     tb_set_output_mode(TB_OUTPUT_256);
 
@@ -104,7 +108,9 @@ void nv_mainloop(struct nv_editor* editor)
 
             editor->height = tb_height();
             editor->width = tb_width();
-
+            editor->window->wd.h = editor->height;
+            editor->window->wd.w = editor->width;
+            nv_redistribute(editor->window);
             nv_redraw_all(editor);
 
             break;
@@ -144,14 +150,14 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
             if (buffer->top_line > 0) {
                 buffer->top_line--;
             }
-            // nv_cursor_move_up(buffer, cursor, 1);
+            nv_cursor_move_up(buffer, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
             if (buffer->top_line < buffer->line_count) {
                 buffer->top_line++;
             }
-            // nv_cursor_move_down(buffer, cursor, 1);
+            nv_cursor_move_down(buffer, cursor, 1);
             break;
         }
     } else {
@@ -193,7 +199,7 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
         }
     }
 
-    //  _nv_draw_buffer(editor);
+    nv_draw_buffer(editor->window);
     nv_draw_cursor(editor);
     return NV_OK;
 }
@@ -250,12 +256,13 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
    
     size_t line_no = 0;
     size_t max_width = window->wd.w - (buffer->linecol_size + 1);
+    size_t line_length = 0;
     struct nv_buff_line* line = NULL;
     size_t copy_size = 0;
 
     for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
         if (line_no > buffer->line_count) {
-            continue;
+            break;
         }
 
         line = &buffer->lines[line_no++];
@@ -263,23 +270,25 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         if (!line) {
             return;
         }
+
+        line_length = line->end - line->begin;
         
-        copy_size = (line->length > max_width) ? max_width : line->length;
+        copy_size = (line_length > max_width) ? max_width : line_length;
         memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
         lbuf[copy_size] = '\0';
         tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
 
-        if (line->length > max_width) {
-            size_t num_wraps = line->length / max_width;
+        if (line_length > max_width) {
+            size_t num_wraps = line_length / max_width;
 
             for (size_t i = 1; i <= num_wraps; i++) {
                 size_t offset = i * max_width;
 
-                if (offset >= line->length) {
+                if (offset >= line_length) {
                     break;
                 }
 
-                size_t wrap_size = (line->length - offset > max_width) ? max_width : line->length - offset;
+                size_t wrap_size = (line_length - offset > max_width) ? max_width : line_length - offset;
                 memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
 

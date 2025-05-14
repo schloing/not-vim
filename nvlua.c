@@ -1,9 +1,9 @@
 // https://github.com/yasuoka/luacstruct
 // https://www.lua.org/pil/contents.html
 
-#include <lauxlib.h>
-#include <lua.h>
-#include <lualib.h>
+#include <luajit-2.1/lauxlib.h>
+#include <luajit-2.1/lua.h>
+#include <luajit-2.1/lualib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +12,11 @@
 #include <unistd.h>
 
 #include "nvlua.h"
+
+static void nv_read_dotnv(char* path);
+static void nv_open_plugin(char* path);
+//  static void nv_find_plugins();
+//  static void nv_make_plugin_directory();
 
 static void nv_read_dotnv(char* path)
 {
@@ -32,8 +37,11 @@ static void nv_open_plugin(char* path)
     case S_IFDIR:
         // find 'dotnv'
         // read entry point
-        char* dotnv_path = (char*)malloc(strlen(path) + sizeof("dotnv"));
+        size_t dotnv_path_sz = strlen(path) + sizeof("dotnv");
+        char* dotnv_path = (char*)malloc(dotnv_path_sz);
+        snprintf(dotnv_path, dotnv_path_sz, "%s/%s", path, "plugin.lua");
         nv_read_dotnv(dotnv_path);
+        free(dotnv_path);
         break;
 
     default:
