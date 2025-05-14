@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/nv.dir/buffer.c.o CMakeFiles/nv.dir/cursor.c.o CMakeFiles/nv.dir/editor.c.o CMakeFiles/nv.dir/events.c.o CMakeFiles/nv.dir/main.c.o CMakeFiles/nv.dir/nvlua.c.o CMakeFiles/nv.dir/window.c.o -o bin/nv  -lluajit-5.1 -ltermbox2 

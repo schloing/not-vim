@@ -1,0 +1,3 @@
+/home/jaisal/sources/not-vim/CMakeFiles/nv.dir
+/home/jaisal/sources/not-vim/CMakeFiles/edit_cache.dir
+/home/jaisal/sources/not-vim/CMakeFiles/rebuild_cache.dir

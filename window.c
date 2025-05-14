@@ -48,13 +48,13 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         return root;
     }
 
-    if (root->show && !root->buffer) {
+    if (!root->has_children && !root->buffer) {
         // first caller has to call nv_buffer_init
         root->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
         return root;
     }
 
-    if (!root->has_children) {
+    if (root->show && !root->has_children) {
         root->left = nv_find_empty_window(root->left);
 
         if (!root->left) {
@@ -63,7 +63,7 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 
         root->left->parent = root;
 
-        if (root->show && root->buffer) {
+        if (root->buffer) {
             root->right = nv_window_init();
             memcpy(root->right, root, sizeof(struct nv_window));
             root->right->buffer = root->buffer;
@@ -75,7 +75,6 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         }
 
         root->has_children = true;
-        root->show = false;
         root->buffer = NULL;
         root->descendants += 2;
 
@@ -93,33 +92,16 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
 
 static void nv_set_widths(struct nv_window* root, struct nv_window* left, struct nv_window* right)
 {
-//  bool left_block = false;
     enum nv_split_kind split = root->parent ? root->parent->split : HORIZONTAL;
 
-/*  if (left->show && !left->has_children) {
-        left->wd.x = root->wd.x;
-        left->wd.y = root->wd.y;
-        left->wd.w = root->wd.w / 2;
-        left->wd.h = root->wd.h;
-        left_block = true;
-    }
-
-    if (right->show && !right->has_children) {
-        right->wd.x = left_block ? root->wd.x + left->wd.w : root->wd.x;
-        right->wd.y = left_block ? root->wd.y + left->wd.y : root->wd.y;
-        right->wd.w = left_block ? root->wd.w - left->wd.w : root->wd.w;
-        right->wd.h = root->wd.h;
-    }   */
-
-    if (left->show && !left->has_children) {
+    if (left->show) {
         left->wd.x = root->wd.x;
         left->wd.y = root->wd.y;
         left->wd.w = split == HORIZONTAL ? root->wd.w / 2 : root->wd.w;
         left->wd.h = split == VERTICAL ? root->wd.h / 2 : root->wd.h;
-//      left_block = true;
     }
 
-    if (right->show && !right->has_children) {
+    if (right->show) {
         right->wd.x = split == HORIZONTAL ? root->wd.x + left->wd.w : root->wd.x;
         right->wd.y = split == VERTICAL ? root->wd.y + left->wd.h : root->wd.y;
         right->wd.w = split == HORIZONTAL ? root->wd.w - left->wd.w : root->wd.w;
