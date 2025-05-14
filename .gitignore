@@ -4,3 +4,5 @@ nv
 .vscode/
 valgrind
 deps.mk
+CMakeFiles/
+bin/
