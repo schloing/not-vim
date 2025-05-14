@@ -1,3 +1,3 @@
 #!/bin/bash
 set -xe
-gdb ./bin/nv $*
+gdb ./bin/nv --args $*
