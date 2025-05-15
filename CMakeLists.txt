@@ -10,6 +10,9 @@ set(CMAKE_CXX_CLANG_TIDY
     -format-style='file';
     -header-filter=${CMAKE_CURRENT_SOURCE_DIR};
     )
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
 
 include_directories(${TERMBOX2_ROOT}/include)
 link_directories(${TERMBOX2_ROOT}/lib)

@@ -13,16 +13,14 @@
 
 #include "nvlua.h"
 
-static void nv_read_dotnv(char* path);
-static void nv_open_plugin(char* path);
+#define NV_PLUGIN_ENTRYPOINT "main.lua"
+#define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
+
+static void nv_load_plugin(lua_State* L, char* path);
 //  static void nv_find_plugins();
 //  static void nv_make_plugin_directory();
 
-static void nv_read_dotnv(char* path)
-{
-}
-
-static void nv_open_plugin(char* path)
+static void nv_load_plugin(lua_State* L, char* path)
 {
     if (!path) {
         return;
@@ -35,13 +33,23 @@ static void nv_open_plugin(char* path)
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFDIR:
-        // find 'dotnv'
-        // read entry point
-        size_t dotnv_path_sz = strlen(path) + sizeof("dotnv");
-        char* dotnv_path = (char*)malloc(dotnv_path_sz);
-        snprintf(dotnv_path, dotnv_path_sz, "%s/%s", path, "plugin.lua");
-        nv_read_dotnv(dotnv_path);
-        free(dotnv_path);
+        size_t path_length = strlen(path);
+        char* plugin_entry_path = (char*)calloc(path_length + NV_PLUGIN_ENTRYPOINT_LENGTH + 1, sizeof(char)); // null terminator
+        memcpy(plugin_entry_path, path, path_length); // base path prefix
+        memcpy(plugin_entry_path + path_length, NV_PLUGIN_ENTRYPOINT, NV_PLUGIN_ENTRYPOINT_LENGTH); // entrypoint suffix
+
+        if (stat(plugin_entry_path, &sb) == -1) {
+            free(plugin_entry_path);
+            return;
+        }
+
+        if ((sb.st_mode & S_IFMT) == S_IFREG) {
+            if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
+                // TODO: LOG
+            }
+        }
+
+        free(plugin_entry_path);
         break;
 
     default:
@@ -55,10 +63,8 @@ int luaopen_mylib(lua_State* L)
     return 1;
 }
 
-int main2(void)
+int nvlua_main()
 {
-    char buff[256];
-    int error = 0;
     lua_State* L = luaL_newstate(); /* opens Lua */
     luaopen_base(L); /* opens the basic library */
     luaopen_table(L); /* opens the table library */
@@ -66,15 +72,7 @@ int main2(void)
     luaopen_string(L); /* opens the string lib. */
     luaopen_math(L); /* opens the math lib. */
 
-    while (fgets(buff, sizeof(buff), stdin) != NULL) {
-        error = luaL_loadbuffer(L, buff, strlen(buff), "line") || lua_pcall(L, 0, 0, 0);
-        if (error) {
-            fprintf(stderr, "%s", lua_tostring(L, -1));
-            lua_pop(L, 1); /* pop error message from the stack */
-        }
-    }
-
-    nv_open_plugin(NULL);
+    nv_load_plugin(L, "./plugload/");
 
     lua_close(L);
     return 0;
