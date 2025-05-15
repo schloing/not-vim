@@ -268,6 +268,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         line = &buffer->lines[line_no++];
 
         if (!line) {
+            free(lbuf);
             return;
         }
 

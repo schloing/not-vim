@@ -76,10 +76,13 @@ int nv_buffer_init(struct nv_buff* buff, char* path)
     cvector_reserve(buff->buffer, (size_t)NV_BUFF_CAP);
 
     buff->chunk = NV_BUFF_CAP;
-    buff->path = path;
     buff->top_line = 0;
 
-    (void)nv_buffer_open_file(buff, path);
+    if (path) {
+        buff->path = path;
+        (void)nv_buffer_open_file(buff, path);
+    }
+
     return NV_OK;
 }
 
