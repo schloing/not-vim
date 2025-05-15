@@ -20,6 +20,7 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
     struct nv_window* window;
+    struct nv_window* logger;
     size_t active_window_index;
     nv_mode mode;
     size_t width;

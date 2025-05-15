@@ -201,6 +201,30 @@ editor.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/nv.dir/build.make CMakeFiles/nv.dir/editor.c.s
 .PHONY : editor.c.s
 
+error.o: error.c.o
+.PHONY : error.o
+
+# target to build an object file
+error.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nv.dir/build.make CMakeFiles/nv.dir/error.c.o
+.PHONY : error.c.o
+
+error.i: error.c.i
+.PHONY : error.i
+
+# target to preprocess a source file
+error.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nv.dir/build.make CMakeFiles/nv.dir/error.c.i
+.PHONY : error.c.i
+
+error.s: error.c.s
+.PHONY : error.s
+
+# target to generate assembly for a file
+error.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/nv.dir/build.make CMakeFiles/nv.dir/error.c.s
+.PHONY : error.c.s
+
 events.o: events.c.o
 .PHONY : events.o
 
@@ -315,6 +339,9 @@ help:
 	@echo "... editor.o"
 	@echo "... editor.i"
 	@echo "... editor.s"
+	@echo "... error.o"
+	@echo "... error.i"
+	@echo "... error.s"
 	@echo "... events.o"
 	@echo "... events.i"
 	@echo "... events.s"

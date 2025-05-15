@@ -26,3 +26,6 @@ https://github.com/termbox/termbox2
 
 vector
 https://github.com/eteran/c-vector/blob/master/cvector.h
+
+### read
+https://www.codingwiththomas.com/blog/a-lua-c-api-cheat-sheet
