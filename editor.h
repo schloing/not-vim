@@ -16,11 +16,17 @@ typedef enum {
     NV_MODE_INSERTS, // insert*
 } nv_mode;
 
+struct nv_status {
+    size_t height;
+    char* format;
+};
+
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
     struct nv_window* window;
     struct nv_window* logger;
+    struct nv_status* statline;
     size_t active_window_index;
     nv_mode mode;
     size_t width;
@@ -48,6 +54,7 @@ struct nv_editor {
 #undef TUI
 #endif
 
+void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height);
 void nv_mainloop(struct nv_editor* editor);
 int nv_editor_init(struct nv_editor* editor);
 int nv_render_term(struct nv_editor* editor);
