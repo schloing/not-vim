@@ -75,6 +75,11 @@ static void nv_redraw_all(struct nv_editor* editor)
     tb_present();
 }
 
+void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height) {
+    editor->width = width;
+    editor->height = editor->statline ? height - editor->statline->height : height;
+}
+
 void nv_mainloop(struct nv_editor* editor)
 {
     if (editor->running) {
@@ -106,10 +111,8 @@ void nv_mainloop(struct nv_editor* editor)
                 break;
             }
 
-            editor->height = tb_height();
-            editor->width = tb_width();
-            editor->window->wd.h = editor->height;
-            editor->window->wd.w = editor->width;
+            nv_resize_for_layout(editor, tb_width(), tb_height());
+            NV_WD_SET_SIZE(editor->window->wd, editor->width, editor->height);
             nv_redistribute(editor->window);
             nv_redraw_all(editor);
 

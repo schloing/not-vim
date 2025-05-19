@@ -29,10 +29,11 @@ int main(int argc, char** argv)
         goto clean_up;
     }
 
-    editor.width = tb_width();
-    editor.height = tb_height();
+    editor.statline = &(struct nv_status){ .height = 1 };
+    nv_resize_for_layout(&editor, tb_width(), tb_height());
+
     editor.logger = nv_find_empty_window(editor.window);
-    editor.logger->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+    editor.logger->buffer = calloc(1, sizeof(struct nv_buff));
 
     if ((rv = nv_buffer_init(editor.logger->buffer, NULL)) != NV_OK) {
         tb_shutdown();
@@ -43,14 +44,15 @@ int main(int argc, char** argv)
     editor.logger->buffer->type = NV_BUFFTYPE_LOG;
     editor.logger->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
     editor.logger->show = false;
-    editor.logger->wd.w = editor.width;
-    editor.logger->wd.h = editor.height;
+    NV_WD_SET_SIZE(editor.logger->wd, editor.width, editor.height);
 
+    // main window
     editor.window = nv_window_init();
-    editor.window->wd.w = editor.width;
-    editor.window->wd.h = editor.height;
+    editor.window->split = HORIZONTAL;
     editor.window->show = true;
+    NV_WD_SET_SIZE(editor.window->wd, editor.width, editor.height);
 
+    // load plugs
     nvlua_main();
 
     for (int i = 1; i < argc; i++) {
