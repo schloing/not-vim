@@ -1,4 +1,3 @@
-#include "termbox2.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,9 +10,9 @@
 #include "cvector.h"
 #include "editor.h"
 #include "error.h"
+#include "termbox2.h"
 #include "window.h"
 
-extern int tb_clear_region(int, int);
 static int nv_get_input(struct nv_editor* editor, struct tb_event* ev);
 static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor);
 static int count_recur(int n);
@@ -59,7 +58,7 @@ static void nv_draw_cursor(struct nv_editor* editor)
     struct cursor c = buffer->cursors[0];
     int row = line(buffer, c.line)->length;
     int effective_row = (c.x > row ? row : c.x) < 0 ? 0 : (c.x > row ? row : c.x); // FIXME
-    tb_set_cell(buffer->linecol_size + effective_row + 1, c.y, ' ', TB_256_BLACK, TB_256_WHITE);
+    tb_set_cell(buffer->linecol_size + effective_row + 1, c.y, ' ', NV_BLACK, NV_WHITE);
     tb_present();
 }
 
@@ -80,14 +79,14 @@ void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height)
     editor->height = editor->statline ? height - editor->statline->height : height;
 }
 
-void nv_mainloop(struct nv_editor* editor)
+void nv_main(struct nv_editor* editor)
 {
     if (editor->running) {
         return;
     }
 
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
-    tb_set_output_mode(TB_OUTPUT_256);
+    tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
 
     editor->running = true;
     nv_redraw_all(editor);
@@ -126,7 +125,7 @@ void nv_mainloop(struct nv_editor* editor)
 
 static void nv_draw_background(struct nv_editor* editor)
 {
-    tb_set_clear_attrs(TB_256_WHITE, TB_256_BLACK);
+    tb_set_clear_attrs(NV_WHITE, NV_BLACK);
     tb_clear();
 }
 
@@ -280,7 +279,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         copy_size = (line_length > max_width) ? max_width : line_length;
         memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
         lbuf[copy_size] = '\0';
-        tb_printf(window->wd.x, row, TB_256_WHITE, TB_256_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
+        tb_printf(window->wd.x, row, NV_WHITE, NV_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
 
         if (line_length > max_width) {
             size_t num_wraps = line_length / max_width;
@@ -296,7 +295,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
                 memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
 
-                tb_printf(window->wd.x, ++row, TB_256_WHITE, TB_256_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+                tb_printf(window->wd.x, ++row, NV_WHITE, NV_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
             }
         }
     }
@@ -327,7 +326,7 @@ static int nv_draw_buffer(struct nv_window* window)
         break;
 
     case NV_BUFFTYPE_BROWSER:
-        tb_print(0, 0, TB_256_WHITE, TB_256_BLACK, "netrw");
+        tb_print(0, 0, NV_WHITE, NV_BLACK, "netrw");
         break;
 
     default:
@@ -351,7 +350,7 @@ static int nv_draw_status(struct nv_editor* editor)
     //  struct nv_buff* buffer = __nv_get_active_buffer(editor);
     //  char* prompt;
     //  if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) ==
-    //  -1) return; tb_printf(0, editor->height - 1, TB_256_BLACK, TB_256_WHITE, "%-*.*s",
+    //  -1) return; tb_printf(0, editor->height - 1, NV_BLACK, NV_WHITE, "%-*.*s",
     //  editor->width, editor->width, prompt); free(prompt);
     return NV_OK;
 }

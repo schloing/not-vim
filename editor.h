@@ -55,7 +55,7 @@ struct nv_editor {
 #endif
 
 void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height);
-void nv_mainloop(struct nv_editor* editor);
+void nv_main(struct nv_editor* editor);
 int nv_editor_init(struct nv_editor* editor);
 int nv_render_term(struct nv_editor* editor);
 int nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);

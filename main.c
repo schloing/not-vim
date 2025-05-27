@@ -13,7 +13,10 @@
 #include "editor.h"
 #include "error.h"
 #include "nvlua.h"
+#define TB_IMPL
 #include "termbox2.h"
+#undef TB_IMPL
+#include "color.h"
 #include "window.h"
 
 int main(int argc, char** argv)
@@ -77,7 +80,7 @@ int main(int argc, char** argv)
         }
     }
 
-    nv_mainloop(&editor);
+    nv_main(&editor);
 
 clean_up:
     tb_shutdown();
