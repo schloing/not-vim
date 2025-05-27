@@ -4,10 +4,10 @@ nv
 .vscode/
 valgrind
 deps.mk
+Makefile
 CMakeFiles/
 bin/
 CMakeCache.txt
-CMakeFiles/
 build.ninja
 cmake_install.cmake
 .ninja_deps
