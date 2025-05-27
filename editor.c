@@ -86,7 +86,11 @@ void nv_main(struct nv_editor* editor)
     }
 
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+    #ifdef TB_OUTPUT_TRUECOLOR
     tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
+    #else
+    tb_set_output_mode(TB_OUTPUT_NORMAL);
+    #endif
 
     editor->running = true;
     nv_redraw_all(editor);
@@ -347,10 +351,11 @@ char* nv_mode_str[NV_MODE_INSERTS + 1] = {
 
 static int nv_draw_status(struct nv_editor* editor)
 {
-    //  struct nv_buff* buffer = __nv_get_active_buffer(editor);
-    //  char* prompt;
-    //  if (asprintf(&prompt, "%s[%zu] %s", nv_mode_str[editor->mode], buffer->id, buffer->path) ==
-    //  -1) return; tb_printf(0, editor->height - 1, NV_BLACK, NV_WHITE, "%-*.*s",
-    //  editor->width, editor->width, prompt); free(prompt);
+    if (asprintf(&editor->statline->format, "--%s--", nv_mode_str[editor->mode]) == -1) 
+        return NV_ERR_MEM;
+    
+    tb_printf(0, editor->height - editor->statline->height, NV_BLACK, NV_WHITE, 
+            "%-*.*s", editor->width, editor->width, editor->statline->format);
+
     return NV_OK;
 }
