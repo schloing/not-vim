@@ -21,6 +21,21 @@ struct nv_status {
     char* format;
 };
 
+struct nv_conf {
+    int bg;
+    int fg;
+    int tab_width;
+    bool expand_tab;
+    bool auto_indent;
+    bool line_numbers;
+    bool show_relative;
+    int command_delay;
+    int status_height;
+    bool show_status;
+    bool show_buffer;
+    bool show_headless;
+};
+
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {

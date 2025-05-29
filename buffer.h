@@ -8,21 +8,6 @@
 #include "cursor.h"
 #include "cvector.h"
 
-struct nv_conf {
-    int bg;
-    int fg;
-    int tab_width;
-    bool expand_tab;
-    bool auto_indent;
-    bool line_numbers;
-    bool show_relative;
-    int command_delay;
-    int status_height;
-    bool show_status;
-    bool show_buffer;
-    bool show_headless;
-};
-
 enum nv_bufftype {
     NV_BUFFTYPE_STDIN      = 1 << 0,
     NV_BUFFTYPE_STDOUT     = 1 << 1,
