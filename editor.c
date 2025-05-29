@@ -33,7 +33,7 @@ int nv_editor_init(struct nv_editor* editor)
 
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
 
-    editor->nv_conf = (struct nv_conf) {
+    editor->config = (struct nv_conf) {
         .tab_width = NV_TAB_WIDTH,
         .expand_tab = NV_TAB_WIDTH,
         .auto_indent = NV_AUTO_INDENT,
@@ -64,7 +64,7 @@ static void nv_draw_cursor(struct nv_editor* editor)
 
 static void nv_redraw_all(struct nv_editor* editor)
 {
-    if (editor->nv_conf.show_headless) {
+    if (editor->config.show_headless) {
         return;
     }
 
@@ -110,7 +110,7 @@ void nv_main(struct nv_editor* editor)
             break;
 
         case TB_EVENT_RESIZE:
-            if (editor->nv_conf.show_headless) {
+            if (editor->config.show_headless) {
                 break;
             }
 
@@ -136,7 +136,7 @@ static void nv_draw_background(struct nv_editor* editor)
 // FIXME:
 static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 {
-    if (editor->nv_conf.show_headless) {
+    if (editor->config.show_headless) {
         return NV_OK;
     }
 
