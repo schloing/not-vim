@@ -4,11 +4,19 @@
 ./bin/nv [file]...
 ```
 ## running
+### Makefile
 ```sh
 cmake .
 make
 ./bin/nv [file]...
 ```
+### faster compilations
+```sh
+cmake -G Ninja .
+ninja
+./bin/nv [file]...
+```
+## debugging
 ### debugging with valgrind (unix)
 ```sh
 sh run_valgrind.sh [file]...
