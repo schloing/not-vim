@@ -50,7 +50,7 @@ struct nv_editor {
     bool running;
     bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
-    struct nv_conf nv_conf;
+    struct nv_conf config;
 };
 
 // config defaults

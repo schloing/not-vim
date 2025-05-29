@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     struct nv_editor editor = { 0 };
     nv_editor_init(&editor);
 
-    if (!editor.nv_conf.show_headless && (rv = tb_init()) != TB_OK) {
+    if (!editor.config.show_headless && (rv = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(rv));
         editor.status = rv;
         goto clean_up;
