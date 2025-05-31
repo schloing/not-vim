@@ -34,13 +34,39 @@ int nv_editor_init(struct nv_editor* editor)
     editor->mode = (nv_mode)NV_MODE_NAVIGATE;
 
     editor->config = (struct nv_conf) {
-        .tab_width = NV_TAB_WIDTH,
-        .expand_tab = NV_TAB_WIDTH,
-        .auto_indent = NV_AUTO_INDENT,
-        .line_numbers = NV_LINE_NUMBERS,
-        .show_relative = NV_SHOW_RELATIVE,
-        .command_delay = NV_COMMAND_DELAY,
-        .show_headless = NV_HEADLESS,
+        .tab_width              = NV_TAB_WIDTH,
+        .expand_tab             = NV_EXPAND_TAB,
+        .auto_indent            = NV_AUTO_INDENT,
+        .line_numbers           = NV_LINE_NUMBERS,
+        .show_relative          = NV_SHOW_RELATIVE,
+        .command_delay          = NV_COMMAND_DELAY,
+        .status_height          = NV_STATUS_HEIGHT,
+        .show_status            = NV_SHOW_STATUS,
+        .show_buffer            = NV_SHOW_BUFFER,
+        .show_headless          = NV_HEADLESS,
+        .allow_italic_text      = NV_ALLOW_ITALIC_TEXT,
+        .allow_bolded_text      = NV_ALLOW_BOLDED_TEXT,
+        .allow_underlined_text  = NV_ALLOW_UNDERLINED_TEXT,
+        .fg_main                = NV_FG_MAIN,
+        .fg_secondary           = NV_FG_SECONDARY,
+        .fg_contrast            = NV_FG_CONTRAST,
+        .bg_main                = NV_BG_MAIN,
+        .bg_secondary           = NV_BG_SECONDARY,
+        .bg_contrast            = NV_BG_CONTRAST,
+        .fg_syntax_keyword      = NV_FG_SYNTAX_KEYWORD,
+        .fg_syntax_string       = NV_FG_SYNTAX_STRING,
+        .fg_syntax_comment      = NV_FG_SYNTAX_COMMENT,
+        .fg_syntax_number       = NV_FG_SYNTAX_NUMBER,
+        .fg_syntax_operator     = NV_FG_SYNTAX_OPERATOR,
+        .fg_syntax_function     = NV_FG_SYNTAX_FUNCTION,
+        .fg_syntax_variable     = NV_FG_SYNTAX_VARIABLE,
+        .fg_syntax_type         = NV_FG_SYNTAX_TYPE,
+        .fg_syntax_macro        = NV_FG_SYNTAX_MACRO,
+        .fg_syntax_preprocessor = NV_FG_SYNTAX_PREPROCESSOR,
+        .fg_syntax_constant     = NV_FG_SYNTAX_CONSTANT,
+        .fg_syntax_builtins     = NV_FG_SYNTAX_BUILTINS,
+        .fg_syntax_attribute    = NV_FG_SYNTAX_ATTRIBUTE,
+        .fg_syntax_error        = NV_FG_SYNTAX_ERROR,
     };
 
     return NV_OK;
@@ -129,7 +155,7 @@ void nv_main(struct nv_editor* editor)
 
 static void nv_draw_background(struct nv_editor* editor)
 {
-    tb_set_clear_attrs(NV_WHITE, NV_BLACK);
+    tb_set_clear_attrs(editor->config.fg_main, editor->config.bg_main);
     tb_clear();
 }
 
@@ -353,9 +379,11 @@ static int nv_draw_status(struct nv_editor* editor)
 {
     if (asprintf(&editor->statline->format, "--%s--", nv_mode_str[editor->mode]) == -1) 
         return NV_ERR_MEM;
-    
-    tb_printf(0, editor->height - editor->statline->height, NV_BLACK, NV_WHITE, 
-            "%-*.*s", editor->width, editor->width, editor->statline->format);
+
+    for (int i = 0; i < editor->statline->height; i++) {
+        tb_printf(0, editor->height - i, NV_BLACK, NV_WHITE,
+                "%-*.*s", editor->width, editor->width, editor->statline->format);
+    }
 
     return NV_OK;
 }
