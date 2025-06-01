@@ -25,6 +25,9 @@ static int nv_draw_windows(struct nv_window* root);
 static int nv_draw_buffer(struct nv_window* window);
 static int nv_draw_status(struct nv_editor* editor);
 
+// globals
+static struct nv_conf* nv_editor_config = NULL;
+
 int nv_editor_init(struct nv_editor* editor)
 {
     if (!editor) {
@@ -90,7 +93,7 @@ static void nv_draw_cursor(struct nv_editor* editor)
 
 static void nv_redraw_all(struct nv_editor* editor)
 {
-    if (editor->config.show_headless) {
+    if (nv_editor_config->show_headless) {
         return;
     }
 
@@ -110,6 +113,8 @@ void nv_main(struct nv_editor* editor)
     if (editor->running) {
         return;
     }
+
+    nv_editor_config = &editor->config;
 
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
     #ifdef TB_OUTPUT_TRUECOLOR
@@ -136,7 +141,7 @@ void nv_main(struct nv_editor* editor)
             break;
 
         case TB_EVENT_RESIZE:
-            if (editor->config.show_headless) {
+            if (nv_editor_config->show_headless) {
                 break;
             }
 
@@ -155,14 +160,14 @@ void nv_main(struct nv_editor* editor)
 
 static void nv_draw_background(struct nv_editor* editor)
 {
-    tb_set_clear_attrs(editor->config.fg_main, editor->config.bg_main);
+    tb_set_clear_attrs(nv_editor_config->fg_main, nv_editor_config->bg_main);
     tb_clear();
 }
 
 // FIXME:
 static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
 {
-    if (editor->config.show_headless) {
+    if (nv_editor_config->show_headless) {
         return NV_OK;
     }
 
@@ -276,6 +281,12 @@ static int nv_draw_windows(struct nv_window* root)
     return NV_OK;
 }
 
+// wrappers
+
+#define NV_PRINTF(x, y, fg, ...) (tb_printf(x, y, fg, nv_editor_config->bg_main, __VA_ARGS__))
+
+#define NV_PRINTF_BUFFER(window, buffer, line_no, lbuf) (NV_PRINTF(window->wd.x, row, NV_WHITE, "%*d %s", buffer->linecol_size, line_no, lbuf))
+
 static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
 {
     char* lbuf = calloc(window->wd.w, sizeof(char));
@@ -309,7 +320,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         copy_size = (line_length > max_width) ? max_width : line_length;
         memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
         lbuf[copy_size] = '\0';
-        tb_printf(window->wd.x, row, NV_WHITE, NV_BLACK, "%*d %s", buffer->linecol_size, line_no, lbuf);
+        NV_PRINTF_BUFFER(window, buffer, line_no, lbuf);
 
         if (line_length > max_width) {
             size_t num_wraps = line_length / max_width;
@@ -325,7 +336,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
                 memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
 
-                tb_printf(window->wd.x, ++row, NV_WHITE, NV_BLACK, "%*c %s", buffer->linecol_size, ' ', lbuf);
+                NV_PRINTF_BUFFER(window, buffer, line_no, lbuf);
             }
         }
     }
