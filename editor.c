@@ -283,9 +283,14 @@ static int nv_draw_windows(struct nv_window* root)
 
 // wrappers
 
-#define NV_PRINTF(x, y, fg, ...) (tb_printf(x, y, fg, nv_editor_config->bg_main, __VA_ARGS__))
+#define NV_PRINTF(x, y, fg, fmt, ...) \
+    tb_printf(x, y, fg, nv_editor_config->bg_main, fmt, ##__VA_ARGS__)
 
-#define NV_PRINTF_BUFFER(window, buffer, line_no, lbuf) (NV_PRINTF(window->wd.x, row, NV_WHITE, "%*d %s", buffer->linecol_size, line_no, lbuf))
+#define NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf) \
+    do { \
+        NV_PRINTF((window)->wd.x, row, NV_GRAY, "%*d", (buffer)->linecol_size, line_no); \
+        NV_PRINTF((window)->wd.x + (buffer)->linecol_size + 1, row, NV_WHITE, "%s", lbuf); \
+    } while (0);
 
 static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
 {
@@ -297,10 +302,10 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         return;
     }
    
-    size_t line_no = 0;
     size_t max_width = window->wd.w - (buffer->linecol_size + 1);
-    size_t line_length = 0;
     struct nv_buff_line* line = NULL;
+    size_t line_length = 0;
+    size_t line_no = 0;
     size_t copy_size = 0;
 
     for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
@@ -311,17 +316,32 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
         line = &buffer->lines[line_no++];
 
         if (!line) {
-            free(lbuf);
-            return;
+            break;
         }
 
         line_length = line->end - line->begin;
-        
         copy_size = (line_length > max_width) ? max_width : line_length;
-        memcpy(lbuf, &buffer->buffer[line->begin], copy_size);
-        lbuf[copy_size] = '\0';
-        NV_PRINTF_BUFFER(window, buffer, line_no, lbuf);
 
+        // convert invalid characters into their printable variants
+        int r = 0;
+        for (int i = 0; i < copy_size; i++) {
+            char chr = buffer->buffer[line->begin + i];
+
+            if (chr == '\t') {
+                // tabs need to be expanded into spaces to nearest tab width
+                size_t space_count = nv_editor_config->tab_width - (r % nv_editor_config->tab_width);
+                memset(lbuf + r, ' ', space_count);
+                r += space_count;
+            } else {
+                lbuf[r++] = chr;
+            }
+        }
+
+        lbuf[r] = '\0';
+        NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf);
+
+        // TODO:
+        // handle the tab expansion here as well
         if (line_length > max_width) {
             size_t num_wraps = line_length / max_width;
 
@@ -335,8 +355,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
                 size_t wrap_size = (line_length - offset > max_width) ? max_width : line_length - offset;
                 memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
-
-                NV_PRINTF_BUFFER(window, buffer, line_no, lbuf);
+                NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf);
             }
         }
     }
