@@ -18,6 +18,7 @@
 #define NV_MAGENTA  0xff00ff
 #define NV_CYAN     0x00ffff
 #define NV_WHITE    0xffffff
+#define NV_GRAY     0x595959
 #else
 #define NV_BLACK    TB_BLACK
 #define NV_RED      TB_RED
@@ -27,6 +28,7 @@
 #define NV_MAGENTA  TB_MAGENTA
 #define NV_CYAN     TB_CYAN
 #define NV_WHITE    TB_WHITE
+#define NV_GRAY     TB_WHITE
 #endif
 
 #endif

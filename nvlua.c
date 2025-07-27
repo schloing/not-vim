@@ -11,41 +11,57 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "editor.h"
+#include "error.h"
 #include "nvlua.h"
 
 #define NV_PLUGIN_ENTRYPOINT "main.lua"
 #define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
 
-static void nv_load_plugin(lua_State* L, char* path);
-//  static void nv_find_plugins();
-//  static void nv_make_plugin_directory();
+static int nv_load_plugin(lua_State* L, char* path);
 
-static void nv_load_plugin(lua_State* L, char* path)
+static int nv_log_lua(lua_State* L)
+{
+    const char* str = luaL_checkstring(L, 1);
+    nv_log(str);
+    return NV_OK;
+}
+
+static int nv_load_plugin(lua_State* L, char* path)
 {
     if (!path) {
-        return;
+        return NV_ERR_NOT_INIT;
     }
 
     struct stat sb;
     if (stat(path, &sb) == -1) {
-        return;
+        return NV_ERR;
     }
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFDIR:
         size_t path_length = strlen(path);
         char* plugin_entry_path = (char*)calloc(path_length + NV_PLUGIN_ENTRYPOINT_LENGTH + 1, sizeof(char)); // null terminator
+
+        if (!plugin_entry_path) {
+            return NV_ERR_MEM;
+        }
+
         memcpy(plugin_entry_path, path, path_length); // base path prefix
         memcpy(plugin_entry_path + path_length, NV_PLUGIN_ENTRYPOINT, NV_PLUGIN_ENTRYPOINT_LENGTH); // entrypoint suffix
 
         if (stat(plugin_entry_path, &sb) == -1) {
             free(plugin_entry_path);
-            return;
+            return NV_ERR;
         }
 
         if ((sb.st_mode & S_IFMT) == S_IFREG) {
             if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
                 // TODO: LOG
+                nv_log("lua entrypoint loaded succesfully");
+            } else {
+                const char* strerr = lua_tostring(L, -1);
+                nv_log(strerr);
             }
         }
 
@@ -53,8 +69,10 @@ static void nv_load_plugin(lua_State* L, char* path)
         break;
 
     default:
-        return;
+        return NV_ERR;
     }
+
+    return NV_OK;
 }
 
 int luaopen_mylib(lua_State* L)
@@ -72,8 +90,10 @@ int nvlua_main()
     luaopen_string(L); /* opens the string lib. */
     luaopen_math(L); /* opens the math lib. */
 
+    lua_register(L, "echo", nv_log_lua);
+
     nv_load_plugin(L, "./plugload/");
 
     lua_close(L);
-    return 0;
+    return NV_OK;
 }

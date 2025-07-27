@@ -8,7 +8,7 @@
 #include "termbox2.h"
 #include "window.h"
 
-static void nv_set_widths(struct nv_window* root, struct nv_window* left, struct nv_window* right);
+static void nv_set_width_and_split(struct nv_window* root, struct nv_window* left, struct nv_window* right);
 
 struct nv_window* nv_window_init()
 {
@@ -90,9 +90,13 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
     return right;
 }
 
-static void nv_set_widths(struct nv_window* root, struct nv_window* left, struct nv_window* right)
+static void nv_set_width_and_split(struct nv_window* root, struct nv_window* left, struct nv_window* right)
 {
-    enum nv_split_kind split = root->parent ? root->parent->split : HORIZONTAL;
+    enum nv_split_kind split = HORIZONTAL;
+
+    if (root->parent) {
+        split = root->parent->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
+    }
 
     if (left->show) {
         left->wd.x = root->wd.x;
@@ -116,7 +120,7 @@ int nv_redistribute(struct nv_window* root)
     }
 
     if (root->right && root->left) {
-        nv_set_widths(root, root->left, root->right);
+        nv_set_width_and_split(root, root->left, root->right);
         nv_redistribute(root->right);
         nv_redistribute(root->left);
         return NV_OK;

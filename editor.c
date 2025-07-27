@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,30 +14,30 @@
 #include "termbox2.h"
 #include "window.h"
 
-static int nv_get_input(struct nv_editor* editor, struct tb_event* ev);
-static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor);
+static int nv_get_input(struct tb_event* ev);
 static int count_recur(int n);
+static struct nv_buff* nv_get_active_buffer();
 static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
-static void nv_set_mode(struct nv_editor* editor, nv_mode mode);
-static void nv_draw_cursor(struct nv_editor* editor);
-static void nv_redraw_all(struct nv_editor* editor);
-static void nv_draw_background(struct nv_editor* editor);
+static void nv_set_mode(nv_mode mode);
+static void nv_draw_cursor();
+static void nv_redraw_all();
+static void nv_draw_background();
 static int nv_draw_windows(struct nv_window* root);
 static int nv_draw_buffer(struct nv_window* window);
-static int nv_draw_status(struct nv_editor* editor);
+static int nv_draw_status();
 
 // globals
-static struct nv_conf* nv_editor_config = NULL;
+static struct nv_editor* nv_editor = NULL;
 
 int nv_editor_init(struct nv_editor* editor)
 {
-    if (!editor) {
-        return NV_ERR_NOT_INIT;
+    if (!nv_editor) {
+        nv_editor = editor;
     }
 
-    editor->mode = (nv_mode)NV_MODE_NAVIGATE;
+    nv_editor->mode = (nv_mode)NV_MODE_NAVIGATE;
 
-    editor->config = (struct nv_conf) {
+    nv_editor->config = (struct nv_conf) {
         .tab_width              = NV_TAB_WIDTH,
         .expand_tab             = NV_EXPAND_TAB,
         .auto_indent            = NV_AUTO_INDENT,
@@ -75,15 +76,15 @@ int nv_editor_init(struct nv_editor* editor)
     return NV_OK;
 }
 
-static void nv_set_mode(struct nv_editor* editor, nv_mode mode)
+static void nv_set_mode(nv_mode mode)
 {
-    editor->mode = mode;
-    nv_draw_status(editor);
+    nv_editor->mode = mode;
+    nv_draw_status(nv_editor);
 }
 
-static void nv_draw_cursor(struct nv_editor* editor)
+static void nv_draw_cursor()
 {
-    struct nv_buff* buffer = nv_get_active_buffer(editor);
+    struct nv_buff* buffer = nv_get_active_buffer();
     struct cursor c = buffer->cursors[0];
     int row = line(buffer, c.line)->length;
     int effective_row = (c.x > row ? row : c.x) < 0 ? 0 : (c.x > row ? row : c.x); // FIXME
@@ -91,30 +92,36 @@ static void nv_draw_cursor(struct nv_editor* editor)
     tb_present();
 }
 
-static void nv_redraw_all(struct nv_editor* editor)
+void nv_log(const char* fmt, ...)
 {
-    if (nv_editor_config->show_headless) {
+    va_list ap;
+    va_start(ap, fmt);
+    // nv_buffer_printf(editor->buffer, fmt, ap);
+    va_end(ap);
+}
+
+static void nv_redraw_all()
+{
+    if (nv_editor->config.show_headless) {
         return;
     }
 
-    nv_draw_background(editor); // clear
-    nv_draw_windows(editor->window);
-    nv_draw_status(editor);
+    nv_draw_background(nv_editor); // clear
+    nv_draw_windows(nv_editor->window); // TODO: add log buffer override
+    nv_draw_status(nv_editor);
     tb_present();
 }
 
-void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height) {
-    editor->width = width;
-    editor->height = editor->statline ? height - editor->statline->height : height;
+void nv_resize_for_layout(size_t width, size_t height) {
+    nv_editor->width = width;
+    nv_editor->height = nv_editor->statline ? height - nv_editor->statline->height : height;
 }
 
-void nv_main(struct nv_editor* editor)
+void nv_main()
 {
-    if (editor->running) {
+    if (nv_editor->running) {
         return;
     }
-
-    nv_editor_config = &editor->config;
 
     tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
     #ifdef TB_OUTPUT_TRUECOLOR
@@ -123,32 +130,32 @@ void nv_main(struct nv_editor* editor)
     tb_set_output_mode(TB_OUTPUT_NORMAL);
     #endif
 
-    editor->running = true;
-    nv_redraw_all(editor);
+    nv_editor->running = true;
+    nv_redraw_all(nv_editor);
 
     struct tb_event ev;
 
-    while (editor->running) {
-        editor->status = tb_poll_event(&ev);
+    while (nv_editor->running) {
+        nv_editor->status = tb_poll_event(&ev);
 
         switch (ev.type) {
         case TB_EVENT_MOUSE:
         case TB_EVENT_KEY:
-            nv_draw_windows(editor->window);
-            nv_get_input(editor, &ev);
-            editor->running = false;
+            nv_draw_windows(nv_editor->window);
+            nv_get_input(&ev);
+            nv_editor->running = false;
 
             break;
 
         case TB_EVENT_RESIZE:
-            if (nv_editor_config->show_headless) {
+            if (nv_editor->config.show_headless) {
                 break;
             }
 
-            nv_resize_for_layout(editor, tb_width(), tb_height());
-            NV_WD_SET_SIZE(editor->window->wd, editor->width, editor->height);
-            nv_redistribute(editor->window);
-            nv_redraw_all(editor);
+            nv_resize_for_layout(tb_width(), tb_height());
+            NV_WD_SET_SIZE(nv_editor->window->wd, nv_editor->width, nv_editor->height);
+            nv_redistribute(nv_editor->window);
+            nv_redraw_all(nv_editor);
 
             break;
 
@@ -158,28 +165,28 @@ void nv_main(struct nv_editor* editor)
     }
 }
 
-static void nv_draw_background(struct nv_editor* editor)
+static void nv_draw_background()
 {
-    tb_set_clear_attrs(nv_editor_config->fg_main, nv_editor_config->bg_main);
+    tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);
     tb_clear();
 }
 
 // FIXME:
-static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
+static int nv_get_input(struct tb_event* ev)
 {
-    if (nv_editor_config->show_headless) {
+    if (nv_editor->config.show_headless) {
         return NV_OK;
     }
 
-    struct nv_buff* buffer = nv_get_active_buffer(editor);
+    struct nv_buff* buffer = nv_get_active_buffer();
     if (!buffer || !buffer->cursors) {
         return NV_ERR_NOT_INIT;
     }
 
     struct cursor* cursor = &buffer->cursors[0];
 
-    editor->inputs[0] = ev->key;
-    editor->inputs[1] = 0;
+    nv_editor->inputs[0] = ev->key;
+    nv_editor->inputs[1] = 0;
 
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
@@ -198,23 +205,23 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
             break;
         }
     } else {
-        if (editor->mode == NV_MODE_INSERT) {
+        if (nv_editor->mode == NV_MODE_INSERT) {
             if (isprint(ev->ch)) {
                 nv_cursor_insert_ch(buffer, cursor, ev->ch);
             } else {
                 switch (ev->key) {
                 case TB_KEY_ESC:
-                    nv_set_mode(editor, NV_MODE_NAVIGATE);
+                    nv_set_mode(NV_MODE_NAVIGATE);
                 }
             }
         } else {
             if (ev->key == TB_KEY_ESC) {
-                editor->running = false;
+                nv_editor->running = false;
             }
 
             switch (ev->ch) {
             case 'i':
-                nv_set_mode(editor, NV_MODE_INSERT);
+                nv_set_mode(NV_MODE_INSERT);
                 break;
 
             case 'j':
@@ -236,13 +243,14 @@ static int nv_get_input(struct nv_editor* editor, struct tb_event* ev)
         }
     }
 
-    nv_draw_buffer(editor->window);
-    nv_draw_cursor(editor);
+    nv_draw_buffer(nv_editor->window);
+    nv_draw_cursor(nv_editor);
+
     return NV_OK;
 }
 
 // FIXME
-static struct nv_buff* nv_get_active_buffer(struct nv_editor* editor)
+static struct nv_buff* nv_get_active_buffer()
 {
     //  struct nv_buff* buffer = (struct nv_buff*)&editor->windows[editor->peek];
     //  editor->current = buffer;
@@ -284,7 +292,7 @@ static int nv_draw_windows(struct nv_window* root)
 // wrappers
 
 #define NV_PRINTF(x, y, fg, fmt, ...) \
-    tb_printf(x, y, fg, nv_editor_config->bg_main, fmt, ##__VA_ARGS__)
+    tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
 #define NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf) \
     do { \
@@ -329,7 +337,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
 
             if (chr == '\t') {
                 // tabs need to be expanded into spaces to nearest tab width
-                size_t space_count = nv_editor_config->tab_width - (r % nv_editor_config->tab_width);
+                size_t space_count = nv_editor->config.tab_width - (r % nv_editor->config.tab_width);
                 memset(lbuf + r, ' ', space_count);
                 r += space_count;
             } else {
@@ -347,11 +355,12 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
 
             for (size_t i = 1; i <= num_wraps; i++) {
                 size_t offset = i * max_width;
-
+                
                 if (offset >= line_length) {
                     break;
                 }
-
+                
+                row++;
                 size_t wrap_size = (line_length - offset > max_width) ? max_width : line_length - offset;
                 memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
@@ -386,7 +395,18 @@ static int nv_draw_buffer(struct nv_window* window)
         break;
 
     case NV_BUFFTYPE_BROWSER:
-        tb_print(0, 0, NV_WHITE, NV_BLACK, "netrw");
+        struct dirent* entry;
+        DIR* dir = opendir(buffer->path);
+
+        if (dir == NULL) {
+            return NV_ERR;
+        }
+
+        int n = 0;
+        while ((entry = readdir(dir)) != NULL) {
+            NV_PRINTF(0, n++, NV_WHITE, "%s", entry->d_name);
+        }
+
         break;
 
     default:

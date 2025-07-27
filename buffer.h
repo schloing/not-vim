@@ -51,7 +51,7 @@ struct nv_buff {
     cvector(struct cursor) cursors;
 };
 
-int nv_buffer_init(struct nv_buff* buff, char* path);
+int nv_buffer_init(struct nv_buff* buff, const char* path);
 int nv_buffer_open_file(struct nv_buff* buff, const char* path);
 int nv_load_file_buffer(struct nv_buff* buffer, size_t* out_line_count);
 int nv_free_buffer(struct nv_buff* buff);

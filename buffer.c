@@ -63,7 +63,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
     return NV_OK;
 }
 
-int nv_buffer_init(struct nv_buff* buff, char* path)
+int nv_buffer_init(struct nv_buff* buff, const char* path)
 {
     if (!buff) {
         return NV_ERR_NOT_INIT;
@@ -79,7 +79,7 @@ int nv_buffer_init(struct nv_buff* buff, char* path)
     buff->top_line = 0;
 
     if (path) {
-        buff->path = path;
+        buff->path = (char*)path;
         (void)nv_buffer_open_file(buff, path);
     }
 
@@ -141,6 +141,8 @@ int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
             line_count++;
         }
     }
+
+    line_count--;
 
     // empty file
     if (line_count == 0) {

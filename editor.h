@@ -6,6 +6,7 @@
 #define TUI
 #include "buffer.h"
 #include "cvector.h"
+#include "status.h"
 #include "window.h"
 
 #define NV_INPUT_BACKLOG_CAP 5
@@ -16,11 +17,6 @@ typedef enum {
     NV_MODE_HIGHLIGHT,
     NV_MODE_INSERTS, // insert*
 } nv_mode;
-
-struct nv_status {
-    size_t height;
-    char* format;
-};
 
 struct nv_conf {
     int      tab_width;
@@ -120,11 +116,12 @@ struct nv_editor {
 #undef TUI
 #endif
 
-void nv_resize_for_layout(struct nv_editor* editor, size_t width, size_t height);
-void nv_main(struct nv_editor* editor);
+void nv_log(const char* fmt, ...);
+void nv_resize_for_layout(size_t width, size_t height);
+void nv_main();
 int nv_editor_init(struct nv_editor* editor);
-int nv_render_term(struct nv_editor* editor);
-int nv_push_buffer(struct nv_editor* editor, struct nv_buff buffer);
-int nv_open_window(struct nv_editor* editor, struct nv_window window);
+int nv_render_term();
+int nv_push_buffer(struct nv_buff buffer);
+int nv_open_window(struct nv_window window);
 
 #endif

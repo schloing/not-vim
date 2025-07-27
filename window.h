@@ -17,7 +17,7 @@ enum nv_split_kind {
 };
 
 struct nv_window {
-    int padding;
+    int padding; // TODO: implement padding
     bool show;
     bool has_children;
     size_t descendants;

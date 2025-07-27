@@ -25,6 +25,20 @@ sh run_valgrind.sh [file]...
 ```sh
 sh run_gdb.sh [file]...
 ```
+### todo
+- [ ] actually write changes to the file
+- [ ] remappable keybinds
+- [ ] make the lua actually do shit
+- [ ] write plugload
+- [ ] per window status line
+- [ ] window padding
+- [ ] syntax highlighting
+- better cursor
+    - [ ] emacs jump
+    - [ ] rectangular select, multiple cursors, macros
+- [ ] save editor state (open windows)
+- [ ] shell integration. maybe even primarily work as a terminal multiplexer with a shit ton of shit
+- [ ] make the code less ass
 ### libraries
 inspired by
 https://github.com/adsr/mle

@@ -9,39 +9,70 @@
 
 #include "buffer.h"
 #include "cursor.h"
+#include "color.h"
 #include "cvector.h"
+#include "status.h"
 #include "editor.h"
 #include "error.h"
 #include "nvlua.h"
 #define TB_IMPL
 #include "termbox2.h"
 #undef TB_IMPL
-#include "color.h"
 #include "window.h"
+
+static void nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename);
+static void nv_editor_cleanup(struct nv_editor* editor);
+
+static void nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename)
+{
+    struct nv_window* window = nv_find_empty_window(root);
+
+    if (!window) {
+        tb_shutdown();
+        editor->status = NV_ERR_NOT_INIT;
+    }
+
+    (void)nv_redistribute(window->parent);
+
+    if (!window->buffer) {
+        window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+    }
+
+    nv_buffer_init(window->buffer, filename);
+}
+
+static void nv_editor_cleanup(struct nv_editor* editor)
+{
+    tb_shutdown();
+    nv_free_windows(editor->logger);
+    nv_free_windows(editor->window);
+    if (editor->statline && editor->statline->format) {
+        free(editor->statline->format);
+    }
+}
 
 int main(int argc, char** argv)
 {
-    int rv = 0;
     assert(argc >= 2);
     struct nv_editor editor = { 0 };
     nv_editor_init(&editor);
 
-    if (!editor.config.show_headless && (rv = tb_init()) != TB_OK) {
-        fprintf(stderr, "%s\n", tb_strerror(rv));
-        editor.status = rv;
-        goto clean_up;
+    if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
+        nv_editor_cleanup(&editor);
+        fprintf(stderr, "%s\n", tb_strerror(editor.status));
+        return editor.status;
     }
 
     editor.statline = &(struct nv_status){ .height = 1 };
-    nv_resize_for_layout(&editor, tb_width(), tb_height());
+    nv_resize_for_layout(tb_width(), tb_height());
 
     editor.logger = nv_find_empty_window(editor.window);
     editor.logger->buffer = calloc(1, sizeof(struct nv_buff));
 
-    if ((rv = nv_buffer_init(editor.logger->buffer, NULL)) != NV_OK) {
-        tb_shutdown();
-        fprintf(stderr, "failed to create editor.logger: %s\n", nv_strerror(rv));
-        return rv;
+    if ((editor.status = nv_buffer_init(editor.logger->buffer, NULL)) != NV_OK) {
+        nv_editor_cleanup(&editor);
+        fprintf(stderr, "failed to create editor.logger: %s\n", nv_strerror(editor.status));
+        return editor.status;
     }
 
     editor.logger->buffer->type = NV_BUFFTYPE_LOG;
@@ -59,32 +90,11 @@ int main(int argc, char** argv)
     nvlua_main();
 
     for (int i = 1; i < argc; i++) {
-        struct nv_window* window = nv_find_empty_window(editor.window);
-
-        if (!window) {
-            tb_shutdown();
-            return -1;
-        }
-
-        if (window->parent) {
-            (void)nv_redistribute(window->parent);
-            window->split = window->parent->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
-        }
-
-        if (window->show) {
-            if (!window->buffer) {
-                window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
-            }
-
-            nv_buffer_init(window->buffer, argv[i]);
-        }
+        nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]);
     }
 
-    nv_main(&editor);
+    nv_main();
 
-clean_up:
-    tb_shutdown();
-    nv_free_windows(editor.logger);
-    nv_free_windows(editor.window);
-    return rv;
+    nv_editor_cleanup(&editor);
+    return editor.status;
 }
