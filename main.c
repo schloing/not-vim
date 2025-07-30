@@ -20,25 +20,24 @@
 #undef TB_IMPL
 #include "window.h"
 
-static void nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename);
+static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename);
 static void nv_editor_cleanup(struct nv_editor* editor);
 
-static void nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename)
+static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename)
 {
-    struct nv_window* window = nv_find_empty_window(root);
+    struct nv_window* window = nv_create_child_window(root);
 
     if (!window) {
-        tb_shutdown();
-        editor->status = NV_ERR_NOT_INIT;
+        return NV_ERR_NOT_INIT;
     }
 
     (void)nv_redistribute(window->parent);
 
     if (!window->buffer) {
-        window->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+        window->buffer = nv_buffer_init(filename);
     }
 
-    nv_buffer_init(window->buffer, filename);
+    return NV_OK;
 }
 
 static void nv_editor_cleanup(struct nv_editor* editor)
@@ -46,6 +45,7 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     tb_shutdown();
     nv_free_windows(editor->logger);
     nv_free_windows(editor->window);
+
     if (editor->statline && editor->statline->format) {
         free(editor->statline->format);
     }
@@ -66,12 +66,12 @@ int main(int argc, char** argv)
     editor.statline = &(struct nv_status){ .height = 1 };
     nv_resize_for_layout(tb_width(), tb_height());
 
-    editor.logger = nv_find_empty_window(editor.window);
-    editor.logger->buffer = calloc(1, sizeof(struct nv_buff));
+    editor.logger = nv_create_child_window(editor.window);
+    editor.logger->buffer = nv_buffer_init(NULL);
 
-    if ((editor.status = nv_buffer_init(editor.logger->buffer, NULL)) != NV_OK) {
+    if (editor.status != NV_OK) {
+        nv_fatal("failed to create log buffer");
         nv_editor_cleanup(&editor);
-        fprintf(stderr, "failed to create editor.logger: %s\n", nv_strerror(editor.status));
         return editor.status;
     }
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
     nvlua_main();
 
     for (int i = 1; i < argc; i++) {
-        nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]);
+        (void)nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]);
     }
 
     nv_main();

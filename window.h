@@ -37,7 +37,7 @@ struct nv_window {
 
 struct nv_window* nv_window_init();
 void nv_free_windows(struct nv_window* root);
-struct nv_window* nv_find_empty_window(struct nv_window* root);
+struct nv_window* nv_create_child_window(struct nv_window* root);
 int nv_redistribute(struct nv_window* root);
 
 #endif

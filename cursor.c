@@ -16,23 +16,34 @@ void nv_cursor_insert_ch(struct nv_buff* buffer, struct cursor* cursor, char ch)
 
 void nv_cursor_move_down(struct nv_buff* buffer, struct cursor* cursor, int amt)
 {
-    if (cursor->y < (int)buffer->line_count) {
-        cursor->y++;
-        cursor->line++;
+    if (cursor->y + amt < (int)buffer->line_count) {
+        cursor->y += amt;
+        cursor->line += amt;
     }
 }
 
 void nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt)
 {
-    if (cursor->y > 0) {
-        cursor->y--;
-        cursor->line--;
+    if (cursor->y - amt >= 0) {
+        cursor->y -= amt;
+        cursor->line -= amt;
     }
 }
 
-void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt) { cursor->x--; }
+void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt)
+{
+    cursor->x -= amt;
+    if (cursor->x < 0)
+        cursor->x = 0;
+}
 
-void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt) { cursor->x++; }
+void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt)
+{
+    int length = (int)line(buffer, cursor->line)->length;
+    cursor->x += amt;
+    if (cursor->x > length)
+        cursor->x = length;
+}
 
 struct cursor* nv_primary_cursor(struct nv_buff* buffer)
 {

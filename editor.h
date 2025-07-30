@@ -58,6 +58,7 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
     struct nv_window* window;
+    struct nv_window* focus;
     struct nv_window* logger;
     struct nv_status* statline;
     size_t active_window_index;
@@ -116,7 +117,11 @@ struct nv_editor {
 #undef TUI
 #endif
 
+extern struct nv_editor* nv_editor;
+
 void nv_log(const char* fmt, ...);
+void nv_log_err(const char* fmt, ...);
+void nv_fatal(const char* operation);
 void nv_resize_for_layout(size_t width, size_t height);
 void nv_main();
 int nv_editor_init(struct nv_editor* editor);

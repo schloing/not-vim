@@ -37,7 +37,8 @@ void nv_free_windows(struct nv_window* root)
     root = NULL;
 }
 
-struct nv_window* nv_find_empty_window(struct nv_window* root)
+// creates a child window wherever it finds a NULL child, walking down root
+struct nv_window* nv_create_child_window(struct nv_window* root)
 {
     if (!root) {
         root = nv_window_init();
@@ -45,17 +46,20 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         root->show = true;
         root->has_children = false;
         root->buffer = NULL;
+
+        nv_editor->focus = root;
+        
         return root;
     }
 
     if (!root->has_children && !root->buffer) {
-        // first caller has to call nv_buffer_init
-        root->buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+        nv_editor->focus = root;
+
         return root;
     }
 
     if (root->show && !root->has_children) {
-        root->left = nv_find_empty_window(root->left);
+        root->left = nv_create_child_window(root->left);
 
         if (!root->left) {
             return NULL;
@@ -78,14 +82,18 @@ struct nv_window* nv_find_empty_window(struct nv_window* root)
         root->buffer = NULL;
         root->descendants += 2;
 
+        nv_editor->focus = root->left;
+
         return root->left;
     }
 
-    struct nv_window* right = nv_find_empty_window(root->right);
+    struct nv_window* right = nv_create_child_window(root->right);
 
     if (right) {
         right->parent = root;
     }
+
+    nv_editor->focus = right;
 
     return right;
 }

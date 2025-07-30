@@ -63,51 +63,33 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
     return NV_OK;
 }
 
-int nv_buffer_init(struct nv_buff* buff, const char* path)
+struct nv_buff* nv_buffer_init(const char* path)
 {
-    if (!buff) {
-        return NV_ERR_NOT_INIT;
+    struct nv_buff* buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
+
+    if (!buffer) {
+        nv_editor->status = NV_ERR_NOT_INIT;
+        nv_fatal("error initialising buffer");
+        // FIXME: really bad error
+        // return NV_ERR_NOT_INIT;
+        return NULL;
     }
 
-    cvector_reserve(buff->cursors, NV_CURSOR_CAP);
+    cvector_reserve(buffer->cursors, NV_CURSOR_CAP);
     static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
-    buff->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
-    cvector_reserve(buff->lines, (size_t)NV_LINE_CAP);
-    cvector_reserve(buff->buffer, (size_t)NV_BUFF_CAP);
+    buffer->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
+    cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
+    cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CAP);
 
-    buff->chunk = NV_BUFF_CAP;
-    buff->top_line = 0;
+    buffer->chunk = NV_BUFF_CAP;
+    buffer->top_line = 0;
 
     if (path) {
-        buff->path = (char*)path;
-        (void)nv_buffer_open_file(buff, path);
+        buffer->path = (char*)path;
+        (void)nv_buffer_open_file(buffer, path);
     }
 
-    return NV_OK;
-}
-
-struct nv_buff_line* currline(struct nv_buff* buff)
-{
-    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    return &buff->lines[line];
-}
-
-struct nv_buff_line* prevline(struct nv_buff* buff)
-{
-    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if ((int)line <= 0) {
-        return NULL;
-    }
-    return &buff->lines[line - 1];
-}
-
-struct nv_buff_line* nextline(struct nv_buff* buff)
-{
-    size_t line = buff->cursors[NV_PRIMARY_CURSOR].line;
-    if (buff->line_count < line + 1) {
-        return NULL;
-    }
-    return &buff->lines[line + 1];
+    return buffer;
 }
 
 struct nv_buff_line* line(struct nv_buff* buff, size_t lineno)
@@ -133,7 +115,7 @@ int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
-            line.length = line.end - line.begin;
+            line.length = line.end - line.begin - (line.end == line.begin ? 0 : 1); // subtract the new line if the line isn't empty
 
             cvector_push_back(buff->lines, line);
 

@@ -15,8 +15,8 @@
 #include "window.h"
 
 static int nv_get_input(struct tb_event* ev);
-static int count_recur(int n);
-static struct nv_buff* nv_get_active_buffer();
+static int count_no_digits(int n);
+static struct nv_window* nv_get_active_window();
 static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
 static void nv_set_mode(nv_mode mode);
 static void nv_draw_cursor();
@@ -26,8 +26,7 @@ static int nv_draw_windows(struct nv_window* root);
 static int nv_draw_buffer(struct nv_window* window);
 static int nv_draw_status();
 
-// globals
-static struct nv_editor* nv_editor = NULL;
+struct nv_editor* nv_editor = NULL; // extern in editor.h 
 
 int nv_editor_init(struct nv_editor* editor)
 {
@@ -84,20 +83,43 @@ static void nv_set_mode(nv_mode mode)
 
 static void nv_draw_cursor()
 {
-    struct nv_buff* buffer = nv_get_active_buffer();
-    struct cursor c = buffer->cursors[0];
-    int row = line(buffer, c.line)->length;
-    int effective_row = (c.x > row ? row : c.x) < 0 ? 0 : (c.x > row ? row : c.x); // FIXME
-    tb_set_cell(buffer->linecol_size + effective_row + 1, c.y, ' ', NV_BLACK, NV_WHITE);
+    struct nv_window* window = nv_get_active_window();
+    struct nv_buff* buffer = window->buffer;
+
+    struct cursor c;
+    int line_length = 0;
+    int effective_row = 0;
+    
+    for (int cindex = 0; cindex <= cvector_size(buffer->cursors); cindex++) {
+        c = buffer->cursors[cindex];
+        line_length = line(buffer, c.line)->length;
+
+        effective_row =
+            window->wd.x + // window position
+            buffer->linecol_size + 1 + // space taken by line numbers
+            (c.x > line_length ? line_length : c.x); // cap the cursor to the end of the line
+
+        tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
+    }
+
     tb_present();
 }
 
 void nv_log(const char* fmt, ...)
 {
+    // FIXME
     va_list ap;
     va_start(ap, fmt);
     // nv_buffer_printf(editor->buffer, fmt, ap);
     va_end(ap);
+}
+
+void nv_fatal(const char* operation)
+{
+    // FIXME
+    // dont work like a fatal error function should
+    nv_editor->running = false;
+    nv_log("nv: %s: %s, %d", operation ? operation : "unknown operation", nv_strerror(nv_editor->status), nv_editor->status);
 }
 
 static void nv_redraw_all()
@@ -132,6 +154,7 @@ void nv_main()
 
     nv_editor->running = true;
     nv_redraw_all(nv_editor);
+    nv_draw_cursor();
 
     struct tb_event ev;
 
@@ -140,10 +163,13 @@ void nv_main()
 
         switch (ev.type) {
         case TB_EVENT_MOUSE:
+            nv_editor->running = false; // FIXME
+
+            break;
+
         case TB_EVENT_KEY:
-            nv_draw_windows(nv_editor->window);
             nv_get_input(&ev);
-            nv_editor->running = false;
+            nv_draw_windows(nv_editor->window);
 
             break;
 
@@ -171,14 +197,14 @@ static void nv_draw_background()
     tb_clear();
 }
 
-// FIXME:
 static int nv_get_input(struct tb_event* ev)
 {
     if (nv_editor->config.show_headless) {
         return NV_OK;
     }
 
-    struct nv_buff* buffer = nv_get_active_buffer();
+    struct nv_buff* buffer = (nv_get_active_window())->buffer;
+
     if (!buffer || !buffer->cursors) {
         return NV_ERR_NOT_INIT;
     }
@@ -244,30 +270,32 @@ static int nv_get_input(struct tb_event* ev)
     }
 
     nv_draw_buffer(nv_editor->window);
-    nv_draw_cursor(nv_editor);
+    nv_draw_cursor();
 
     return NV_OK;
 }
 
-// FIXME
-static struct nv_buff* nv_get_active_buffer()
+static struct nv_window* nv_get_active_window()
 {
-    //  struct nv_buff* buffer = (struct nv_buff*)&editor->windows[editor->peek];
-    //  editor->current = buffer;
-    //  return buffer;
-    return NULL;
+    if (!nv_editor->focus) {
+        return NULL;
+    }
+
+    return nv_editor->focus;
 }
 
-// calculate width of number
-static int count_recur(int n)
+// calculate the # of digits in n
+static int count_no_digits(int n)
 {
     if (n < 0) {
-        return count_recur((n == INT_MIN) ? INT_MAX : -n);
+        return count_no_digits((n == INT_MIN) ? INT_MAX : -n);
     }
+
     if (n < 10) {
         return 1;
     }
-    return 1 + count_recur(n / 10);
+    
+    return 1 + count_no_digits(n / 10);
 }
 
 static int nv_draw_windows(struct nv_window* root)
@@ -294,6 +322,7 @@ static int nv_draw_windows(struct nv_window* root)
 #define NV_PRINTF(x, y, fg, fmt, ...) \
     tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
+// FIXME: program will slime u out if lbuf is a character. this is better as a function
 #define NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf) \
     do { \
         NV_PRINTF((window)->wd.x, row, NV_GRAY, "%*d", (buffer)->linecol_size, line_no); \
@@ -311,29 +340,30 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
     }
    
     size_t max_width = window->wd.w - (buffer->linecol_size + 1);
-    struct nv_buff_line* line = NULL;
+    struct nv_buff_line* current_line = NULL;
     size_t line_length = 0;
     size_t line_no = 0;
     size_t copy_size = 0;
 
     for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
-        if (line_no > buffer->line_count) {
+        current_line = line(buffer, line_no++);
+
+        if (!current_line) {
             break;
         }
 
-        line = &buffer->lines[line_no++];
+        line_length = current_line->end - current_line->begin;
 
-        if (!line) {
-            break;
+        if (line_length == 0) {
+            NV_PRINTF_BUFFER(window, row, buffer, line_no, " ");
         }
 
-        line_length = line->end - line->begin;
         copy_size = (line_length > max_width) ? max_width : line_length;
 
         // convert invalid characters into their printable variants
         int r = 0;
         for (int i = 0; i < copy_size; i++) {
-            char chr = buffer->buffer[line->begin + i];
+            char chr = buffer->buffer[current_line->begin + i];
 
             if (chr == '\t') {
                 // tabs need to be expanded into spaces to nearest tab width
@@ -362,7 +392,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
                 
                 row++;
                 size_t wrap_size = (line_length - offset > max_width) ? max_width : line_length - offset;
-                memcpy(lbuf, &buffer->buffer[line->begin + offset], wrap_size);
+                memcpy(lbuf, &buffer->buffer[current_line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
                 NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf);
             }
@@ -370,6 +400,11 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
     }
 
     free(lbuf);
+}
+
+int netrw_filename_sort(const void* a, const void* b)
+{
+    return strcmp(*(const char**)a, *(const char**)b);
 }
 
 static int nv_draw_buffer(struct nv_window* window)
@@ -387,7 +422,7 @@ static int nv_draw_buffer(struct nv_window* window)
 
         if (!buffer->loaded) {
             nv_load_file_buffer(buffer, &buffer->line_count);
-            buffer->linecol_size = count_recur(buffer->line_count);
+            buffer->linecol_size = count_no_digits(buffer->line_count);
             buffer->loaded = true;
         }
 
@@ -396,16 +431,36 @@ static int nv_draw_buffer(struct nv_window* window)
 
     case NV_BUFFTYPE_BROWSER:
         struct dirent* entry;
+        char** filenames = NULL;
+        size_t n = 0;
+
         DIR* dir = opendir(buffer->path);
 
         if (dir == NULL) {
             return NV_ERR;
         }
 
-        int n = 0;
         while ((entry = readdir(dir)) != NULL) {
-            NV_PRINTF(0, n++, NV_WHITE, "%s", entry->d_name);
+            filenames = realloc(filenames, (n + 1) * sizeof(char*));
+
+            if (!filenames) {
+                closedir(dir);
+                return NV_ERR_MEM;
+            }
+            
+            filenames[n] = strdup(entry->d_name);
+            n++;
         }
+
+        closedir(dir);
+        qsort(filenames, n, sizeof(char*), netrw_filename_sort);
+
+        for (size_t i = 0; i < n; i++) {
+            NV_PRINTF(0, i, NV_WHITE, "%s", filenames[i]);
+            free(filenames[i]);
+        }
+
+        free(filenames);
 
         break;
 

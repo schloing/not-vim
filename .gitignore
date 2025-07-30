@@ -8,6 +8,7 @@ Makefile
 CMakeFiles/
 bin/
 CMakeCache.txt
+build/
 build.ninja
 cmake_install.cmake
 .ninja_deps
