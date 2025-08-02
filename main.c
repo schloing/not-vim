@@ -67,6 +67,13 @@ int main(int argc, char** argv)
     nv_resize_for_layout(tb_width(), tb_height());
 
     editor.logger = nv_create_child_window(editor.window);
+
+    if (editor.status != NV_OK) {
+        nv_fatal("failed to create log window");
+        nv_editor_cleanup(&editor);
+        return editor.status;
+    }
+
     editor.logger->buffer = nv_buffer_init(NULL);
 
     if (editor.status != NV_OK) {
@@ -82,6 +89,13 @@ int main(int argc, char** argv)
 
     // main window
     editor.window = nv_window_init();
+
+    if (editor.status != NV_OK) {
+        nv_fatal("failed to create editor window");
+        nv_editor_cleanup(&editor);
+        return editor.status;
+    }
+
     editor.window->split = HORIZONTAL;
     editor.window->show = true;
     NV_WD_SET_SIZE(editor.window->wd, editor.width, editor.height);
@@ -90,7 +104,11 @@ int main(int argc, char** argv)
     nvlua_main();
 
     for (int i = 1; i < argc; i++) {
-        (void)nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]);
+        if (nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]) != NV_OK) {
+            nv_fatal("failed to open a file");
+            nv_editor_cleanup(&editor);
+            return editor.status;
+        }
     }
 
     nv_main();

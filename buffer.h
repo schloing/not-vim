@@ -9,20 +9,23 @@
 #include "cvector.h"
 
 enum nv_bufftype {
-    NV_BUFFTYPE_STDIN      = 1 << 0,
-    NV_BUFFTYPE_STDOUT     = 1 << 1,
-    NV_BUFFTYPE_BROWSER    = 1 << 2,
-    NV_BUFFTYPE_NETWORK    = 1 << 3,
-    NV_BUFFTYPE_SOURCE     = 1 << 4,
-    NV_BUFFTYPE_PLAINTEXT  = 1 << 5,
-    NV_BUFFTYPE_LOG        = 1 << 6,
+    NV_BUFFTYPE_STDIN        = 0,
+    NV_BUFFTYPE_STDOUT       = 1,
+    NV_BUFFTYPE_BROWSER      = 2,
+    NV_BUFFTYPE_NETWORK      = 3,
+    NV_BUFFTYPE_SOURCE       = 4,
+    NV_BUFFTYPE_PLAINTEXT    = 5,
+    NV_BUFFTYPE_LOG          = 6,
 };
 
 enum nv_bufffmt {
-    NV_FILE_FORMAT_BINARY    = 1 << 0,
-    NV_FILE_FORMAT_SOURCE    = 1 << 1, // lsp + treesitter impl
-    NV_FILE_FORMAT_PLAINTEXT = 1 << 2,
+    NV_FILE_FORMAT_BINARY    = 0,
+    NV_FILE_FORMAT_SOURCE    = 1, // lsp + treesitter impl
+    NV_FILE_FORMAT_PLAINTEXT = 2,
 };
+
+extern char* nv_bufftype_str[NV_BUFFTYPE_LOG + 1];
+extern char* nv_bufffmt_str[NV_BUFFTYPE_PLAINTEXT + 1];
 
 struct nv_buff_line {
     size_t begin;
@@ -31,8 +34,8 @@ struct nv_buff_line {
 };
 
 #define NV_BUFFID_UNSET 0
-#define NV_BUFF_CAP 1024 * 16
-#define NV_LINE_CAP 32
+#define NV_BUFF_CAP     1024 * 16
+#define NV_LINE_CAP     32
 
 struct nv_buff {
     enum nv_bufftype type;

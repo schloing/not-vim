@@ -13,12 +13,19 @@ static void nv_set_width_and_split(struct nv_window* root, struct nv_window* lef
 struct nv_window* nv_window_init()
 {
     struct nv_window* window = (struct nv_window*)calloc(1, sizeof(struct nv_window));
+
+    if (!window) {
+        nv_editor->status = NV_ERR_MEM;
+        return NULL;
+    }
+
     window->buffer = NULL;
     window->show = true;
     window->has_children = false;
     window->parent = NULL;
     window->left = NULL;
     window->right = NULL;
+    
     return window;
 }
 
@@ -42,6 +49,11 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
 {
     if (!root) {
         root = nv_window_init();
+
+        if (nv_editor->status != NV_OK) {
+            return NULL;
+        }
+
         root->parent = NULL; // caller sets parent
         root->show = true;
         root->has_children = false;
@@ -61,7 +73,7 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
     if (root->show && !root->has_children) {
         root->left = nv_create_child_window(root->left);
 
-        if (!root->left) {
+        if (nv_editor->status != NV_OK) {
             return NULL;
         }
 
@@ -69,6 +81,11 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
 
         if (root->buffer) {
             root->right = nv_window_init();
+
+            if (nv_editor->status != NV_OK) {
+                return NULL;
+            }
+
             memcpy(root->right, root, sizeof(struct nv_window));
             root->right->buffer = root->buffer;
             root->right->parent = root;
@@ -88,6 +105,10 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
     }
 
     struct nv_window* right = nv_create_child_window(root->right);
+
+    if (nv_editor->status != NV_OK) {
+        return NULL;
+    }
 
     if (right) {
         right->parent = root;
@@ -129,8 +150,8 @@ int nv_redistribute(struct nv_window* root)
 
     if (root->right && root->left) {
         nv_set_width_and_split(root, root->left, root->right);
-        nv_redistribute(root->right);
-        nv_redistribute(root->left);
+        (void)nv_redistribute(root->right);
+        (void)nv_redistribute(root->left);
         return NV_OK;
     }
 

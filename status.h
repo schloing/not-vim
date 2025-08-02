@@ -4,6 +4,7 @@
 struct nv_status {
     size_t height;
     char* format;
+    char* string;
 };
 
 #endif

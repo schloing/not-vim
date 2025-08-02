@@ -69,9 +69,6 @@ struct nv_buff* nv_buffer_init(const char* path)
 
     if (!buffer) {
         nv_editor->status = NV_ERR_NOT_INIT;
-        nv_fatal("error initialising buffer");
-        // FIXME: really bad error
-        // return NV_ERR_NOT_INIT;
         return NULL;
     }
 
@@ -86,7 +83,10 @@ struct nv_buff* nv_buffer_init(const char* path)
 
     if (path) {
         buffer->path = (char*)path;
-        (void)nv_buffer_open_file(buffer, path);
+        nv_editor->status = nv_buffer_open_file(buffer, path);
+        if (nv_editor->status != NV_OK) {
+            return NULL;
+        }
     }
 
     return buffer;

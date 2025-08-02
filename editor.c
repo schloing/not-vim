@@ -17,7 +17,7 @@
 static int nv_get_input(struct tb_event* ev);
 static int count_no_digits(int n);
 static struct nv_window* nv_get_active_window();
-static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
+static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
 static void nv_set_mode(nv_mode mode);
 static void nv_draw_cursor();
 static void nv_redraw_all();
@@ -26,7 +26,33 @@ static int nv_draw_windows(struct nv_window* root);
 static int nv_draw_buffer(struct nv_window* window);
 static int nv_draw_status();
 
-struct nv_editor* nv_editor = NULL; // extern in editor.h 
+_Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
+
+// extern in editor.h
+char* nv_mode_str[NV_MODE_INSERTS + 1] = {
+    "NAV",
+    "INS",
+    "HIGH",
+    "INS*",
+};
+
+// extern in buffer.h
+char* nv_bufftype_str[NV_BUFFTYPE_LOG + 1] = {
+    "stdin",
+    "stdout",
+    "browser",
+    "network",
+    "source",
+    "plaintext",
+    "log",
+};
+
+// extern in buffer.h
+char* nv_bufffmt_str[NV_BUFFTYPE_PLAINTEXT + 1] = {
+    "binary",
+    "source",
+    "plaintext",
+};
 
 int nv_editor_init(struct nv_editor* editor)
 {
@@ -234,6 +260,7 @@ static int nv_get_input(struct tb_event* ev)
         if (nv_editor->mode == NV_MODE_INSERT) {
             if (isprint(ev->ch)) {
                 nv_cursor_insert_ch(buffer, cursor, ev->ch);
+                nv_redraw_all();
             } else {
                 switch (ev->key) {
                 case TB_KEY_ESC:
@@ -329,14 +356,12 @@ static int nv_draw_windows(struct nv_window* root)
         NV_PRINTF((window)->wd.x + (buffer)->linecol_size + 1, row, NV_WHITE, "%s", lbuf); \
     } while (0);
 
-static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
+static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
 {
     char* lbuf = calloc(window->wd.w, sizeof(char));
     
     if (!lbuf) {
-        // FIXME
-        //  return ERR_MEM;
-        return;
+        return NV_ERR_MEM;
     }
    
     size_t max_width = window->wd.w - (buffer->linecol_size + 1);
@@ -400,6 +425,7 @@ static void nv_draw_buffer_within_window(struct nv_window* window, struct nv_buf
     }
 
     free(lbuf);
+    return NV_OK;
 }
 
 int netrw_filename_sort(const void* a, const void* b)
@@ -426,7 +452,10 @@ static int nv_draw_buffer(struct nv_window* window)
             buffer->loaded = true;
         }
 
-        nv_draw_buffer_within_window(window, buffer);
+        if (nv_draw_buffer_within_window(window, buffer) != NV_OK) {
+            nv_fatal("failed to draw buffer");
+        }
+
         break;
 
     case NV_BUFFTYPE_BROWSER:
@@ -472,22 +501,16 @@ static int nv_draw_buffer(struct nv_window* window)
     return NV_OK;
 }
 
-// extern char* nv_mode_str
-char* nv_mode_str[NV_MODE_INSERTS + 1] = {
-    "NAV",
-    "INS",
-    "HIGH",
-    "INS*",
-};
-
-static int nv_draw_status(struct nv_editor* editor)
+static int nv_draw_status()
 {
-    if (asprintf(&editor->statline->format, "--%s--", nv_mode_str[editor->mode]) == -1) 
+    struct nv_buff* buffer = nv_editor->focus->buffer;
+
+    if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s--", buffer->path, nv_bufftype_str[buffer->type], nv_bufffmt_str[buffer->format], nv_mode_str[nv_editor->mode]) == -1) 
         return NV_ERR_MEM;
 
-    for (int i = 0; i < editor->statline->height; i++) {
-        tb_printf(0, editor->height - i, NV_BLACK, NV_WHITE,
-                "%-*.*s", editor->width, editor->width, editor->statline->format);
+    for (int i = 0; i < nv_editor->statline->height; i++) {
+        tb_printf(0, nv_editor->height - i, NV_BLACK, NV_WHITE,
+                "%-*.*s", nv_editor->width, nv_editor->width, nv_editor->statline->format);
     }
 
     return NV_OK;

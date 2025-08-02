@@ -32,7 +32,13 @@ void nv_cursor_move_up(struct nv_buff* buffer, struct cursor* cursor, int amt)
 
 void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt)
 {
+    int length = (int)line(buffer, cursor->line)->length;
+    
+    if (cursor->x > length)
+        cursor->x = length;
+    
     cursor->x -= amt;
+    
     if (cursor->x < 0)
         cursor->x = 0;
 }
@@ -40,7 +46,9 @@ void nv_cursor_move_left(struct nv_buff* buffer, struct cursor* cursor, int amt)
 void nv_cursor_move_right(struct nv_buff* buffer, struct cursor* cursor, int amt)
 {
     int length = (int)line(buffer, cursor->line)->length;
+
     cursor->x += amt;
+
     if (cursor->x > length)
         cursor->x = length;
 }

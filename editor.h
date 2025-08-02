@@ -117,7 +117,7 @@ struct nv_editor {
 #undef TUI
 #endif
 
-extern struct nv_editor* nv_editor;
+extern _Thread_local struct nv_editor* nv_editor;
 
 void nv_log(const char* fmt, ...);
 void nv_log_err(const char* fmt, ...);
