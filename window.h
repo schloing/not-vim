@@ -18,15 +18,15 @@ enum nv_split_kind {
 
 struct nv_window {
     int padding; // TODO: implement padding
+    int descendants;
     bool show;
     bool has_children;
-    size_t descendants;
     enum nv_split_kind split;
     struct nv_windim wd;
     struct nv_window* parent;
     struct nv_window* left;
     struct nv_window* right;
-    struct nv_buff* buffer; // generally NULL if has_children
+    struct nv_view* view; // generally NULL if has_children
 };
 
 #define NV_WD_SET_SIZE(of, _w, _h) \

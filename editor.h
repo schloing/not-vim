@@ -63,13 +63,19 @@ struct nv_editor {
     struct nv_status* statline;
     size_t active_window_index;
     nv_mode mode;
-    size_t width;
-    size_t height;
+    int width;
+    int height;
     int status;
     bool running;
     bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
     struct nv_conf config;
+};
+
+struct nv_context {
+    struct nv_window* window;
+    struct nv_view* view;
+    struct nv_buff* buffer;
 };
 
 // defaults
@@ -119,6 +125,7 @@ struct nv_editor {
 
 extern _Thread_local struct nv_editor* nv_editor;
 
+struct nv_context nv_get_context(struct nv_window* window);
 void nv_log(const char* fmt, ...);
 void nv_log_err(const char* fmt, ...);
 void nv_fatal(const char* operation);

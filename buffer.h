@@ -8,6 +8,10 @@
 #include "cursor.h"
 #include "cvector.h"
 
+#define NV_BUFFID_UNSET 0
+#define NV_BUFF_CAP     1024 * 16
+#define NV_LINE_CAP     32
+
 enum nv_bufftype {
     NV_BUFFTYPE_STDIN        = 0,
     NV_BUFFTYPE_STDOUT       = 1,
@@ -33,31 +37,41 @@ struct nv_buff_line {
     size_t length;
 };
 
-#define NV_BUFFID_UNSET 0
-#define NV_BUFF_CAP     1024 * 16
-#define NV_LINE_CAP     32
+struct nv_visual_row {
+    size_t line_index;
+    size_t wrap_index;
+    size_t offset;
+};
+
+#define NV_MAP_CAP 128
+
+struct nv_view {
+    size_t top_line_index;
+    int gutter_digit_width;
+    int line_count;
+    struct nv_buff* buffer;
+    cvector(struct nv_visual_row) visual_rows;
+    cvector(struct nv_buff_line) lines;
+    cvector(size_t) map; // enough space to map ~100 lines to visual rows
+    cvector(struct cursor) cursors;
+};
 
 struct nv_buff {
-    enum nv_bufftype type;
-    enum nv_bufffmt format;
     FILE* file;
     char* path;
     size_t chunk;
     bool loaded;
-    struct {
-        size_t top_line;
-        size_t linecol_size;
-        size_t line_count;
-    };
+    enum nv_bufftype type;
+    enum nv_bufffmt format;
     cvector(char) buffer;
-    cvector(struct nv_buff_line) lines;
-    cvector(struct cursor) cursors;
 };
 
+struct nv_view* nv_view_init(const char* buffer_file_path);
 struct nv_buff* nv_buffer_init(const char* path);
 int nv_buffer_open_file(struct nv_buff* buff, const char* path);
-int nv_load_file_buffer(struct nv_buff* buffer, size_t* out_line_count);
+int nv_load_file_buffer(struct nv_buff* buff, int* out_line_count);
+int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
-struct nv_buff_line* line(struct nv_buff* buff, size_t lineno);
+struct nv_buff_line* line(struct nv_view* view, size_t lineno);
 
 #endif

@@ -19,12 +19,12 @@ struct nv_window* nv_window_init()
         return NULL;
     }
 
-    window->buffer = NULL;
-    window->show = true;
     window->has_children = false;
-    window->parent = NULL;
     window->left = NULL;
+    window->parent = NULL;
     window->right = NULL;
+    window->show = true;
+    window->view = NULL;
     
     return window;
 }
@@ -35,13 +35,11 @@ void nv_free_windows(struct nv_window* root)
         return;
     }
 
-    nv_free_buffer(root->buffer);
-    root->buffer = NULL;
     nv_free_windows(root->left);
     nv_free_windows(root->right);
+    nv_free_view(root->view);
 
     free(root);
-    root = NULL;
 }
 
 // creates a child window wherever it finds a NULL child, walking down root
@@ -54,19 +52,18 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
             return NULL;
         }
 
+        root->has_children = false;
         root->parent = NULL; // caller sets parent
         root->show = true;
-        root->has_children = false;
-        root->buffer = NULL;
+        root->view = NULL;
 
         nv_editor->focus = root;
         
         return root;
     }
 
-    if (!root->has_children && !root->buffer) {
+    if (!root->has_children && !root->view) {
         nv_editor->focus = root;
-
         return root;
     }
 
@@ -79,7 +76,7 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
 
         root->left->parent = root;
 
-        if (root->buffer) {
+        if (root->view->buffer) {
             root->right = nv_window_init();
 
             if (nv_editor->status != NV_OK) {
@@ -87,16 +84,17 @@ struct nv_window* nv_create_child_window(struct nv_window* root)
             }
 
             memcpy(root->right, root, sizeof(struct nv_window));
-            root->right->buffer = root->buffer;
+            root->right->view = root->view;
             root->right->parent = root;
             root->right->left = NULL;
             root->right->right = NULL;
             root->right->show = true;
             root->right->has_children = false;
+            root->right->split = root->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
         }
 
         root->has_children = true;
-        root->buffer = NULL;
+        root->view = NULL;
         root->descendants += 2;
 
         nv_editor->focus = root->left;

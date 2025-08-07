@@ -2,7 +2,7 @@
 #define NV_STATUS_H
 
 struct nv_status {
-    size_t height;
+    int height;
     char* format;
     char* string;
 };

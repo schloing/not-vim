@@ -63,6 +63,28 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
     return NV_OK;
 }
 
+struct nv_view* nv_view_init(const char* buffer_file_path)
+{
+    struct nv_view* view = (struct nv_view*)calloc(1, sizeof(struct nv_view));
+
+    if (!view) {
+        nv_editor->status = NV_ERR_MEM;
+        return NULL;
+    }
+
+    view->top_line_index = 0;
+
+    view->buffer = nv_buffer_init(buffer_file_path);
+    
+    if (nv_editor->status != NV_OK) {
+        return NULL;
+    }
+
+    cvector_reserve(view->map, (size_t)NV_MAP_CAP);
+
+    return view;
+}
+
 struct nv_buff* nv_buffer_init(const char* path)
 {
     struct nv_buff* buffer = (struct nv_buff*)calloc(1, sizeof(struct nv_buff));
@@ -79,7 +101,6 @@ struct nv_buff* nv_buffer_init(const char* path)
     cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CAP);
 
     buffer->chunk = NV_BUFF_CAP;
-    buffer->top_line = 0;
 
     if (path) {
         buffer->path = (char*)path;
@@ -92,15 +113,16 @@ struct nv_buff* nv_buffer_init(const char* path)
     return buffer;
 }
 
-struct nv_buff_line* line(struct nv_buff* buff, size_t lineno)
+struct nv_buff_line* line(struct nv_view* view, size_t lineno)
 {
-    if (buff->line_count < lineno) {
+    if (view->line_count < lineno) {
         return NULL;
     }
-    return &buff->lines[lineno];
+
+    return &view->buffer->lines[lineno];
 }
 
-int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
+int nv_load_file_buffer(struct nv_buff* buff, int* out_line_count)
 {
     char* b = buff->buffer;
 
@@ -110,7 +132,7 @@ int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
 
     struct nv_buff_line line = { 0 };
     size_t i = 0;
-    size_t line_count = 0;
+    int line_count = 0;
 
     while (b[i++] != '\0') {
         if (b[i] == '\n') {
@@ -136,6 +158,22 @@ int nv_load_file_buffer(struct nv_buff* buff, size_t* out_line_count)
     *out_line_count = line_count;
     return NV_OK;
 }
+
+int nv_free_view(struct nv_view* view)
+{
+    if (!view) {
+        return NV_ERR_NOT_INIT;
+    }
+
+    cvector_free(view->visual_rows);
+    cvector_free(view->map);
+    nv_free_buffer(view->buffer);
+
+    free(view);
+    view = NULL;
+    return NV_OK;
+}
+
 
 int nv_free_buffer(struct nv_buff* buff)
 {

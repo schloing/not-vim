@@ -33,11 +33,11 @@ static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window* ro
 
     (void)nv_redistribute(window->parent);
 
-    if (!window->buffer) {
-        window->buffer = nv_buffer_init(filename);
+    if (!window->view) {
+        window->view = nv_view_init(filename);
     }
 
-    return NV_OK;
+    return nv_editor->status;
 }
 
 static void nv_editor_cleanup(struct nv_editor* editor)
@@ -58,15 +58,15 @@ int main(int argc, char** argv)
     nv_editor_init(&editor);
 
     if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
-        nv_editor_cleanup(&editor);
         fprintf(stderr, "%s\n", tb_strerror(editor.status));
+        nv_editor_cleanup(&editor);
         return editor.status;
     }
 
     editor.statline = &(struct nv_status){ .height = 1 };
     nv_resize_for_layout(tb_width(), tb_height());
 
-    editor.logger = nv_create_child_window(editor.window);
+    editor.logger = nv_window_init();
 
     if (editor.status != NV_OK) {
         nv_fatal("failed to create log window");
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
-    editor.logger->buffer = nv_buffer_init(NULL);
+    editor.logger->view = nv_view_init(NULL);
 
     if (editor.status != NV_OK) {
         nv_fatal("failed to create log buffer");
@@ -82,13 +82,10 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
-    editor.logger->buffer->type = NV_BUFFTYPE_LOG;
-    editor.logger->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
+    editor.logger->view->buffer->type = NV_BUFFTYPE_LOG;
+    editor.logger->view->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
     editor.logger->show = false;
     NV_WD_SET_SIZE(editor.logger->wd, editor.width, editor.height);
-
-    // main window
-    editor.window = nv_window_init();
 
     if (editor.status != NV_OK) {
         nv_fatal("failed to create editor window");
@@ -96,6 +93,8 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
+    // main window
+    editor.window = nv_window_init();
     editor.window->split = HORIZONTAL;
     editor.window->show = true;
     NV_WD_SET_SIZE(editor.window->wd, editor.width, editor.height);

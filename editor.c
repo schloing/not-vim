@@ -17,7 +17,7 @@
 static int nv_get_input(struct tb_event* ev);
 static int count_no_digits(int n);
 static struct nv_window* nv_get_active_window();
-static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer);
+static int nv_draw_buffer_within_window(struct nv_window* window);
 static void nv_set_mode(nv_mode mode);
 static void nv_draw_cursor();
 static void nv_redraw_all();
@@ -109,20 +109,19 @@ static void nv_set_mode(nv_mode mode)
 
 static void nv_draw_cursor()
 {
-    struct nv_window* window = nv_get_active_window();
-    struct nv_buff* buffer = window->buffer;
+    struct nv_context ctx = nv_get_context(nv_get_active_window());
 
     struct cursor c;
     int line_length = 0;
     int effective_row = 0;
     
-    for (int cindex = 0; cindex <= cvector_size(buffer->cursors); cindex++) {
-        c = buffer->cursors[cindex];
-        line_length = line(buffer, c.line)->length;
+    for (int cindex = 0; cindex <= cvector_size(ctx.buffer->cursors); cindex++) {
+        c = ctx.buffer->cursors[cindex];
+        line_length = line(ctx.view, c.line)->length;
 
         effective_row =
-            window->wd.x + // window position
-            buffer->linecol_size + 1 + // space taken by line numbers
+            ctx.window->wd.x + // window position
+            ctx.view->gutter_digit_width + 1 + // space taken by line numbers
             (c.x > line_length ? line_length : c.x); // cap the cursor to the end of the line
 
         tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
@@ -223,19 +222,30 @@ static void nv_draw_background()
     tb_clear();
 }
 
+struct nv_context nv_get_context(struct nv_window* window) {
+    struct nv_context ctx = {
+        .window = window,
+        .view = window->view,
+    };
+    
+    ctx.buffer = ctx.view ? window->view->buffer : NULL;
+
+    return ctx;
+}
+
 static int nv_get_input(struct tb_event* ev)
 {
     if (nv_editor->config.show_headless) {
         return NV_OK;
     }
 
-    struct nv_buff* buffer = (nv_get_active_window())->buffer;
+    struct nv_context ctx = nv_get_context(nv_get_active_window());
 
-    if (!buffer || !buffer->cursors) {
+    if (!ctx.buffer || !ctx.buffer->cursors) {
         return NV_ERR_NOT_INIT;
     }
 
-    struct cursor* cursor = &buffer->cursors[0];
+    struct cursor* cursor = &ctx.buffer->cursors[0];
 
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
@@ -243,23 +253,23 @@ static int nv_get_input(struct tb_event* ev)
     if (ev->type == TB_EVENT_MOUSE) {
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            if (buffer->top_line > 0) {
-                buffer->top_line--;
+            if (ctx.view->top_line_index > 0) {
+                ctx.view->top_line_index--;
             }
-            nv_cursor_move_up(buffer, cursor, 1);
+            nv_cursor_move_up(ctx.view, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            if (buffer->top_line < buffer->line_count) {
-                buffer->top_line++;
+            if (ctx.view->top_line_index < ctx.view->line_count) {
+                ctx.view->top_line_index++;
             }
-            nv_cursor_move_down(buffer, cursor, 1);
+            nv_cursor_move_down(ctx.view, cursor, 1);
             break;
         }
     } else {
         if (nv_editor->mode == NV_MODE_INSERT) {
             if (isprint(ev->ch)) {
-                nv_cursor_insert_ch(buffer, cursor, ev->ch);
+                nv_cursor_insert_ch(ctx.view, cursor, ev->ch);
                 nv_redraw_all();
             } else {
                 switch (ev->key) {
@@ -278,19 +288,19 @@ static int nv_get_input(struct tb_event* ev)
                 break;
 
             case 'j':
-                nv_cursor_move_down(buffer, cursor, 1);
+                nv_cursor_move_down(ctx.view, cursor, 1);
                 break;
 
             case 'k':
-                nv_cursor_move_up(buffer, cursor, 1);
+                nv_cursor_move_up(ctx.view, cursor, 1);
                 break;
 
             case 'h':
-                nv_cursor_move_left(buffer, cursor, 1);
+                nv_cursor_move_left(ctx.view, cursor, 1);
                 break;
 
             case 'l':
-                nv_cursor_move_right(buffer, cursor, 1);
+                nv_cursor_move_right(ctx.view, cursor, 1);
                 break;
             }
         }
@@ -349,29 +359,79 @@ static int nv_draw_windows(struct nv_window* root)
 #define NV_PRINTF(x, y, fg, fmt, ...) \
     tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
-// FIXME: program will slime u out if lbuf is a character. this is better as a function
-#define NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf) \
-    do { \
-        NV_PRINTF((window)->wd.x, row, NV_GRAY, "%*d", (buffer)->linecol_size, line_no); \
-        NV_PRINTF((window)->wd.x + (buffer)->linecol_size + 1, row, NV_WHITE, "%s", lbuf); \
-    } while (0);
+static inline void nv_printf_buffer(struct nv_context* ctx, int row, int line_no, const char* lbuf)
+{
+    NV_PRINTF(ctx->window->wd.x, row, NV_GRAY, "%*d", ctx->view->gutter_digit_width, line_no);
+    NV_PRINTF(ctx->window->wd.x + ctx->view->gutter_digit_width + 1, row, NV_WHITE, "%s", lbuf);
+}
 
-static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff* buffer)
+static void nv_rebuild_visual_rows(struct nv_context* ctx)
+{
+    struct nv_buff_line* current_line = NULL;
+    int max_width = window->wd.w - (ctx.view->gutter_digit_width + 1);
+    int buff_line_no = ctx.view->top_line_index;
+
+    for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++, buff_line_no++) {
+        current_line = line(ctx.view, buff_line_no);
+
+        if (!current_line) {
+            nv_editor->status = NV_ERR;
+            return;
+        }
+
+        struct nv_visual_row vr = {
+            .line_index = buff_line_no,
+            .wrap_index = 0,
+            .offset = 0,
+        };
+
+        cvector_push_back(ctx.view->visual_rows, vr);
+        ctx.view->map[buff_line_no - ctx.view->top_line_index] = cvector_size(ctx.view->visual_rows) - 1;
+
+        if (current_line->length > max_width) {
+            size_t num_wraps = current_line->length / max_width;
+
+            for (size_t i = 1; i <= num_wraps; i++) {
+                size_t offset = i * max_width;
+
+                if (offset >= line_length) {
+                    break;
+                }
+
+                vr.wrap_index = i;
+                vr.offset = offset;
+                cvector_push_back(ctx.view->visual_rows, vr);
+            }
+        }
+    }
+}
+
+static int nv_draw_buffer_within_window(struct nv_window* window)
 {
     char* lbuf = calloc(window->wd.w, sizeof(char));
     
     if (!lbuf) {
         return NV_ERR_MEM;
     }
+
+    struct nv_context ctx = nv_get_context(window);
+
+    if (ctx.view->line_count <= 0) {
+        free(lbuf);
+        return NV_OK;
+    }
+
+    if (cvector_size(visual_rows) <= 0) {
+        nv_rebuild_visual_rows(&ctx);
+    }
    
-    size_t max_width = window->wd.w - (buffer->linecol_size + 1);
     struct nv_buff_line* current_line = NULL;
     size_t line_length = 0;
     size_t line_no = 0;
     size_t copy_size = 0;
 
     for (int row = window->wd.y; row < window->wd.y + window->wd.h; row++) {
-        current_line = line(buffer, line_no++);
+        current_line = line(ctx.view, line_no++);
 
         if (!current_line) {
             break;
@@ -380,7 +440,7 @@ static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff
         line_length = current_line->end - current_line->begin;
 
         if (line_length == 0) {
-            NV_PRINTF_BUFFER(window, row, buffer, line_no, " ");
+            nv_printf_buffer(&ctx, row, line_no, " ");
         }
 
         copy_size = (line_length > max_width) ? max_width : line_length;
@@ -388,7 +448,7 @@ static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff
         // convert invalid characters into their printable variants
         int r = 0;
         for (int i = 0; i < copy_size; i++) {
-            char chr = buffer->buffer[current_line->begin + i];
+            char chr = ctx.buffer->buffer[current_line->begin + i];
 
             if (chr == '\t') {
                 // tabs need to be expanded into spaces to nearest tab width
@@ -401,7 +461,7 @@ static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff
         }
 
         lbuf[r] = '\0';
-        NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf);
+        nv_printf_buffer(&ctx, row, line_no, lbuf);
 
         // TODO:
         // handle the tab expansion here as well
@@ -417,9 +477,9 @@ static int nv_draw_buffer_within_window(struct nv_window* window, struct nv_buff
                 
                 row++;
                 size_t wrap_size = (line_length - offset > max_width) ? max_width : line_length - offset;
-                memcpy(lbuf, &buffer->buffer[current_line->begin + offset], wrap_size);
+                memcpy(lbuf, &ctx.buffer->buffer[current_line->begin + offset], wrap_size);
                 lbuf[wrap_size] = '\0';
-                NV_PRINTF_BUFFER(window, row, buffer, line_no, lbuf);
+                nv_printf_buffer(&ctx, row, line_no, lbuf);
             }
         }
     }
@@ -435,66 +495,39 @@ int netrw_filename_sort(const void* a, const void* b)
 
 static int nv_draw_buffer(struct nv_window* window)
 {
-    if (!window || !window->show || !window->buffer) {
+    if (!window || !window->show) {
         return NV_ERR_NOT_INIT;
     }
 
-    struct nv_buff* buffer = window->buffer;
+    struct nv_context ctx = nv_get_context(window);
 
-    switch (buffer->type) {
+    if (!ctx.buffer) {
+        return NV_ERR_NOT_INIT;
+    }
+
+    switch (ctx.buffer->type) {
     case NV_BUFFTYPE_PLAINTEXT:
     case NV_BUFFTYPE_SOURCE:
         // int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
-        if (!buffer->loaded) {
-            nv_load_file_buffer(buffer, &buffer->line_count);
-            buffer->linecol_size = count_no_digits(buffer->line_count);
-            buffer->loaded = true;
+        if (!ctx.buffer->loaded) {
+            nv_load_file_buffer(ctx.buffer, &ctx.view->line_count);
+            ctx.view->gutter_digit_width = count_no_digits(ctx.view->line_count);
+            ctx.buffer->loaded = true;
         }
 
-        if (nv_draw_buffer_within_window(window, buffer) != NV_OK) {
+        if (nv_draw_buffer_within_window(window) != NV_OK) {
             nv_fatal("failed to draw buffer");
         }
 
         break;
 
     case NV_BUFFTYPE_BROWSER:
-        struct dirent* entry;
-        char** filenames = NULL;
-        size_t n = 0;
-
-        DIR* dir = opendir(buffer->path);
-
-        if (dir == NULL) {
-            return NV_ERR;
-        }
-
-        while ((entry = readdir(dir)) != NULL) {
-            filenames = realloc(filenames, (n + 1) * sizeof(char*));
-
-            if (!filenames) {
-                closedir(dir);
-                return NV_ERR_MEM;
-            }
-            
-            filenames[n] = strdup(entry->d_name);
-            n++;
-        }
-
-        closedir(dir);
-        qsort(filenames, n, sizeof(char*), netrw_filename_sort);
-
-        for (size_t i = 0; i < n; i++) {
-            NV_PRINTF(0, i, NV_WHITE, "%s", filenames[i]);
-            free(filenames[i]);
-        }
-
-        free(filenames);
-
+        // TODO: implement this as a plugin
         break;
 
     default:
-        fprintf(stderr, "unsupported bufftype %d\n", buffer->type);
+        fprintf(stderr, "unsupported bufftype %d\n", ctx.buffer->type);
         break;
     }
 
@@ -503,9 +536,14 @@ static int nv_draw_buffer(struct nv_window* window)
 
 static int nv_draw_status()
 {
-    struct nv_buff* buffer = nv_editor->focus->buffer;
+    struct nv_context ctx = nv_get_context(nv_get_active_window());
 
-    if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s--", buffer->path, nv_bufftype_str[buffer->type], nv_bufffmt_str[buffer->format], nv_mode_str[nv_editor->mode]) == -1) 
+    if (!ctx.buffer)
+        return NV_ERR_NOT_INIT;
+
+    if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s--", ctx.buffer->path, 
+                nv_bufftype_str[ctx.buffer->type], nv_bufffmt_str[ctx.buffer->format],
+                nv_mode_str[nv_editor->mode]) == -1) 
         return NV_ERR_MEM;
 
     for (int i = 0; i < nv_editor->statline->height; i++) {
