@@ -96,8 +96,8 @@ struct nv_buff* nv_buffer_init(const char* path)
         return NULL;
     }
 
-    buffer->chunk = NV_BUFF_CAP;
-    cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CAP);
+    buffer->chunk = NV_BUFF_CHUNK_SIZE;
+    cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CHUNK_SIZE);
     cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
 
     if (path) {

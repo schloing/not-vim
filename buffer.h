@@ -9,9 +9,9 @@
 #include "cvector.h"
 #include "window.h"
 
-#define NV_BUFFID_UNSET 0
-#define NV_BUFF_CAP     1024 * 16
-#define NV_LINE_CAP     32
+#define NV_BUFFID_UNSET        0
+#define NV_BUFF_CHUNK_SIZE     1024 * 16
+#define NV_LINE_CAP            32
 
 enum nv_bufftype {
     NV_BUFFTYPE_STDIN        = 0,
