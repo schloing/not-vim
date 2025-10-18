@@ -1,0 +1,3 @@
+[submodule "nvtree"]
+	path = nvtree
+	url = https://github.com/schloing/nvtree.git
