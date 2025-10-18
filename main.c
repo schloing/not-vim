@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
-    editor.logger->view->buffer->type = NV_BUFFTYPE_LOG;
+    editor.logger->view->buffer->type = NV_BUFF_TYPE_LOG;
     editor.logger->view->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
     editor.logger->show = false;
     NV_WD_SET_SIZE(editor.logger->wd, editor.width, editor.height);

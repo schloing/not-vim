@@ -38,7 +38,7 @@ char* nv_mode_str[NV_MODE_INSERTS + 1] = {
 };
 
 // extern in buffer.h
-char* nv_bufftype_str[NV_BUFFTYPE_LOG + 1] = {
+char* nv_str_buff_type[NV_BUFF_TYPE_LOG + 1] = {
     "stdin",
     "stdout",
     "browser",
@@ -49,7 +49,7 @@ char* nv_bufftype_str[NV_BUFFTYPE_LOG + 1] = {
 };
 
 // extern in buffer.h
-char* nv_bufffmt_str[NV_BUFFTYPE_PLAINTEXT + 1] = {
+char* nv_str_buff_fmt[NV_BUFF_TYPE_PLAINTEXT + 1] = {
     "binary",
     "source",
     "plaintext",
@@ -499,8 +499,8 @@ static int nv_draw_buffer(struct nv_window* window)
     }
 
     switch (ctx.buffer->type) {
-    case NV_BUFFTYPE_PLAINTEXT:
-    case NV_BUFFTYPE_SOURCE:
+    case NV_BUFF_TYPE_PLAINTEXT:
+    case NV_BUFF_TYPE_SOURCE:
         // int top = buffer->cursors[0].line - buffer->cursors[0].y;
 
         if (!ctx.buffer->loaded) {
@@ -515,7 +515,7 @@ static int nv_draw_buffer(struct nv_window* window)
 
         break;
 
-    case NV_BUFFTYPE_BROWSER:
+    case NV_BUFF_TYPE_BROWSER:
         // TODO: implement this as a plugin
         break;
 
@@ -536,7 +536,7 @@ static int nv_draw_status()
         return NV_ERR_NOT_INIT;
 
     if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s-- %d/%ld dbg:%d", ctx.buffer->path,
-                nv_bufftype_str[ctx.buffer->type], nv_bufffmt_str[ctx.buffer->format],
+                nv_str_buff_type[ctx.buffer->type], nv_str_buff_fmt[ctx.buffer->format],
                 nv_mode_str[nv_editor->mode], c.x, line(&ctx, c.line)->length, nv_editor->statline->dbg) == -1)
         return NV_ERR_MEM;
 

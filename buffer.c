@@ -35,11 +35,11 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
     switch (sb.st_mode & S_IFMT) {
     case S_IFLNK: // symlink
     case S_IFDIR:
-        buff->type = NV_BUFFTYPE_BROWSER;
+        buff->type = NV_BUFF_TYPE_BROWSER;
         break;
 
     case S_IFREG:
-        buff->type = NV_BUFFTYPE_SOURCE;
+        buff->type = NV_BUFF_TYPE_SOURCE;
         buff->file = fopen(buff->path, "rb+");
 
         if (buff->file == NULL) {
@@ -52,7 +52,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
         break;
 
     case S_IFSOCK:
-        buff->type = NV_BUFFTYPE_NETWORK;
+        buff->type = NV_BUFF_TYPE_NETWORK;
         break;
 
     default:

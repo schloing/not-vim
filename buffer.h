@@ -13,24 +13,24 @@
 #define NV_BUFF_CHUNK_SIZE     1024 * 16
 #define NV_LINE_CAP            32
 
-enum nv_bufftype {
-    NV_BUFFTYPE_STDIN        = 0,
-    NV_BUFFTYPE_STDOUT       = 1,
-    NV_BUFFTYPE_BROWSER      = 2,
-    NV_BUFFTYPE_NETWORK      = 3,
-    NV_BUFFTYPE_SOURCE       = 4,
-    NV_BUFFTYPE_PLAINTEXT    = 5,
-    NV_BUFFTYPE_LOG          = 6,
-};
+typedef enum {
+    NV_BUFF_TYPE_STDIN        = 0,
+    NV_BUFF_TYPE_STDOUT       = 1,
+    NV_BUFF_TYPE_BROWSER      = 2,
+    NV_BUFF_TYPE_NETWORK      = 3,
+    NV_BUFF_TYPE_SOURCE       = 4,
+    NV_BUFF_TYPE_PLAINTEXT    = 5,
+    NV_BUFF_TYPE_LOG          = 6,
+} nv_buff_type;
 
-enum nv_bufffmt {
+typedef enum {
     NV_FILE_FORMAT_BINARY    = 0,
     NV_FILE_FORMAT_SOURCE    = 1, // lsp + treesitter impl
     NV_FILE_FORMAT_PLAINTEXT = 2,
-};
+} nv_buff_fmt;
 
-extern char* nv_bufftype_str[NV_BUFFTYPE_LOG + 1];
-extern char* nv_bufffmt_str[NV_BUFFTYPE_PLAINTEXT + 1];
+extern char* nv_str_buff_type[NV_BUFF_TYPE_LOG + 1];
+extern char* nv_str_buff_fmt[NV_BUFF_TYPE_PLAINTEXT + 1];
 
 struct nv_buff_line {
     size_t begin;
@@ -61,8 +61,8 @@ struct nv_buff {
     char* path;
     size_t chunk;
     bool loaded;
-    enum nv_bufftype type;
-    enum nv_bufffmt format;
+    nv_buff_type type;
+    nv_buff_fmt format;
     cvector(struct nv_buff_line) lines;
     cvector(char) buffer;
 };
