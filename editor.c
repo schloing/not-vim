@@ -38,7 +38,7 @@ char* nv_mode_str[NV_MODE_INSERTS + 1] = {
 };
 
 // extern in buffer.h
-char* nv_str_buff_type[NV_BUFF_TYPE_LOG + 1] = {
+char* nv_str_buff_type[NV_BUFF_TYPE_END] = {
     "stdin",
     "stdout",
     "browser",
@@ -49,7 +49,7 @@ char* nv_str_buff_type[NV_BUFF_TYPE_LOG + 1] = {
 };
 
 // extern in buffer.h
-char* nv_str_buff_fmt[NV_BUFF_TYPE_PLAINTEXT + 1] = {
+char* nv_str_buff_fmt[NV_FILE_FORMAT_END] = {
     "binary",
     "source",
     "plaintext",

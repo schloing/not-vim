@@ -21,16 +21,18 @@ typedef enum {
     NV_BUFF_TYPE_SOURCE       = 4,
     NV_BUFF_TYPE_PLAINTEXT    = 5,
     NV_BUFF_TYPE_LOG          = 6,
+    NV_BUFF_TYPE_END,
 } nv_buff_type;
 
 typedef enum {
     NV_FILE_FORMAT_BINARY    = 0,
     NV_FILE_FORMAT_SOURCE    = 1, // lsp + treesitter impl
     NV_FILE_FORMAT_PLAINTEXT = 2,
+    NV_FILE_FORMAT_END,
 } nv_buff_fmt;
 
-extern char* nv_str_buff_type[NV_BUFF_TYPE_LOG + 1];
-extern char* nv_str_buff_fmt[NV_BUFF_TYPE_PLAINTEXT + 1];
+extern char* nv_str_buff_type[NV_BUFF_TYPE_END];
+extern char* nv_str_buff_fmt[NV_FILE_FORMAT_END];
 
 struct nv_buff_line {
     size_t begin;
