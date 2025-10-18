@@ -103,12 +103,9 @@ struct nv_buff* nv_buffer_init(const char* path)
     if (path) {
         buffer->path = (char*)path;
         nv_editor->status = nv_buffer_open_file(buffer, path);
-        if (nv_editor->status != NV_OK) {
-            return NULL;
-        }
     }
 
-    return buffer;
+    return nv_editor->status == NV_OK ? buffer : NULL;
 }
 
 struct nv_buff_line* line(struct nv_context* ctx, size_t lineno)
