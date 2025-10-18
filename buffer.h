@@ -7,6 +7,7 @@
 
 #include "cursor.h"
 #include "cvector.h"
+#include "window.h"
 
 #define NV_BUFFID_UNSET 0
 #define NV_BUFF_CAP     1024 * 16
@@ -51,7 +52,6 @@ struct nv_view {
     int line_count;
     struct nv_buff* buffer;
     cvector(struct nv_visual_row) visual_rows;
-    cvector(struct nv_buff_line) lines;
     cvector(size_t) map; // enough space to map ~100 lines to visual rows
     cvector(struct cursor) cursors;
 };
@@ -63,15 +63,16 @@ struct nv_buff {
     bool loaded;
     enum nv_bufftype type;
     enum nv_bufffmt format;
+    cvector(struct nv_buff_line) lines;
     cvector(char) buffer;
 };
 
 struct nv_view* nv_view_init(const char* buffer_file_path);
 struct nv_buff* nv_buffer_init(const char* path);
 int nv_buffer_open_file(struct nv_buff* buff, const char* path);
-int nv_load_file_buffer(struct nv_buff* buff, int* out_line_count);
+int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count);
 int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
-struct nv_buff_line* line(struct nv_view* view, size_t lineno);
+struct nv_buff_line* line(struct nv_context* ctx, size_t lineno);
 
 #endif

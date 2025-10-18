@@ -72,12 +72,6 @@ struct nv_editor {
     struct nv_conf config;
 };
 
-struct nv_context {
-    struct nv_window* window;
-    struct nv_view* view;
-    struct nv_buff* buffer;
-};
-
 // defaults
 
 #define NV_TAB_WIDTH               4

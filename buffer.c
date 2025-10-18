@@ -23,7 +23,7 @@ bool is_elf(const char* buffer)
 
 int nv_buffer_open_file(struct nv_buff* buff, const char* path)
 {
-    if (!buff || !path || !buff->cursors || !buff->buffer) {
+    if (!buff || !path || !buff->buffer) {
         return NV_ERR_NOT_INIT;
     }
 
@@ -49,7 +49,6 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
         fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
         cvector_set_size(buff->buffer, buff->chunk);
 
-        buff->cursors[0].ch = buff->buffer[0];
         break;
 
     case S_IFSOCK:
@@ -73,8 +72,11 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
     }
 
     view->top_line_index = 0;
-
     view->buffer = nv_buffer_init(buffer_file_path);
+
+    static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
+    cvector_reserve(view->cursors, NV_CURSOR_CAP);
+    view->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
     
     if (nv_editor->status != NV_OK) {
         return NULL;
@@ -94,13 +96,9 @@ struct nv_buff* nv_buffer_init(const char* path)
         return NULL;
     }
 
-    cvector_reserve(buffer->cursors, NV_CURSOR_CAP);
-    static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
-    buffer->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
-    cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
-    cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CAP);
-
     buffer->chunk = NV_BUFF_CAP;
+    cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CAP);
+    cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
 
     if (path) {
         buffer->path = (char*)path;
@@ -113,16 +111,16 @@ struct nv_buff* nv_buffer_init(const char* path)
     return buffer;
 }
 
-struct nv_buff_line* line(struct nv_view* view, size_t lineno)
+struct nv_buff_line* line(struct nv_context* ctx, size_t lineno)
 {
-    if (view->line_count < lineno) {
+    if (ctx->view->line_count < lineno) {
         return NULL;
     }
 
-    return &view->buffer->lines[lineno];
+    return &ctx->buffer->lines[lineno];
 }
 
-int nv_load_file_buffer(struct nv_buff* buff, int* out_line_count)
+int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count)
 {
     char* b = buff->buffer;
 
@@ -134,19 +132,25 @@ int nv_load_file_buffer(struct nv_buff* buff, int* out_line_count)
     size_t i = 0;
     int line_count = 0;
 
-    while (b[i++] != '\0') {
+    while (b[i] != '\0') {
         if (b[i] == '\n') {
             line.end = i;
-            line.length = line.end - line.begin - (line.end == line.begin ? 0 : 1); // subtract the new line if the line isn't empty
+            line.length = line.end - line.begin;
 
             cvector_push_back(buff->lines, line);
 
             line.begin = i + 1;
             line_count++;
         }
+        i++;
     }
 
-    line_count--;
+    if (i > line.begin) {
+        line.end = i;
+        line.length = line.end - line.begin;
+        cvector_push_back(buff->lines, line);
+        line_count++;
+    }
 
     // empty file
     if (line_count == 0) {
@@ -166,6 +170,7 @@ int nv_free_view(struct nv_view* view)
     }
 
     cvector_free(view->visual_rows);
+    cvector_free(view->cursors);
     cvector_free(view->map);
     nv_free_buffer(view->buffer);
 
@@ -186,9 +191,9 @@ int nv_free_buffer(struct nv_buff* buff)
         buff->file = NULL;
     }
 
-    cvector_free(buff->cursors);
     cvector_free(buff->lines);
     cvector_free(buff->buffer);
+
     free(buff);
     buff = NULL;
     return NV_OK;

@@ -1,60 +1,67 @@
 #include "cursor.h"
 #include "cursorhelp.h"
 #include "buffer.h"
+#include "editor.h"
 #include "termbox2.h"
 
-void nv_cursor_insert_ch(struct nv_view* view, struct cursor* cursor, char ch)
+void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
 {
-    struct nv_buff_line* l = line(view, cursor->line);
-    size_t row = l->begin + cursor->x;
+    struct nv_buff_line* l = line(ctx, cursor->line);
+    size_t row = l->begin + (cursor->x > l->length ? l->length : cursor->x);
 
-    cvector_insert(view->buffer->buffer, row, ch);
-    cvector_clear(view->buffer->lines); // FIXME
-    nv_load_file_buffer(view->buffer, &view->line_count);
+    cvector_insert(ctx->view->buffer->buffer, row, ch);
+    cvector_clear(ctx->view->buffer->lines); // FIXME
+    (void)nv_rebuild_lines(ctx->view->buffer, &ctx->view->line_count);
 
     cursor->x++;
 }
 
-void nv_cursor_move_down(struct nv_view* view, struct cursor* cursor, int amt)
+// FIXME
+
+void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    if (cursor->y + amt < (int)view->line_count) {
+    if (amt < 0) {
+        nv_cursor_move_up(ctx, cursor, -amt);
+        return;
+    }
+
+    if (cursor->y + amt < (int)ctx->view->line_count) {
         cursor->y += amt;
         cursor->line += amt;
     }
 }
 
-void nv_cursor_move_up(struct nv_view* view, struct cursor* cursor, int amt)
+void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
+    if (amt < 0) {
+        nv_cursor_move_down(ctx, cursor, -amt);
+        return;
+    }
+
     if (cursor->y - amt >= 0) {
         cursor->y -= amt;
         cursor->line -= amt;
     }
 }
 
-void nv_cursor_move_left(struct nv_view* view, struct cursor* cursor, int amt)
+void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    int length = (int)line(view, cursor->line)->length;
+    int length = (int)line(ctx, cursor->line)->length;
 
+    // cursor could be out of range before any change to the cursor
     if (cursor->x > length)
         cursor->x = length;
-
-    cursor->x -= amt;
-
-    if (cursor->x < 0)
-        cursor->x = 0;
-}
-
-void nv_cursor_move_right(struct nv_view* view, struct cursor* cursor, int amt)
-{
-    int length = (int)line(view, cursor->line)->length;
 
     cursor->x += amt;
 
     if (cursor->x > length)
         cursor->x = length;
+
+    if (cursor->x < 0)
+        cursor->x = 0;
 }
 
-struct cursor* nv_primary_cursor(struct nv_buff* buffer)
-{
-    return &buffer->cursors[NV_PRIMARY_CURSOR];
-}
+// struct cursor* nv_primary_cursor(struct nv_buff* buffer)
+// {
+//     return &buffer->cursors[NV_PRIMARY_CURSOR];
+// }

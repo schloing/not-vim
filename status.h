@@ -5,6 +5,7 @@ struct nv_status {
     int height;
     char* format;
     char* string;
+    int dbg;
 };
 
 #endif

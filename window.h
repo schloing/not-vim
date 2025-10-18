@@ -23,10 +23,15 @@ struct nv_window {
     bool has_children;
     enum nv_split_kind split;
     struct nv_windim wd;
-    struct nv_window* parent;
-    struct nv_window* left;
-    struct nv_window* right;
+    struct nv_window* left, *right, *parent;
+    // TODO bring nv_buff out of nv_view and into nv_window
     struct nv_view* view; // generally NULL if has_children
+};
+
+struct nv_context {
+    struct nv_window* window;
+    struct nv_view* view;
+    struct nv_buff* buffer;
 };
 
 #define NV_WD_SET_SIZE(of, _w, _h) \
