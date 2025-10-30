@@ -128,15 +128,17 @@ static void nv_set_width_and_split(struct nv_window* root, struct nv_window* lef
     if (left->show) {
         left->wd.x = root->wd.x;
         left->wd.y = root->wd.y;
-        left->wd.w = split == HORIZONTAL ? root->wd.w / 2 : root->wd.w;
-        left->wd.h = split == VERTICAL ? root->wd.h / 2 : root->wd.h;
+        nv_window_set_dim(left,
+                split == HORIZONTAL ? root->wd.w / 2 : root->wd.w,
+                split == VERTICAL ? root->wd.h / 2 : root->wd.h);
     }
 
     if (right->show) {
         right->wd.x = split == HORIZONTAL ? root->wd.x + left->wd.w : root->wd.x;
         right->wd.y = split == VERTICAL ? root->wd.y + left->wd.h : root->wd.y;
-        right->wd.w = split == HORIZONTAL ? root->wd.w - left->wd.w : root->wd.w;
-        right->wd.h = split == VERTICAL ? root->wd.h - left->wd.h : root->wd.h;
+        nv_window_set_dim(right,
+                 split == HORIZONTAL ? root->wd.w - left->wd.w : root->wd.w,
+                 split == VERTICAL ? root->wd.h - left->wd.h : root->wd.h);
     }
 }
 
@@ -161,8 +163,32 @@ int nv_redistribute(struct nv_window* root)
 
     window->wd.x = root->wd.x;
     window->wd.y = root->wd.y;
-    window->wd.w = root->wd.w;
-    window->wd.h = root->wd.h;
+    nv_window_set_dim(window, root->wd.w, root->wd.h);
 
     return NV_OK;
+}
+
+void nv_window_set_dim(struct nv_window* window, float w, float h)
+{
+    if (!window) {
+        return;
+    }
+
+    w = w > 1 ? 1 : (w < 0 ? 0 : w);
+    h = h > 1 ? 1 : (h < 0 ? 0 : h);
+
+    window->wd.w = w;
+    window->wd.h = h;
+    window->cd.w = w * nv_editor->width + 1;
+    window->cd.h = h * nv_editor->height + 1;
+    window->cd.x = window->wd.x * nv_editor->width;
+    window->cd.y = window->wd.y * nv_editor->height;
+
+    if (window->left) {
+        nv_window_set_dim(window->left, window->left->wd.w, window->left->wd.h);
+    }
+
+    if (window->right) {
+        nv_window_set_dim(window->right, window->right->wd.w, window->right->wd.h);
+    }
 }

@@ -88,6 +88,7 @@ struct nv_editor {
 #define NV_ALLOW_BOLDED_TEXT       true
 #define NV_ALLOW_UNDERLINED_TEXT   true
 
+// FIXME
 // config defaults to 32-bit colours regardless of support for it
 // the editor does not check to see whether the colours are supported or not
 

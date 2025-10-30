@@ -6,12 +6,10 @@
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
 {
-    struct nv_buff_line* l = line(ctx, cursor->line);
-    size_t row = l->begin + (cursor->x > l->length ? l->length : cursor->x);
+//  struct nv_node* l = line(ctx, cursor->line);
+//  size_t row = l->begin + (cursor->x > l->length ? l->length : cursor->x);
 
-    cvector_insert(ctx->view->buffer->buffer, row, ch);
-    cvector_clear(ctx->view->buffer->lines); // FIXME
-    (void)nv_rebuild_lines(ctx->view->buffer, &ctx->view->line_count);
+//  cvector_insert(ctx->view->buffer->buffer, row, ch);
 
     cursor->x++;
 }
@@ -25,7 +23,7 @@ void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
         return;
     }
 
-    if (cursor->y + amt < (int)ctx->view->line_count) {
+    if (cursor->y + amt < (int)ctx->buffer->line_count) {
         cursor->y += amt;
         cursor->line += amt;
     }
@@ -46,7 +44,7 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    int length = (int)line(ctx, cursor->line)->length;
+    int length = (int)line(ctx, cursor->line)->data.length;
 
     // cursor could be out of range before any change to the cursor
     if (cursor->x > length)

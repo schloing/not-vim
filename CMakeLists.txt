@@ -17,7 +17,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-Wall -Werror) # -Wextra
 endif()
 
-file(GLOB SRC_FILES "*.c" "*.h")
+file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h" "*.c" "*.h")
 
 add_executable(nv ${SRC_FILES})
 

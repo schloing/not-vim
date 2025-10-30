@@ -8,6 +8,7 @@
 #include "cursor.h"
 #include "cvector.h"
 #include "window.h"
+#include "nvtree/nvtree.h"
 
 #define NV_BUFFID_UNSET        0
 #define NV_BUFF_CHUNK_SIZE     1024 * 16
@@ -34,12 +35,6 @@ typedef enum {
 extern char* nv_str_buff_type[NV_BUFF_TYPE_END];
 extern char* nv_str_buff_fmt[NV_FILE_FORMAT_END];
 
-struct nv_buff_line {
-    size_t begin;
-    size_t end;
-    size_t length;
-};
-
 struct nv_visual_row {
     size_t line_index;
     size_t wrap_index;
@@ -51,22 +46,26 @@ struct nv_visual_row {
 struct nv_view {
     size_t top_line_index;
     int gutter_digit_width;
-    int line_count;
     struct nv_buff* buffer;
     cvector(struct nv_visual_row) visual_rows;
     cvector(size_t) map; // enough space to map ~100 lines to visual rows
     cvector(struct cursor) cursors;
 };
 
+typedef nv_pool_index nv_tree_pool_index;
+
 struct nv_buff {
     FILE* file;
     char* path;
     size_t chunk;
     bool loaded;
+    int line_count;
     nv_buff_type type;
     nv_buff_fmt format;
-    cvector(struct nv_buff_line) lines;
+    nv_tree_pool_index tree;
+    cvector(struct nv_tree_node*) lines;
     cvector(char) buffer;
+    cvector(char) add_buffer;
 };
 
 struct nv_view* nv_view_init(const char* buffer_file_path);
@@ -75,6 +74,6 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path);
 int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count);
 int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
-struct nv_buff_line* line(struct nv_context* ctx, size_t lineno);
+struct nv_tree_node* line(struct nv_context* ctx, int lineno);
 
 #endif

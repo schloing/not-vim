@@ -55,7 +55,11 @@ int main(int argc, char** argv)
 {
     assert(argc >= 2);
     struct nv_editor editor = { 0 };
-    nv_editor_init(&editor);
+
+    if (nv_editor_init(&editor) != NV_OK) {
+        nv_editor_cleanup(&editor);
+        return editor.status;
+    }
 
     if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(editor.status));
@@ -76,7 +80,7 @@ int main(int argc, char** argv)
 
     editor.logger->view = nv_view_init(NULL);
 
-    if (editor.status != NV_OK) {
+    if (editor.status != NV_OK || !editor.logger->view->buffer) {
         nv_fatal("failed to create log buffer");
         nv_editor_cleanup(&editor);
         return editor.status;
@@ -85,7 +89,8 @@ int main(int argc, char** argv)
     editor.logger->view->buffer->type = NV_BUFF_TYPE_LOG;
     editor.logger->view->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
     editor.logger->show = false;
-    NV_WD_SET_SIZE(editor.logger->wd, editor.width, editor.height);
+
+    nv_window_set_dim(editor.logger, 1, 1);
 
     if (editor.status != NV_OK) {
         nv_fatal("failed to create editor window");
@@ -97,7 +102,8 @@ int main(int argc, char** argv)
     editor.window = nv_window_init();
     editor.window->split = HORIZONTAL;
     editor.window->show = true;
-    NV_WD_SET_SIZE(editor.window->wd, editor.width, editor.height);
+
+    nv_window_set_dim(editor.window, 1, 1);
 
     // load plugs
     nvlua_main();
