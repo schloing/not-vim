@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <dlfcn.h>
+#include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -51,8 +52,51 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     }
 }
 
+static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
+{
+    (void)ucontext;
+    tb_shutdown();
+
+    const char* sig_name;
+
+    switch(sig) {
+        case SIGSEGV: sig_name = "SIGSEGV"; break;
+        case SIGBUS:  sig_name = "SIGBUS";  break;
+        case SIGFPE:  sig_name = "SIGFPE";  break;
+        case SIGABRT: sig_name = "SIGABRT"; break;
+        case SIGILL:  sig_name = "SIGILL"; break;
+        case SIGTRAP: sig_name = "SIGTRAP"; break;
+        default:      sig_name = "UNKNOWN"; break;
+    }
+
+    fprintf(stderr, "%s (%d) at address %p\n", sig_name, sig, info->si_addr);
+
+    void* bt[32];
+    int bt_size = backtrace(bt, 32);
+    backtrace_symbols_fd(bt, bt_size, STDERR_FILENO);
+
+    exit(128 + sig);
+}
+
+static void nv_setup_signal_handlers()
+{
+    signal(SIGTTOU, SIG_IGN);
+
+    struct sigaction sa;
+    sa.sa_sigaction = nv_fatal_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGBUS,  &sa, NULL);
+    sigaction(SIGFPE,  &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+}
+
 int main(int argc, char** argv)
 {
+    nv_setup_signal_handlers();
+
     assert(argc >= 2);
     struct nv_editor editor = { 0 };
 
