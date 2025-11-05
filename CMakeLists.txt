@@ -23,13 +23,21 @@ add_executable(nv ${SRC_FILES})
 
 target_include_directories(nv PRIVATE ${LuaJIT_INCLUDE_DIRS})
 target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
+target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
 
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64
-    _XOPEN_SOURCE=700
-    _DEFAULT_SOURCE 
-    _BSD_SOURCE
 )
+
+if(APPLE)
+    target_compile_definitions(nv PRIVATE _DARWIN_C_SOURCE)
+elseif(UNIX)
+    target_compile_definitions(nv PRIVATE
+        _XOPEN_SOURCE=700
+        _DEFAULT_SOURCE
+        _BSD_SOURCE
+    )
+endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
