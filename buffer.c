@@ -91,6 +91,7 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
 #define NV_TREE_MIN_CHARS_FOR_NODE_INIT 8
 #define NV_LINES_PER_NODE               8
 
+#ifdef NV_DEBUG_TREE_PRINT
 static void print(nv_pool_index tree)
 {
     struct nv_tree_node* node = NODE_FROM_POOL(tree);
@@ -126,6 +127,7 @@ static void print_current_only(nv_pool_index tree)
         printf("%.*s\n", (int)node->data.length, &nv_buffers[node->data.buff_id][node->data.buff_index]);
     }
 }
+#endif
 
 // FIXME: name does not indicate that it performs important set up for nvtree to work
 int nv_buffer_build_tree(struct nv_buff* buff)
@@ -143,34 +145,17 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     struct nv_node node = {
         .buff_id = NV_BUFF_ID_ORIGINAL,
         .buff_index = 0,
-        .length = 0,
+        .length = buff->chunk,
         .length_left = 0,
         .lfcount = 0
     };
 
-    size_t line_count = 0, buff_offset = 0, tree_pos = 0;
+    buff->tree = nv_tree_insert(buff->tree, 0, node);
+    buff->tree = nv_tree_paint(buff->tree, B);
 
-    while (b[buff_offset] != '\0') {
-        if (b[buff_offset] != '\n') {
-            node.length++;
-            buff_offset++;
-            continue;
-        }
+    struct nv_tree_node* tree = NODE_FROM_POOL(buff->tree);
 
-        node.length++; // include \n
-        tree_pos += node.length;
-
-        buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
-        buff->tree = nv_tree_paint(buff->tree, B);
-
-        node.buff_index += node.length;
-        node.length = 0;
-
-        line_count++;
-        buff_offset++;
-    }
-
-    buff->line_count = line_count;
+    buff->line_count = tree->data.lfcount;
 
     return NV_OK;
 }
@@ -193,26 +178,18 @@ struct nv_buff* nv_buffer_init(const char* path)
         buffer->path = (char*)path;
         nv_editor->status = nv_buffer_open_file(buffer, path);
         nv_buffer_build_tree(buffer); // only fails when nv_buff or nv_buff->buffer is NULL
-        print(-1);
-        print_current_only(-1);
-//      print(buffer->tree);
-//      for (int i = 0; i < 7; i++) {
-//          print_current_only(nv_find_by_line(buffer->tree, i));
-//          print_current_only(-1);
-//          print(nv_find_by_line(buffer->tree, i));
-//      }
     }
 
     return nv_editor->status == NV_OK ? buffer : NULL;
 }
 
-struct nv_tree_node* line(struct nv_context* ctx, int lineno)
+nv_pool_index line(struct nv_context* ctx, int lineno)
 {
-    if (!ctx || !ctx->buffer || lineno >= ctx->buffer->line_count) {
-        return NULL;
+    if (!ctx || !ctx->buffer) {
+        return NV_NULL_INDEX;
     }
 
-    return NODE_FROM_POOL(nv_find_by_line(ctx->buffer->tree, lineno));
+    return nv_find_by_line(ctx->buffer->tree, lineno);
 }
 
 int nv_free_view(struct nv_view* view)
@@ -248,6 +225,7 @@ int nv_free_buffer(struct nv_buff* buff)
 
     cvector_free(buff->lines);
     cvector_free(buff->buffer);
+    cvector_free(buff->add_buffer);
 
     free(buff);
     return NV_OK;

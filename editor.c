@@ -60,22 +60,21 @@ char* nv_str_buff_fmt[NV_FILE_FORMAT_END] = {
 #define NV_PRINTF(x, y, fg, fmt, ...) \
     tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
+// FIXME
 static inline void nv_buffer_printf(struct nv_context* ctx, int row, int line_no, char* lbuf, size_t length)
 {
     if (!lbuf) {
         return;
     }
 
-    char* string = (char*)malloc(length);
-    int redacted = 0;
+    size_t max_length = length > ctx->window->cd.w ? ctx->window->cd.w : length;
+    char* string = (char*)malloc(max_length + 1);
 
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < max_length; i++) {
         string[i] = lbuf[i];
     }
 
-    length -= redacted;
-
-    string[length > ctx->window->cd.w ? ctx->window->cd.w : length] = '\0';
+    string[max_length] = '\0';
 
     NV_PRINTF(ctx->window->cd.x, row, NV_GRAY, "%*d", ctx->view->gutter_digit_width, line_no);
     NV_PRINTF(ctx->window->cd.x + ctx->view->gutter_digit_width + 1, row, NV_WHITE, "%s", string);
@@ -146,7 +145,8 @@ static void nv_draw_cursor()
 
     for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
-        struct nv_tree_node* l = line(&ctx, c.line);
+        struct nv_tree_node* l = NODE_FROM_POOL(line(&ctx, c.line));
+
         line_length = l ? l->data.length - 1 : 0; // FIXME: only works if *local* lfcount = 1
 
         effective_row =
@@ -229,10 +229,6 @@ void nv_main()
 
         switch (ev.type) {
         case TB_EVENT_MOUSE:
-            nv_editor->running = false; // FIXME
-
-            break;
-
         case TB_EVENT_KEY:
             nv_get_input(&ev);
             nv_draw_windows(nv_editor->window);
@@ -315,14 +311,12 @@ static int nv_get_input(struct tb_event* ev)
             if (ctx.view->top_line_index > 0) {
                 ctx.view->top_line_index--;
             }
-            nv_cursor_move_up(&ctx, cursor, 1);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
             if (ctx.view->top_line_index < ctx.buffer->line_count) {
                 ctx.view->top_line_index++;
             }
-            nv_cursor_move_down(&ctx, cursor, 1);
             break;
         }
     } else {
@@ -416,30 +410,78 @@ static int nv_draw_windows(struct nv_window* root)
     return NV_OK;
 }
 
-static void nv_buffer_print_tree(nv_pool_index tree, struct nv_buff* buffer);
-
-static void nv_buffer_print_tree(nv_pool_index tree, struct nv_buff* buffer)
+// FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
+static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
 {
-    if (!buffer || !buffer->lines) {
+    if (!ctx || !ctx->view || !ctx->buffer || !ctx->window) {
         return;
     }
 
-    struct nv_tree_node* node = NODE_FROM_POOL(tree);
+    size_t line = ctx->view->top_line_index;
+    size_t lines_remaining = ctx->window->cd.h; // how many lines after 'line' to flatten
 
-    if (!node) {
-        return;
+    struct nv_tree_node* current = NODE_FROM_POOL(tree);
+
+    while (current && lines_remaining > 0) {
+        struct nv_tree_node* left = current->left ? NODE_FROM_POOL(current->left) : NULL;
+        struct nv_tree_node* right = current->right ? NODE_FROM_POOL(current->right) : NULL;
+
+        size_t left_lf = left ? left->data.lfcount : 0;
+        size_t right_lf = right ? right->data.lfcount : 0;
+        size_t local_lf = current->data.lfcount - left_lf - right_lf;
+
+        if (line < left_lf) {
+            // line in left tree
+            current = left;
+        }
+        else if (line < left_lf + local_lf) {
+            // line is within this node
+
+            char* buf = nv_buffers[current->data.buff_id];
+            // how many lines to skip to get the target line?
+            size_t lines_to_skip = line - left_lf;
+            
+            struct nv_node line_node = {
+                .buff_id = current->data.buff_id,
+                .buff_index = current->data.buff_index,
+                .length = 0,
+                .lfcount = 1,
+            };
+
+            // skip necessary amt of lines
+            while (lines_to_skip > 0) { // FIXME bounds
+                if (buf[line_node.buff_index] == '\n') {
+                    lines_to_skip--;
+                }
+                line_node.buff_index++;
+            }
+
+            line_node.length = 0;
+            size_t lines_collected = 0;
+
+            // collect the rest of the lines in this node
+            while (lines_collected < lines_remaining) { // FIXME bounds
+                if (buf[line_node.buff_index + line_node.length] == '\n') {
+                    line_node.length++;
+                    cvector_push_back(ctx->buffer->lines, line_node);
+                    line_node.buff_index += line_node.length;
+                    line_node.length = 0;
+                    lines_collected++;
+                } else {
+                    line_node.length++;
+                }
+            }
+
+            lines_remaining -= lines_collected;
+            line = 0;
+            current = right;
+        }
+        else {
+            // line in right tree
+            line -= left_lf + local_lf;
+            current = right;
+        }
     }
-
-    nv_buffer_print_tree(node->left, buffer);
-
-    size_t bufsize = cvector_size(buffer->buffer);
-
-    if (node->data.buff_index < bufsize &&
-        node->data.buff_index + node->data.length <= bufsize) {
-        cvector_push_back(buffer->lines, node);
-    }
-
-    nv_buffer_print_tree(node->right, buffer);
 }
 
 static int nv_draw_buffer_within_window(struct nv_window* window)
@@ -450,19 +492,13 @@ static int nv_draw_buffer_within_window(struct nv_window* window)
 
     struct nv_context ctx = nv_get_context(window);
 
-    if (cvector_size(ctx.buffer->lines) <= 0) {
-        nv_buffer_print_tree(ctx.buffer->tree, ctx.buffer);
-    }
+    cvector_clear(ctx.buffer->lines); // FIXME, can reuse some lines depending on scroll shift
+    nv_pool_index top_line = line(&ctx, ctx.view->top_line_index);
+    nv_buffer_print_tree(top_line, &ctx);
 
-    size_t row = window->cd.y;
-    
-    for (int line_no = 0; line_no < ctx.buffer->line_count; line_no++) {
-        struct nv_tree_node* node = line(&ctx, line_no);
-
-//      struct nv_tree_node* node = ctx.buffer->lines[line_no];
-
-        nv_buffer_printf(&ctx, line_no, row + line_no, &nv_buffers[node->data.buff_id][node->data.buff_index], node->data.length);
-//      nv_buffer_printf(&ctx, line_no, row + line_no, &nv_buffers[node->data.buff_id][node->data.buff_index], node->data.length);
+    for (size_t line_no = ctx.view->top_line_index; line_no < ctx.view->top_line_index + ctx.window->cd.h; line_no++) {
+        struct nv_node node = ctx.buffer->lines[line_no - ctx.view->top_line_index];
+        nv_buffer_printf(&ctx, line_no - ctx.view->top_line_index, line_no, &nv_buffers[node.buff_id][node.buff_index], node.length);
     }
 
     return NV_OK;
@@ -522,7 +558,7 @@ static int nv_draw_status()
         return NV_ERR_NOT_INIT;
     }
 
-    struct nv_tree_node* l = line(&ctx, c.line);
+    struct nv_tree_node* l = NODE_FROM_POOL(line(&ctx, c.line));
 
     if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s-- %d %d/%ld dbg:%d", ctx.buffer->path,
                 nv_str_buff_type[ctx.buffer->type], nv_str_buff_fmt[ctx.buffer->format],
@@ -533,6 +569,8 @@ static int nv_draw_status()
         tb_printf(0, nv_editor->height - i, NV_BLACK, NV_WHITE,
                 "%-*.*s", nv_editor->width, nv_editor->width, nv_editor->statline->format);
     }
+
+    free(nv_editor->statline->format);
 
     return NV_OK;
 }

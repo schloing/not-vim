@@ -44,7 +44,8 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    int length = (int)line(ctx, cursor->line)->data.length;
+    struct nv_tree_node* l = NODE_FROM_POOL(line(ctx, cursor->line));
+    int length = l ? (int)l->data.length : 0;
 
     // cursor could be out of range before any change to the cursor
     if (cursor->x > length)
