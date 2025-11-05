@@ -5,7 +5,7 @@
 
 int nvlua_main();
 
-#include <luajit-2.1/lua.h>
+#include <lua.h>
 
 int l_dir(lua_State* L);
 

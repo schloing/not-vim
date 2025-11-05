@@ -1,9 +1,9 @@
 // https://github.com/yasuoka/luacstruct
 // https://www.lua.org/pil/contents.html
 
-#include <luajit-2.1/lauxlib.h>
-#include <luajit-2.1/lua.h>
-#include <luajit-2.1/lualib.h>
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +39,7 @@ static int nv_load_plugin(lua_State* L, char* path)
     }
 
     switch (sb.st_mode & S_IFMT) {
-    case S_IFDIR:
+    case S_IFDIR: {
         size_t path_length = strlen(path);
         char* plugin_entry_path = (char*)calloc(path_length + NV_PLUGIN_ENTRYPOINT_LENGTH + 1, sizeof(char)); // null terminator
 
@@ -67,6 +67,7 @@ static int nv_load_plugin(lua_State* L, char* path)
 
         free(plugin_entry_path);
         break;
+    }
 
     default:
         return NV_ERR;
