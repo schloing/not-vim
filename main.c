@@ -46,10 +46,6 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     tb_shutdown();
     nv_free_windows(editor->logger);
     nv_free_windows(editor->window);
-
-    if (editor->statline && editor->statline->format) {
-        free(editor->statline->format);
-    }
 }
 
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
@@ -149,8 +145,10 @@ int main(int argc, char** argv)
 
     nv_window_set_dim(editor.window, 1, 1);
 
+#ifndef NV_NO_LUAJIT
     // load plugs
     nvlua_main();
+#endif
 
     for (int i = 1; i < argc; i++) {
         if (nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]) != NV_OK) {
