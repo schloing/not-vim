@@ -41,7 +41,14 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
 
     case S_IFREG:
         buff->type = NV_BUFF_TYPE_SOURCE;
-        buff->file = fopen(buff->path, "rb+");
+
+        if (access(buff->path, W_OK) == 0) {
+            buff->file = fopen(buff->path, "rb+");
+        }
+        else {
+            // TODO: set readonly indicator
+            buff->file = fopen(buff->path, "rb");
+        }
 
         if (buff->file == NULL) {
             return NV_ERR;
@@ -149,6 +156,30 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         .length_left = 0,
         .lfcount = 0
     };
+
+    int line_count = 0;
+    int abs_pos = 0;
+    int tree_pos = 0;
+
+    while (abs_pos < buff->chunk) {
+        if (b[abs_pos] == '\n') {
+            node.length++;
+            buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
+            buff->tree = nv_tree_paint(buff->tree, B);
+            tree_pos += node.length;
+            node.length = 0;
+            line_count++;
+        }
+        else {
+            node.length++;
+        }
+
+        abs_pos++;
+    }
+
+    buff->line_count = line_count;
+
+    return NV_OK;
 
     buff->tree = nv_tree_insert(buff->tree, 0, node);
     buff->tree = nv_tree_paint(buff->tree, B);

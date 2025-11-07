@@ -156,8 +156,6 @@ static void nv_draw_cursor()
     
         tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
     }
-
-    tb_present();
 }
 
 void nv_log(const char* fmt, ...)
@@ -192,6 +190,7 @@ static void nv_redraw_all()
 
     nv_draw_background(); // clear
     nv_draw_windows(nv_editor->window); // TODO: add log buffer override
+    nv_draw_cursor();
     nv_draw_status();
     tb_present();
 }
@@ -200,10 +199,13 @@ void nv_resize_for_layout(size_t width, size_t height)
 {
     nv_editor->width = width;
     nv_editor->height = nv_editor->statline ? height - nv_editor->statline->height : height;
+
     if (nv_editor->window) {
         nv_window_set_dim(nv_editor->window, nv_editor->window->wd.w, nv_editor->window->wd.w);
     }
 }
+
+#include <time.h>
 
 void nv_main()
 {
@@ -220,34 +222,16 @@ void nv_main()
 
     nv_editor->running = true;
     nv_redraw_all();
-    nv_draw_cursor();
 
     struct tb_event ev;
 
     while (nv_editor->running) {
-        nv_editor->status = tb_poll_event(&ev);
-
-        switch (ev.type) {
-        case TB_EVENT_MOUSE:
-        case TB_EVENT_KEY:
-            nv_get_input(&ev);
-            nv_draw_windows(nv_editor->window);
-
-            break;
-
-        case TB_EVENT_RESIZE:
-            if (nv_editor->config.show_headless) {
-                break;
-            }
-
-            nv_resize_for_layout(tb_width(), tb_height());
-            nv_redraw_all();
-
-            break;
-
-        default:
-            break;
+        if (tb_poll_event(&ev) != TB_OK) {
+            continue;
         }
+
+        nv_get_input(&ev);
+        nv_redraw_all();
     }
 }
 
@@ -305,66 +289,60 @@ static int nv_get_input(struct tb_event* ev)
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
 
-    if (ev->type == TB_EVENT_MOUSE) {
+    switch (ev->type) {
+    case TB_EVENT_MOUSE:
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            if (ctx.view->top_line_index > 0) {
-                ctx.view->top_line_index--;
+            ctx.view->top_line_index -= 2;
+            if (ctx.view->top_line_index < 0) {
+                ctx.view->top_line_index = 0;
             }
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            if (ctx.view->top_line_index < ctx.buffer->line_count) {
-                ctx.view->top_line_index++;
+            ctx.view->top_line_index += 2;
+            if (ctx.view->top_line_index > ctx.buffer->line_count) {
+                ctx.view->top_line_index = ctx.buffer->line_count;
             }
             break;
         }
-    } else {
+        break;
+
+    case TB_EVENT_KEY:
         if (nv_editor->mode == NV_MODE_INSERT) {
             if (isprint(ev->ch)) {
                 nv_cursor_insert_ch(&ctx, cursor, ev->ch);
-            } else {
-                switch (ev->key) {
-                case TB_KEY_ESC:
-                    nv_set_mode(NV_MODE_NAVIGATE);
-                }
-            }
-        } else {
-            if (ev->key == TB_KEY_ESC) {
-                nv_editor->running = false;
-            }
-
-            switch (ev->ch) {
-            case 'i':
-                nv_set_mode(NV_MODE_INSERT);
-                break;
-
-            case 'j':
-                nv_cursor_move_down(&ctx, cursor, 1);
-                break;
-
-            case 'k':
-                nv_cursor_move_up(&ctx, cursor, 1);
-                break;
-
-            case 'h':
-                nv_cursor_move_x(&ctx, cursor, -1);
-                break;
-
-            case 'l':
-                nv_cursor_move_x(&ctx, cursor, 1);
-                break;
+            } else if (ev->key == TB_KEY_ESC) {
+                nv_set_mode(NV_MODE_NAVIGATE);
             }
         }
-    }
+        else {
+            if (ev->key == TB_KEY_ESC) {
+                nv_editor->running = false;
+            } else {
+                switch (ev->ch) {
+                case 'i': nv_set_mode(NV_MODE_INSERT); break;
+                case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
+                case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
+                case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
+                case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
+                }
+            }
+        }
+        break;
 
-    nv_draw_windows(nv_editor->focus);
-    nv_draw_status();
-    nv_draw_cursor();
+    case TB_EVENT_RESIZE:
+        if (!nv_editor->config.show_headless) {
+            nv_resize_for_layout(tb_width(), tb_height());
+        }
+        break;
+
+    default:
+        break;
+    }
 
     return NV_OK;
 }
-
 static struct nv_window* nv_get_active_window()
 {
     if (!nv_editor->focus) {
@@ -438,6 +416,7 @@ static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
             // line is within this node
 
             char* buf = nv_buffers[current->data.buff_id];
+            size_t bufsiz = cvector_size(buf);
             // how many lines to skip to get the target line?
             size_t lines_to_skip = line - left_lf;
             
@@ -449,7 +428,7 @@ static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
             };
 
             // skip necessary amt of lines
-            while (lines_to_skip > 0) { // FIXME bounds
+            while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
                 if (buf[line_node.buff_index] == '\n') {
                     lines_to_skip--;
                 }
@@ -460,7 +439,7 @@ static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
             size_t lines_collected = 0;
 
             // collect the rest of the lines in this node
-            while (lines_collected < lines_remaining) { // FIXME bounds
+            while (line_node.buff_index + line_node.length < bufsiz && lines_collected < lines_remaining) {
                 if (buf[line_node.buff_index + line_node.length] == '\n') {
                     line_node.length++;
                     cvector_push_back(ctx->buffer->lines, line_node);
@@ -493,10 +472,14 @@ static int nv_draw_buffer_within_window(struct nv_window* window)
     struct nv_context ctx = nv_get_context(window);
 
     cvector_clear(ctx.buffer->lines); // FIXME, can reuse some lines depending on scroll shift
-    nv_pool_index top_line = line(&ctx, ctx.view->top_line_index);
-    nv_buffer_print_tree(top_line, &ctx);
+    nv_buffer_print_tree(ctx.buffer->tree, &ctx);
+    size_t computed_lines = cvector_size(ctx.buffer->lines);
 
     for (size_t line_no = ctx.view->top_line_index; line_no < ctx.view->top_line_index + ctx.window->cd.h; line_no++) {
+        if (line_no - ctx.view->top_line_index >= computed_lines) {
+            break;
+        }
+
         struct nv_node node = ctx.buffer->lines[line_no - ctx.view->top_line_index];
         nv_buffer_printf(&ctx, line_no - ctx.view->top_line_index, line_no, &nv_buffers[node.buff_id][node.buff_index], node.length);
     }
