@@ -21,6 +21,10 @@ ninja
 ```sh
 sh run_valgrind.sh [file]...
 ```
+### callgrind
+```sh
+valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes ./bin/nv main.c
+```
 ### debugging with gdb (unix)
 ```sh
 sh run_gdb.sh [file]...
