@@ -11,7 +11,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_search_module(LuaJIT REQUIRED luajit)
+pkg_search_module(LuaJIT QUIET luajit)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-Wall -Werror) # -Wextra
@@ -21,9 +21,13 @@ file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h" "*.c" "*.h")
 
 add_executable(nv ${SRC_FILES})
 
-target_include_directories(nv PRIVATE ${LuaJIT_INCLUDE_DIRS})
-target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
-target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
+if(LuaJIT_FOUND)
+    target_include_directories(nv PRIVATE ${LuaJIT_INCLUDE_DIRS})
+    target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
+    target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
+else()
+    target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
+endif()
 
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64
@@ -47,6 +51,6 @@ target_compile_definitions(nv PRIVATE
     )
 
 target_compile_options(nv PRIVATE
-    $<$<CONFIG:Debug>:-g>
+    $<$<CONFIG:Debug>:-pg>
     $<$<CONFIG:Release>:-O2>
     )

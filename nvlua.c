@@ -1,6 +1,6 @@
 // https://github.com/yasuoka/luacstruct
 // https://www.lua.org/pil/contents.html
-
+#ifndef NV_NO_LUAJIT
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -98,3 +98,4 @@ int nvlua_main()
     lua_close(L);
     return NV_OK;
 }
+#endif
