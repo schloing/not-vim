@@ -45,7 +45,10 @@ struct nv_visual_row {
 
 struct nv_view {
     size_t top_line_index;
-    int gutter_digit_width;
+    size_t padding;
+    size_t gutter_digit_width;
+    bool visible;
+    bool allow_split;
     struct nv_buff* buffer;
     cvector(struct nv_visual_row) visual_rows;
     cvector(size_t) map; // enough space to map ~100 lines to visual rows

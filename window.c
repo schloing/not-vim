@@ -8,187 +8,66 @@
 #include "termbox2.h"
 #include "window.h"
 
-static void nv_set_width_and_split(struct nv_window* root, struct nv_window* left, struct nv_window* right);
+#include <stdlib.h>
+#include <stdio.h>
 
-struct nv_window* nv_window_init()
+static nv_pool_index nv_split_view(); // returns pool index to parent view
+static void layout();
+
+struct nv_window_node* nv_window_node_init()
 {
-    struct nv_window* window = (struct nv_window*)calloc(1, sizeof(struct nv_window));
+    struct nv_window_node* window = (struct nv_window_node*)malloc(sizeof(struct nv_window_node));
 
     if (!window) {
         nv_editor->status = NV_ERR_MEM;
         return NULL;
     }
 
-    window->has_children = false;
-    window->left = NULL;
-    window->parent = NULL;
-    window->right = NULL;
-    window->show = true;
+    static size_t id = 0;
+    window->id = id++;
+    window->kind = NV_WM_VIEW;
     window->view = NULL;
-    
+
+    cvector_push(nv_editor->windows, window);
+    nv_editor->status = NV_OK;
     return window;
 }
 
-void nv_free_windows(struct nv_window* root)
+static nv_err nv_window_set_focus(struct nv_window* focus)
 {
-    if (!root) {
-        return;
+    if (!focus) {
+        return NV_ERR_MEM;
     }
 
-    nv_free_windows(root->left);
-    nv_free_windows(root->right);
-    nv_free_view(root->view);
-
-    free(root);
-}
-
-// creates a child window wherever it finds a NULL child, walking down root
-struct nv_window* nv_create_child_window(struct nv_window* root)
-{
-    if (!root) {
-        root = nv_window_init();
-
-        if (nv_editor->status != NV_OK) {
-            return NULL;
-        }
-
-        root->has_children = false;
-        root->parent = NULL; // caller sets parent
-        root->show = true;
-        root->view = NULL;
-
-        nv_editor->focus = root;
-        
-        return root;
+    if (focus->kind != NV_WM_VIEW) {
+        // focus->kind MUST be NV_WM_VIEW because a split cannot be split further without making a choice
+        return NV_ERR;
     }
 
-    if (!root->has_children && !root->view) {
-        nv_editor->focus = root;
-        return root;
-    }
-
-    if (root->show && !root->has_children) {
-        root->left = nv_create_child_window(root->left);
-
-        if (nv_editor->status != NV_OK) {
-            return NULL;
-        }
-
-        root->left->parent = root;
-
-        if (root->view->buffer) {
-            root->right = nv_window_init();
-
-            if (nv_editor->status != NV_OK) {
-                return NULL;
-            }
-
-            memcpy(root->right, root, sizeof(struct nv_window));
-            root->right->view = root->view;
-            root->right->parent = root;
-            root->right->left = NULL;
-            root->right->right = NULL;
-            root->right->show = true;
-            root->right->has_children = false;
-            root->right->split = root->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
-        }
-
-        root->has_children = true;
-        root->view = NULL;
-        root->descendants += 2;
-
-        nv_editor->focus = root->left;
-
-        return root->left;
-    }
-
-    struct nv_window* right = nv_create_child_window(root->right);
-
-    if (nv_editor->status != NV_OK) {
-        return NULL;
-    }
-
-    if (right) {
-        right->parent = root;
-    }
-
-    nv_editor->focus = right;
-
-    return right;
-}
-
-static void nv_set_width_and_split(struct nv_window* root, struct nv_window* left, struct nv_window* right)
-{
-    enum nv_split_kind split = HORIZONTAL;
-
-    if (root->parent) {
-        split = root->parent->split == HORIZONTAL ? VERTICAL : HORIZONTAL;
-    }
-
-    if (left->show) {
-        left->wd.x = root->wd.x;
-        left->wd.y = root->wd.y;
-        nv_window_set_dim(left,
-                split == HORIZONTAL ? root->wd.w / 2 : root->wd.w,
-                split == VERTICAL ? root->wd.h / 2 : root->wd.h);
-    }
-
-    if (right->show) {
-        right->wd.x = split == HORIZONTAL ? root->wd.x + left->wd.w : root->wd.x;
-        right->wd.y = split == VERTICAL ? root->wd.y + left->wd.h : root->wd.y;
-        nv_window_set_dim(right,
-                 split == HORIZONTAL ? root->wd.w - left->wd.w : root->wd.w,
-                 split == VERTICAL ? root->wd.h - left->wd.h : root->wd.h);
-    }
-}
-
-int nv_redistribute(struct nv_window* root)
-{
-    if (!root) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    if (root->right && root->left) {
-        nv_set_width_and_split(root, root->left, root->right);
-        (void)nv_redistribute(root->right);
-        (void)nv_redistribute(root->left);
-        return NV_OK;
-    }
-
-    struct nv_window* window = root->right == NULL ? root->left : root->right;
-    if (!window) {
-        // FIXME: NV_ERR or NV_ERR_NOT_INIT?
-        return NV_ERR_NOT_INIT;
-    }
-
-    window->wd.x = root->wd.x;
-    window->wd.y = root->wd.y;
-    nv_window_set_dim(window, root->wd.w, root->wd.h);
+    nv_editor->focus = focus;
 
     return NV_OK;
 }
 
-void nv_window_set_dim(struct nv_window* window, float w, float h)
+struct nv_window_node* nv_window_node_push_child(struct nv_window_node* root, struct nv_window_node* child)
 {
-    if (!window) {
-        return;
+    if (!child || !root) {
+        nv_editor->status = NV_ERR_NOT_INIT;
+        return NULL;
     }
 
-    w = w > 1 ? 1 : (w < 0 ? 0 : w);
-    h = h > 1 ? 1 : (h < 0 ? 0 : h);
+    assert(root->kind == NV_WM_VIEW);
 
-    window->wd.w = w;
-    window->wd.h = h;
-    window->cd.w = w * nv_editor->width + 1;
-    window->cd.h = h * nv_editor->height + 1;
-    window->cd.x = window->wd.x * nv_editor->width;
-    window->cd.y = window->wd.y * nv_editor->height;
+    struct nv_view* view = root->leaf.view;
+    root->leaf.view = NULL;
 
-    if (window->left) {
-        nv_window_set_dim(window->left, window->left->wd.w, window->left->wd.h);
-    }
+    root->kind = NV_WM_SPLIT;
+    root->split.kind = NV_SPLIT_HORIZONTAL;
+    root->split.right = child;
+    root->split.ratio = 0.5f;
 
-    if (window->right) {
-        nv_window_set_dim(window->right, window->right->wd.w, window->right->wd.h);
-    }
+    root->split.left = nv_window_node_init();
+    root->split.left->leaf.view = view;
+
+    return child;
 }

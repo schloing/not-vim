@@ -1,7 +1,6 @@
 #include "cursor.h"
 #include "cursorhelp.h"
 #include "buffer.h"
-#include "editor.h"
 #include "termbox2.h"
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
@@ -14,8 +13,6 @@ void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
     cursor->x++;
 }
 
-// FIXME
-
 void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
     if (amt < 0) {
@@ -23,21 +20,17 @@ void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
         return;
     }
 
-    if (cursor->y + amt < (int)ctx->buffer->line_count) {
+    if (cursor->line + amt < ctx->buffer->line_count) {
         cursor->y += amt;
         cursor->line += amt;
     }
 
-    if (cursor->y > ctx->window->cd.h) {
+    if (cursor->y > ctx->window->h * nv_editor->height - 1) {
         ctx->view->top_line_index++;
-        cursor->y = ctx->window->cd.h;
+        cursor->y = ctx->window->h * nv_editor->height - 1;
         cursor->line -= amt;
         cursor->line++;
     }
-
-    cursor->line = cursor->line > ctx->buffer->line_count ? ctx->buffer->line_count : cursor->line;
-    ctx->view->top_line_index = ctx->view->top_line_index > ctx->window->cd.h ? ctx->window->cd.h : ctx->view->top_line_index;
-    cursor->y = cursor->y > ctx->window->cd.h ? ctx->window->cd.h : cursor->y;
 }
 
 void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
@@ -56,10 +49,6 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
         cursor->y = 0;
         cursor->line--;
     }
-
-    cursor->line = cursor->line < 0 ? 0 : cursor->line;
-    ctx->view->top_line_index = ctx->view->top_line_index < 1 ? 1 : ctx->view->top_line_index;
-    cursor->y = cursor->y < 0 ? 0 : cursor->y;
 }
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)

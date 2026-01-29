@@ -1,3 +1,4 @@
+#include "nvtree/nvtree.h"
 #include <assert.h>
 #include <dlfcn.h>
 #include <execinfo.h>
@@ -9,9 +10,7 @@
 #define CVECTOR_LOGARITHMIC_GROWTH
 
 #include "buffer.h"
-#include "cursor.h"
 #include "color.h"
-#include "cvector.h"
 #include "status.h"
 #include "editor.h"
 #include "error.h"
@@ -21,24 +20,31 @@
 #undef TB_IMPL
 #include "window.h"
 
-static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename);
+static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window_node* root, const char* filename);
+static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext);
 static void nv_editor_cleanup(struct nv_editor* editor);
+static void nv_cleanup();
+static void nv_setup_signal_handlers();
+static void nv_must_be_no_errors(const char* message);
 
-static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window* root, const char* filename)
+static int nv_open_file_in_window(struct nv_editor* editor, struct nv_window_node* root, const char* filename)
 {
-    struct nv_window* window = nv_create_child_window(root);
+    struct nv_window_node* window = nv_window_node_init();
 
     if (!window) {
-        return NV_ERR_NOT_INIT;
+        return NV_ERR_MEM;
     }
 
-    (void)nv_redistribute(window->parent);
+    // window->leaf.view = nv_view_init(filename);
 
-    if (!window->view) {
-        window->view = nv_view_init(filename);
+    if (nv_editor->status != NV_OK) {
+        return NV_ERR_MEM;
     }
 
-    return nv_editor->status;
+    (void)nv_window_node_push_child(root, window);
+    editor->focus = window;
+
+    return editor->status;
 }
 
 static void nv_editor_cleanup(struct nv_editor* editor)
@@ -46,6 +52,13 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     tb_shutdown();
     nv_free_windows(editor->logger);
     nv_free_windows(editor->window);
+}
+
+static void nv_cleanup()
+{
+    if (nv_editor) {
+        nv_editor_cleanup(nv_editor);
+    }
 }
 
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
@@ -76,6 +89,8 @@ static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
 
 static void nv_setup_signal_handlers()
 {
+    atexit(nv_cleanup);
+
     signal(SIGTTOU, SIG_IGN);
 
     struct sigaction sa;
@@ -89,13 +104,20 @@ static void nv_setup_signal_handlers()
     sigaction(SIGABRT, &sa, NULL);
 }
 
+static void nv_must_be_no_errors(const char* message)
+{
+    if (nv_editor->status != NV_OK) {
+        nv_fatal(message);
+        exit(nv_editor->status);
+    }
+}
+
 int main(int argc, char** argv)
 {
     nv_setup_signal_handlers();
 
     assert(argc >= 2);
     struct nv_editor editor = { 0 };
-
     if (nv_editor_init(&editor) != NV_OK) {
         nv_editor_cleanup(&editor);
         return editor.status;
@@ -107,56 +129,49 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
-    editor.statline = &(struct nv_status){ .height = 1 };
-    nv_resize_for_layout(tb_width(), tb_height());
+//  editor.statline = &(struct nv_status){ .height = 1 };
+//  nv_resize_for_layout(tb_width(), tb_height());
 
-    editor.logger = nv_window_init();
+    editor->window = nv_window_node_init();
+    nv_must_be_no_errors("failed to create editor base window");
 
-    if (editor.status != NV_OK) {
-        nv_fatal("failed to create log window");
-        nv_editor_cleanup(&editor);
-        return editor.status;
+    editor.logger = nv_window_node_init();
+    nv_must_be_no_errors("failed to create log window");
+    editor.logger->leaf.view = nv_view_init(NULL);
+    nv_must_be_no_errors("failed to create log buffer");
+
+    struct nv_context logger_ctx = nv_get_context(editor.logger);
+    logger_ctx.buffer->type = NV_BUFF_TYPE_LOG;
+    logger_ctx.buffer->format = NV_FILE_FORMAT_PLAINTEXT;
+    logger_ctx.view->visible = false;
+
+    struct nv_window_node* primary = nv_window_node_init();
+    nv_must_be_no_errors("failed to create primary window");
+    primary = nv_window_node_push_child(editor.window, primary);
+
+    assert(editor.window->kind == NV_WM_SPLIT);
+    editor.window->split.kind = NV_SPLIT_HORIZONTAL;
+    editor.window->split.ratio = 0.1;
+
+    for (int i = 1; i < argc; i++) {
+        if (nv_open_file_in_window(&editor, primary, (const char*)argv[i]) != NV_OK) {
+            nv_fatal("failed to open a file");
+            exit(editor.status);
+        }
     }
 
-    editor.logger->view = nv_view_init(NULL);
+    struct nv_window_node* status = nv_window_node_init();
+    nv_must_be_no_errors("failed to create status window");
+    status->leaf.view = nv_view_init(NULL);
+    nv_must_be_no_errors("failed to create status view");
 
-    if (editor.status != NV_OK || !editor.logger->view->buffer) {
-        nv_fatal("failed to create log buffer");
-        nv_editor_cleanup(&editor);
-        return editor.status;
-    }
-
-    editor.logger->view->buffer->type = NV_BUFF_TYPE_LOG;
-    editor.logger->view->buffer->format = NV_FILE_FORMAT_PLAINTEXT;
-    editor.logger->show = false;
-
-    nv_window_set_dim(editor.logger, 1, 1);
-
-    if (editor.status != NV_OK) {
-        nv_fatal("failed to create editor window");
-        nv_editor_cleanup(&editor);
-        return editor.status;
-    }
-
-    // main window
-    editor.window = nv_window_init();
-    editor.window->split = HORIZONTAL;
-    editor.window->show = true;
-
-    nv_window_set_dim(editor.window, 1, 1);
+    status->leaf.view->allow_split = false;
+    status = nv_window_node_push_child(editor.window, status);
 
 #ifndef NV_NO_LUAJIT
     // load plugs
     nvlua_main();
 #endif
-
-    for (int i = 1; i < argc; i++) {
-        if (nv_open_file_in_window(&editor, editor.window, (const char*)argv[i]) != NV_OK) {
-            nv_fatal("failed to open a file");
-            nv_editor_cleanup(&editor);
-            return editor.status;
-        }
-    }
 
     nv_main();
 

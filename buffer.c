@@ -70,6 +70,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
     return NV_OK;
 }
 
+// FIXME: receive BUFFTYPE instead of filepath, more flexible
 struct nv_view* nv_view_init(const char* buffer_file_path)
 {
     struct nv_view* view = (struct nv_view*)calloc(1, sizeof(struct nv_view));
@@ -79,19 +80,19 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
         return NULL;
     }
 
-    view->top_line_index = 0;
+    view->top_line_index = 1;
     view->buffer = nv_buffer_init(buffer_file_path);
 
     static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
     cvector_reserve(view->cursors, NV_CURSOR_CAP);
-    view->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { 0 };
+    view->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { .line = 1 };
     
     if (nv_editor->status != NV_OK) {
         return NULL;
     }
 
     cvector_reserve(view->map, (size_t)NV_MAP_CAP);
-
+    nv_editor->status = NV_OK;
     return view;
 }
 
@@ -180,15 +181,6 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     buff->line_count = line_count;
 
     return NV_OK;
-
-    buff->tree = nv_tree_insert(buff->tree, 0, node);
-    buff->tree = nv_tree_paint(buff->tree, B);
-
-    struct nv_tree_node* tree = NODE_FROM_POOL(buff->tree);
-
-    buff->line_count = tree->data.lfcount;
-
-    return NV_OK;
 }
 
 struct nv_buff* nv_buffer_init(const char* path)
@@ -250,7 +242,7 @@ int nv_free_buffer(struct nv_buff* buff)
         buff->file = NULL;
     }
 
-    if (buff->tree) {
+    if (buff->tree != NV_NULL_INDEX) {
         nv_tree_free_all(buff->tree);
     }
 

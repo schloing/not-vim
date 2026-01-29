@@ -57,11 +57,12 @@ struct nv_conf {
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
-    struct nv_window* window;
-    struct nv_window* focus;
-    struct nv_window* logger;
+    cvector(struct nv_window_node*) windows;
+    cvector(struct nv_view*) views;
+    POOL_MANAGED struct nv_window_node* focus;
+    struct nv_window_node* window;
+    struct nv_window_node* logger;
     struct nv_status* statline;
-    size_t active_window_index;
     nv_mode mode;
     int width;
     int height;
@@ -120,7 +121,6 @@ struct nv_editor {
 
 extern _Thread_local struct nv_editor* nv_editor;
 
-struct nv_context nv_get_context(struct nv_window* window);
 void nv_log(const char* fmt, ...);
 void nv_log_err(const char* fmt, ...);
 void nv_fatal(const char* operation);
@@ -129,6 +129,6 @@ void nv_main();
 int nv_editor_init(struct nv_editor* editor);
 int nv_render_term();
 int nv_push_buffer(struct nv_buff buffer);
-int nv_open_window(struct nv_window window);
+int nv_open_window(struct nv_window_node window);
 
 #endif
