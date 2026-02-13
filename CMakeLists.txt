@@ -14,7 +14,8 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(LuaJIT QUIET luajit)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-    add_compile_options(-Wall -Werror) # -Wextra
+    add_compile_options(-Wall)
+    #    add_compile_options(-Wextra)
 endif()
 
 file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h" "*.c" "*.h")
@@ -26,7 +27,7 @@ if(LuaJIT_FOUND)
     target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
     target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
 else()
-    target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
+    target_compile_definitions(nv PRIVATE) # append NV_LUAJIT to indicate luajit support
 endif()
 
 target_compile_definitions(nv PRIVATE
@@ -53,4 +54,8 @@ target_compile_definitions(nv PRIVATE
 target_compile_options(nv PRIVATE
     $<$<CONFIG:Debug>:-pg>
     $<$<CONFIG:Release>:-O2>
+    )
+
+target_compile_options(nv PRIVATE
+    $<$<CONFIG:Debug>:-Wunused-function>
     )

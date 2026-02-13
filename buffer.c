@@ -150,8 +150,11 @@ int nv_buffer_build_tree(struct nv_buff* buff)
 
     buff->tree = nv_tree_init();
 
+    static size_t buff_id = 0;
+
     struct nv_node node = {
-        .buff_id = NV_BUFF_ID_ORIGINAL,
+        // .buff_purpose = NV_BUFF_ID_ORIGINAL,
+        .buff_id = buff_id++,
         .buff_index = 0,
         .length = buff->chunk,
         .length_left = 0,

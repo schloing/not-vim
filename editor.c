@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define NV_DEBUG_WINDOW_BACKGROUND_COLOURS
-
 #include "buffer.h"
 #include "color.h"
 #include "cursor.h"
@@ -19,14 +17,16 @@
 static int nv_get_input(struct tb_event* ev);
 static int count_no_digits(int n);
 static struct nv_window_node* nv_get_active_window();
-static int nv_draw_buffer_within_window(struct nv_window_node* window);
+static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area);
 static void nv_set_mode(nv_mode mode);
 static void nv_draw_cursor();
 static void nv_redraw_all();
 static void nv_draw_background_rect(int x1, int y1, int x2, int y2);
 static void nv_draw_background();
-static int nv_draw_windows(struct nv_window_node* root);
-static int nv_draw_view(struct nv_window_node* window);
+static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area area);
+static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area);
+static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
+static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 static int nv_draw_status();
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
@@ -63,13 +63,13 @@ char* nv_str_buff_fmt[NV_FILE_FORMAT_END] = {
     tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
 // FIXME
-static inline void nv_buffer_printf(struct nv_context* ctx, int row, int line_no, char* lbuf, size_t length)
+static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length)
 {
-    if (!lbuf) {
+    if (!lbuf || !view) {
         return;
     }
 
-    size_t max_length = length > ctx->window->w * nv_editor->width ? ctx->window->w * nv_editor->width : length;
+    size_t max_length = length > area->w ? area->w : length;
     char* string = (char*)malloc(max_length + 1);
 
     for (int i = 0; i < max_length; i++) {
@@ -78,8 +78,8 @@ static inline void nv_buffer_printf(struct nv_context* ctx, int row, int line_no
 
     string[max_length] = '\0';
 
-    NV_PRINTF(ctx->window->x * nv_editor->width, ctx->window->y * nv_editor->height + row, NV_GRAY, "%*d", ctx->view->gutter_digit_width, line_no);
-    NV_PRINTF(ctx->window->x * nv_editor->width + ctx->view->gutter_digit_width + 1, ctx->window->y * nv_editor->height + row, NV_WHITE, "%s", string);
+    NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_digit_width, line_no);
+    NV_PRINTF(area->x + view->gutter_digit_width + 1, area->y + row, NV_WHITE, "%s", string);
 
     free(string);
 }
@@ -145,18 +145,24 @@ static void nv_draw_cursor()
     int line_length = 0;
     int effective_row = 0;
 
+    if (!ctx.view) {
+        // FIXME
+        return;
+    }
+
     for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
         struct nv_tree_node* l = NODE_FROM_POOL(line(&ctx, c.line));
 
         line_length = l ? l->data.length - 1 : 0; // FIXME: only works if *local* lfcount = 1
 
-        effective_row =
-            ctx.window->x +                          // window position
-            ctx.view->gutter_digit_width + 1 +       // space taken by line numbers
-            (c.x > line_length ? line_length : c.x); // cap the cursor to the end of the line
+        // FIXME
+        // effective_row =
+        //     ctx.view->area.x +                       // window position
+        //     ctx.view->gutter_digit_width + 1 +       // space taken by line numbers
+        //     (c.x > line_length ? line_length : c.x); // cap the cursor to the end of the line
     
-        tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
+        // tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
     }
 }
 
@@ -191,7 +197,7 @@ static void nv_redraw_all()
     }
 
     nv_draw_background(); // clear
-    nv_draw_windows(nv_editor->window); // TODO: add log buffer override
+    nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height }); // TODO: add log buffer override
     nv_draw_cursor();
     nv_draw_status();
     tb_present();
@@ -232,10 +238,16 @@ void nv_main()
             continue;
         }
 
-        nv_get_input(&ev);
+        if (ev.key == TB_KEY_ESC) {
+            nv_editor->running = false;
+        }
+
+        // nv_get_input(&ev);
         nv_redraw_all();
     }
 }
+
+#define NV_DEBUG_WINDOW_BACKGROUND_COLOURS
 
 static void nv_draw_background_rect(int x1, int y1, int x2, int y2)
 {
@@ -355,38 +367,64 @@ static int count_no_digits(int n)
     return 1 + count_no_digits(n / 10);
 }
 
-static int nv_draw_windows(struct nv_window_node* root)
+static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area area)
 {
     if (!root) {
         return NV_ERR_NOT_INIT;
     }
 
     if (root->kind == NV_WM_SPLIT) {
-        (void)nv_draw_windows(root->split.left);
-        (void)nv_draw_windows(root->split.right);
+        struct nv_window_area child_area = { 0 };
+
+        if (root->split.kind == NV_SPLIT_HORIZONTAL) {
+            // top split
+            child_area.h = root->split.ratio * area.h;
+            child_area.w = area.w;
+            child_area.x = area.x;
+            child_area.y = area.y;
+            (void)nv_draw_windows(root->split.left, child_area);
+            
+            // bottom split
+            child_area.y += child_area.h;
+            child_area.h = area.h - child_area.h;
+            (void)nv_draw_windows(root->split.right, child_area);
+        }
+        else {
+            // left split
+            child_area.h = area.h;
+            child_area.w = root->split.ratio * area.w;
+            child_area.x = area.x;
+            child_area.y = area.y;
+            (void)nv_draw_windows(root->split.left, child_area);
+
+            // right split
+            child_area.x += child_area.w;
+            child_area.w = area.w - child_area.w;
+            (void)nv_draw_windows(root->split.right, child_area);
+        }
+
         return NV_OK;
     }
 
-    nv_draw_background_rect(root->x * nv_editor->width,
-        root->y * nv_editor->height,
-        (root->x + root->w) * nv_editor->width,
-        (root->y + root->h) * nv_editor->height
-    );
-
-    nv_draw_view(root);
+    if (root->leaf.view) {          // TODO: this shouldn't be necessary here, all view drawing logic (null or not)
+                                    // needa be moved into draw_view
+        // FIXME: doing this only for ez compile, there's no reason 2 pass area in nv_draw_windows
+        nv_draw_background_rect(area.x, area.y, area.x + area.w, area.y + area.h);
+        nv_draw_view(root->leaf.view, &area);
+    }
 
     return NV_OK;
 }
 
 // FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
-static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
+static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
 {
-    if (!ctx || !ctx->view || !ctx->buffer || !ctx->window) {
+    if (!view || !view->buffer) {
         return;
     }
 
-    size_t line = ctx->view->top_line_index - 1;
-    size_t lines_remaining = ctx->window->h * nv_editor->height; // how many lines after 'line' to flatten
+    size_t line = view->top_line_index - 1;
+    size_t lines_remaining = area->h; // how many lines after 'line' to flatten
 
     struct nv_tree_node* current = NODE_FROM_POOL(tree);
 
@@ -432,7 +470,7 @@ static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
             while (line_node.buff_index + line_node.length < bufsiz && lines_collected < lines_remaining) {
                 if (buf[line_node.buff_index + line_node.length] == '\n') {
                     line_node.length++;
-                    cvector_push_back(ctx->buffer->lines, line_node);
+                    cvector_push_back(view->buffer->lines, line_node);
                     line_node.buff_index += line_node.length;
                     line_node.length = 0;
                     lines_collected++;
@@ -453,25 +491,23 @@ static void nv_buffer_print_tree(nv_pool_index tree, struct nv_context* ctx)
     }
 }
 
-static int nv_draw_buffer_within_window(struct nv_window_node* window)
+static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area)
 {
-    if (!window) {
+    if (!view || !view->buffer || !area) {
         return NV_ERR_NOT_INIT;
     }
 
-    struct nv_context ctx = nv_get_context(window);
+    cvector_clear(view->buffer->lines); // FIXME, can reuse some lines depending on scroll shift
+    nv_buffer_print_tree(view->buffer->tree, view, area);
+    size_t computed_lines = cvector_size(view->buffer->lines);
 
-    cvector_clear(ctx.buffer->lines); // FIXME, can reuse some lines depending on scroll shift
-    nv_buffer_print_tree(ctx.buffer->tree, &ctx);
-    size_t computed_lines = cvector_size(ctx.buffer->lines);
-
-    for (size_t line_no = ctx.view->top_line_index; line_no < ctx.view->top_line_index + ctx.window->h * nv_editor->height; line_no++) {
-        if (line_no - ctx.view->top_line_index >= computed_lines) {
+    for (size_t line_no = view->top_line_index; line_no < view->top_line_index + area->h; line_no++) {
+        if (line_no - view->top_line_index >= computed_lines) {
             break;
         }
 
-        struct nv_node node = ctx.buffer->lines[line_no - ctx.view->top_line_index];
-        nv_buffer_printf(&ctx, line_no - ctx.view->top_line_index, line_no, &nv_buffers[node.buff_id][node.buff_index], node.length);
+        struct nv_node node = view->buffer->lines[line_no - view->top_line_index];
+        nv_buffer_printf(view, area, line_no - view->top_line_index, line_no, &nv_buffers[node.buff_id][node.buff_index], node.length);
     }
 
     return NV_OK;
@@ -482,27 +518,21 @@ int netrw_filename_sort(const void* a, const void* b)
     return strcmp(*(const char**)a, *(const char**)b);
 }
 
-static int nv_draw_view(struct nv_window_node* window)
+static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 {
-    if (!window) {
+    if (!view || !view->buffer || !area) {
         return NV_ERR_NOT_INIT;
     }
 
-    struct nv_context ctx = nv_get_context(window);
-
-    if (!ctx.buffer) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    switch (ctx.buffer->type) {
+    switch (view->buffer->type) {
     case NV_BUFF_TYPE_PLAINTEXT:
     case NV_BUFF_TYPE_SOURCE:
-        if (!ctx.buffer->loaded) {
-            ctx.view->gutter_digit_width = count_no_digits(ctx.buffer->line_count);
-            ctx.buffer->loaded = true;
+        if (!view->buffer->loaded) {
+            view->gutter_digit_width = count_no_digits(view->buffer->line_count);
+            view->buffer->loaded = true;
         }
 
-        if (nv_draw_buffer_within_window(window) != NV_OK) {
+        if (nv_draw_text_buffer(view, area) != NV_OK) {
             nv_fatal("failed to draw buffer");
         }
 

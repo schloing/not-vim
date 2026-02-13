@@ -1,6 +1,6 @@
 // https://github.com/yasuoka/luacstruct
 // https://www.lua.org/pil/contents.html
-#ifndef NV_NO_LUAJIT
+#ifdef NV_LUAJIT
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>

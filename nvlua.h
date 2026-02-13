@@ -1,7 +1,7 @@
 #ifndef NV_LUA_H
 #define NV_LUA_H
 
-#ifndef NV_NO_LUAJIT
+#ifdef NV_LUAJIT
 
 #include <lua.h>
 

@@ -25,12 +25,13 @@ void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
         cursor->line += amt;
     }
 
-    if (cursor->y > ctx->window->h * nv_editor->height - 1) {
-        ctx->view->top_line_index++;
-        cursor->y = ctx->window->h * nv_editor->height - 1;
-        cursor->line -= amt;
-        cursor->line++;
-    }
+    // FIXME
+    // if (cursor->y > ctx->view->area.h * nv_editor->height - 1) {
+    //     ctx->view->top_line_index++;
+    //     cursor->y = ctx->view->area.h * nv_editor->height - 1;
+    //     cursor->line -= amt;
+    //     cursor->line++;
+    // }
 }
 
 void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)

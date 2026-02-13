@@ -3,18 +3,13 @@
 #include <stdlib.h>
 
 #include "buffer.h"
+#include "cvector.h"
 #include "editor.h"
 #include "error.h"
 #include "termbox2.h"
 #include "window.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-
-static nv_pool_index nv_split_view(); // returns pool index to parent view
-static void layout();
-
-struct nv_window_node* nv_window_node_init()
+struct nv_window_node* nv_window_node_init(enum nv_window_kind kind)
 {
     struct nv_window_node* window = (struct nv_window_node*)malloc(sizeof(struct nv_window_node));
 
@@ -25,15 +20,15 @@ struct nv_window_node* nv_window_node_init()
 
     static size_t id = 0;
     window->id = id++;
-    window->kind = NV_WM_VIEW;
-    window->view = NULL;
+    window->kind = kind;
+    window->leaf.view = NULL;
 
-    cvector_push(nv_editor->windows, window);
+    cvector_push_back(nv_editor->windows, window);
     nv_editor->status = NV_OK;
     return window;
 }
 
-static nv_err nv_window_set_focus(struct nv_window* focus)
+nv_err nv_window_set_focus(struct nv_window_node* focus)
 {
     if (!focus) {
         return NV_ERR_MEM;
@@ -59,15 +54,59 @@ struct nv_window_node* nv_window_node_push_child(struct nv_window_node* root, st
     assert(root->kind == NV_WM_VIEW);
 
     struct nv_view* view = root->leaf.view;
+
+    if (!view) {
+        // child can use this view
+        (void)memcpy(root, child, sizeof(struct nv_window_node));
+        return root;
+    }
+
     root->leaf.view = NULL;
 
     root->kind = NV_WM_SPLIT;
-    root->split.kind = NV_SPLIT_HORIZONTAL;
+    root->split.kind = NV_SPLIT_VERTICAL;
     root->split.right = child;
     root->split.ratio = 0.5f;
 
-    root->split.left = nv_window_node_init();
+    root->split.left = nv_window_node_init(NV_WM_VIEW);
     root->split.left->leaf.view = view;
 
     return child;
+}
+
+void nv_free_windows()
+{
+    if (!nv_editor->windows) {
+        nv_editor->status = NV_ERR_NOT_INIT;
+        return;
+    }
+
+    for (int i = 0; i < cvector_size(nv_editor->windows); i++) {
+        if (nv_editor->windows[i]) {
+            free(nv_editor->windows[i]);
+        }
+    }
+}
+
+void nv_free_views()
+{
+    if (!nv_editor->views) {
+        nv_editor->status = NV_ERR_NOT_INIT;
+        return;
+    }
+
+    for (int i = 0; i < cvector_size(nv_editor->views); i++) {
+        if (nv_editor->views[i]) {
+            free(nv_editor->views[i]);
+        }
+    }
+}
+
+struct nv_context nv_get_context(struct nv_window_node* window)
+{
+    return (struct nv_context) {
+        .window = window,
+        .view = window ? window->leaf.view : NULL,
+        .buffer = window->leaf.view ? window->leaf.view->buffer : NULL,
+    };
 }
