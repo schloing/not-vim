@@ -116,7 +116,7 @@ static void nv_init_base_window()
     nv_editor->window = nv_window_node_init(NV_WM_SPLIT);
     nv_must_be_no_errors("failed to create editor base window");
     assert(nv_editor->window->kind == NV_WM_SPLIT);
-    nv_editor->window->split.kind = NV_SPLIT_VERTICAL;
+    nv_editor->window->split.kind = NV_SPLIT_HORIZONTAL;
     nv_editor->window->split.ratio = 0.9;
 }
 
@@ -172,7 +172,7 @@ int main(int argc, char** argv)
     }
 
     nv_editor->width = tb_width();
-    nv_editor->height = tb_width();
+    nv_editor->height = tb_height();
 
 //  editor.statline = &(struct nv_status){ .height = 1 };
 //  nv_resize_for_layout(tb_width(), tb_height());
