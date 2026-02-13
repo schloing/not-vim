@@ -46,7 +46,7 @@ struct nv_visual_row {
 struct nv_view {
     size_t top_line_index;
     size_t padding;
-    size_t gutter_digit_width;
+    size_t gutter_width_cols;
     bool visible;
     bool allow_split;
     struct nv_buff* buffer;

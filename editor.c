@@ -78,8 +78,8 @@ static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window
 
     string[max_length] = '\0';
 
-    NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_digit_width, line_no);
-    NV_PRINTF(area->x + view->gutter_digit_width + 1, area->y + row, NV_WHITE, "%s", string);
+    NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_width_cols, line_no);
+    NV_PRINTF(area->x + view->gutter_width_cols + 1, area->y + row, NV_WHITE, "%s", string);
 
     free(string);
 }
@@ -206,11 +206,7 @@ static void nv_redraw_all()
 void nv_resize_for_layout(size_t width, size_t height)
 {
     nv_editor->width = width;
-    nv_editor->height = nv_editor->statline ? height - nv_editor->statline->height : height;
-
-    if (nv_editor->window) {
-        // FIXME resize
-    }
+    nv_editor->height = height;
 }
 
 #include <time.h>
@@ -238,11 +234,7 @@ void nv_main()
             continue;
         }
 
-        if (ev.key == TB_KEY_ESC) {
-            nv_editor->running = false;
-        }
-
-        // nv_get_input(&ev);
+        nv_get_input(&ev);
         nv_redraw_all();
     }
 }
@@ -280,14 +272,6 @@ static int nv_get_input(struct tb_event* ev)
         return NV_OK;
     }
 
-    struct nv_context ctx = nv_get_context(nv_get_active_window());
-
-    if (!ctx.buffer || !ctx.view->cursors) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    struct cursor* cursor = &ctx.view->cursors[0];
-
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
 
@@ -295,11 +279,11 @@ static int nv_get_input(struct tb_event* ev)
     case TB_EVENT_MOUSE:
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
-            nv_cursor_move_up(&ctx, cursor, 2);
+            // nv_cursor_move_up(&ctx, cursor, 2);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
-            nv_cursor_move_down(&ctx, cursor, 2);
+            // nv_cursor_move_down(&ctx, cursor, 2);
             break;
         }
         break;
@@ -307,7 +291,7 @@ static int nv_get_input(struct tb_event* ev)
     case TB_EVENT_KEY:
         if (nv_editor->mode == NV_MODE_INSERT) {
             if (isprint(ev->ch)) {
-                nv_cursor_insert_ch(&ctx, cursor, ev->ch);
+                // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
             } else if (ev->key == TB_KEY_ESC) {
                 nv_set_mode(NV_MODE_NAVIGATE);
             }
@@ -318,10 +302,10 @@ static int nv_get_input(struct tb_event* ev)
             } else {
                 switch (ev->ch) {
                 case 'i': nv_set_mode(NV_MODE_INSERT); break;
-                case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
-                case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
-                case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
-                case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
+                // case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
+                // case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
+                // case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
+                // case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
                 }
             }
         }
@@ -337,10 +321,10 @@ static int nv_get_input(struct tb_event* ev)
         break;
     }
 
-    cursor->line = cursor->line < 1 ? 1 : cursor->line;
-    cursor->line = cursor->line > ctx.buffer->line_count ? ctx.buffer->line_count : cursor->line;
-    ctx.view->top_line_index = ctx.view->top_line_index < 1 ? 1 : ctx.view->top_line_index;
-    ctx.view->top_line_index = ctx.view->top_line_index > ctx.buffer->line_count ? ctx.buffer->line_count : ctx.view->top_line_index;
+    // cursor->line = cursor->line < 1 ? 1 : cursor->line;
+    // cursor->line = cursor->line > ctx.buffer->line_count ? ctx.buffer->line_count : cursor->line;
+    // ctx.view->top_line_index = ctx.view->top_line_index < 1 ? 1 : ctx.view->top_line_index;
+    // ctx.view->top_line_index = ctx.view->top_line_index > ctx.buffer->line_count ? ctx.buffer->line_count : ctx.view->top_line_index;
 
     return NV_OK;
 }
@@ -528,7 +512,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     case NV_BUFF_TYPE_PLAINTEXT:
     case NV_BUFF_TYPE_SOURCE:
         if (!view->buffer->loaded) {
-            view->gutter_digit_width = count_no_digits(view->buffer->line_count);
+            view->gutter_width_cols = count_no_digits(view->buffer->line_count);
             view->buffer->loaded = true;
         }
 
