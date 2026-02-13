@@ -117,7 +117,7 @@ static void nv_init_base_window()
     nv_must_be_no_errors("failed to create editor base window");
     assert(nv_editor->window->kind == NV_WM_SPLIT);
     nv_editor->window->split.kind = NV_SPLIT_HORIZONTAL;
-    nv_editor->window->split.ratio = 0.9;
+    nv_editor->window->split.ratio = 0.98;
 }
 
 static void nv_init_logger_window()
