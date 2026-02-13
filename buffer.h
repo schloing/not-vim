@@ -63,6 +63,7 @@ struct nv_buff {
     size_t chunk;
     bool loaded;
     int line_count;
+    size_t buff_id;
     nv_buff_type type;
     nv_buff_fmt format;
     nv_tree_pool_index tree;

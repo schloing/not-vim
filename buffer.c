@@ -144,13 +144,13 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         return NV_ERR_NOT_INIT;
     }
 
+    static size_t buff_id = 0;
+
     char* b = buff->buffer;
 
-    nv_buffers[NV_BUFF_ID_ORIGINAL] = b;
+    nv_buffers[buff_id] = b;
 
     buff->tree = nv_tree_init();
-
-    static size_t buff_id = 0;
 
     struct nv_node node = {
         // .buff_purpose = NV_BUFF_ID_ORIGINAL,
