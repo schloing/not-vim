@@ -92,6 +92,7 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
     }
 
     cvector_reserve(view->map, (size_t)NV_MAP_CAP);
+    cvector_push_back(nv_editor->views, view);
     nv_editor->status = NV_OK;
     return view;
 }
