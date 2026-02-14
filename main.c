@@ -152,6 +152,7 @@ static void nv_init_status_window()
     status->leaf.view = nv_view_init(NULL);
     nv_must_be_no_errors("failed to create status view");
     status->leaf.view->allow_split = false;
+    status->leaf.view->gutter_width_cols = 0;
     nv_editor->window->split.right = status;
     nv_editor->statline = status;
 }
