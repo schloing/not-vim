@@ -91,6 +91,9 @@ int nv_editor_init(struct nv_editor* editor)
     }
 
     nv_editor->mode = (nv_mode)NV_MODE_NAVIGATE;
+#define NV_WINDOW_CAP 16
+    cvector_reserve(nv_editor->windows, (size_t)NV_WINDOW_CAP);
+    cvector_reserve(nv_editor->views, (size_t)NV_WINDOW_CAP);
 
     nv_editor->config = (struct nv_conf) {
         .tab_width              = NV_TAB_WIDTH,
