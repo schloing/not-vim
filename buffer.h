@@ -74,6 +74,7 @@ struct nv_buff {
 
 struct nv_view* nv_view_init(const char* buffer_file_path);
 struct nv_buff* nv_buffer_init(const char* path);
+int nv_buffer_build_tree(struct nv_buff* buff);
 int nv_buffer_open_file(struct nv_buff* buff, const char* path);
 int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count);
 int nv_free_view(struct nv_view* view);
