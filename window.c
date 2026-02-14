@@ -86,6 +86,9 @@ void nv_free_windows()
             free(nv_editor->windows[i]);
         }
     }
+
+    cvector_free(nv_editor->windows);
+    nv_editor->windows = NULL;
 }
 
 void nv_free_views()
@@ -96,10 +99,11 @@ void nv_free_views()
     }
 
     for (int i = 0; i < cvector_size(nv_editor->views); i++) {
-        if (nv_editor->views[i]) {
-            free(nv_editor->views[i]);
-        }
+        nv_free_view(nv_editor->views[i]);
     }
+
+    cvector_free(nv_editor->views);
+    nv_editor->views = NULL;
 }
 
 struct nv_context nv_get_context(struct nv_window_node* window)
