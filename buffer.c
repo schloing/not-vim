@@ -196,6 +196,7 @@ struct nv_buff* nv_buffer_init(const char* path)
         return NULL;
     }
 
+    buffer->type = NV_BUFF_TYPE_PLAINTEXT;
     buffer->chunk = NV_BUFF_CHUNK_SIZE;
     cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CHUNK_SIZE);
     cvector_reserve(buffer->add_buffer, (size_t)NV_BUFF_CHUNK_SIZE); // TODO: determine size to allocate here

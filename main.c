@@ -54,7 +54,6 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     editor->focus = NULL;
     editor->window = NULL;
     editor->logger = NULL;
-    editor->statline = NULL;
 }
 
 static void nv_cleanup()
@@ -154,6 +153,7 @@ static void nv_init_status_window()
     nv_must_be_no_errors("failed to create status view");
     status->leaf.view->allow_split = false;
     nv_editor->window->split.right = status;
+    nv_editor->statline = status;
 }
 
 int main(int argc, char** argv)
@@ -178,7 +178,6 @@ int main(int argc, char** argv)
     nv_editor->width = tb_width();
     nv_editor->height = tb_height();
 
-//  editor.statline = &(struct nv_status){ .height = 1 };
 //  nv_resize_for_layout(tb_width(), tb_height());
     nv_init_base_window();
     nv_init_logger_window();

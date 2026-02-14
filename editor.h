@@ -59,10 +59,7 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 struct nv_editor {
     cvector(struct nv_window_node*) windows;
     cvector(struct nv_view*) views;
-    POOL_MANAGED struct nv_window_node* focus;
-    POOL_MANAGED struct nv_window_node* window;
-    POOL_MANAGED struct nv_window_node* logger;
-    struct nv_status* statline;
+    POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
     nv_mode mode;
     int width;
     int height;

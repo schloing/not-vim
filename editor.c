@@ -11,6 +11,7 @@
 #include "cvector.h"
 #include "editor.h"
 #include "error.h"
+#include "nvtree/nvtree.h"
 #include "termbox2.h"
 #include "window.h"
 
@@ -27,6 +28,7 @@ static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_a
 static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area);
 static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
 static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
+static struct nv_window_node* nv_get_status_window();
 static int nv_draw_status();
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
@@ -513,6 +515,10 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 
     switch (view->buffer->type) {
     case NV_BUFF_TYPE_PLAINTEXT:
+        nv_buffer_printf(view, area, 0, 0, view->buffer->buffer, area->w);
+
+        break;
+
     case NV_BUFF_TYPE_SOURCE:
         if (!view->buffer->loaded) {
             view->gutter_width_cols = count_no_digits(view->buffer->line_count);
@@ -540,31 +546,17 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 
 static int nv_draw_status()
 {
-    return NV_OK;
+    struct nv_context statline = nv_get_context(nv_editor->statline);
+    struct nv_context focus = nv_get_context(nv_get_active_window());
 
-    struct nv_context ctx = nv_get_context(nv_get_active_window());
-    struct cursor c = ctx.view->cursors[NV_PRIMARY_CURSOR];
-
-    if (!ctx.buffer) {
+    if (!statline.buffer || !focus.buffer) {
         return NV_ERR_NOT_INIT;
     }
 
-//  struct nv_tree_node* l = NODE_FROM_POOL(line(&ctx, c.line)); // FIXME: this is bad, inefficient
-    struct nv_tree_node* l = NULL;
-
-    if (asprintf(&nv_editor->statline->format, "%s (%s, %s) --%s-- %d %d,%d/%ld", ctx.buffer->path,
-                nv_str_buff_type[ctx.buffer->type], nv_str_buff_fmt[ctx.buffer->format],
-                nv_mode_str[nv_editor->mode], c.y, c.line, c.x, l ? l->data.length : 0) == -1) {
+    if (snprintf(statline.buffer->buffer, NV_BUFF_CHUNK_SIZE, "%s (%s, %s) --%s--"/* "%d %d,%d/%ld" */, focus.buffer->path,
+                nv_str_buff_type[focus.buffer->type], nv_str_buff_fmt[focus.buffer->format],
+                nv_mode_str[nv_editor->mode] /*, c.y, c.line, c.x, l ? l->data.length : 0 */) == -1) {
         return NV_ERR_MEM;
-    }
-
-    for (int i = 0; i < nv_editor->statline->height; i++) {
-        tb_printf(0, nv_editor->height - i, NV_BLACK, NV_WHITE,
-                "%-*.*s", nv_editor->width, nv_editor->width, nv_editor->statline->format);
-    }
-
-    if (nv_editor->statline->format) {
-        free(nv_editor->statline->format);
     }
 
     return NV_OK;
