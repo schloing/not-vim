@@ -201,6 +201,7 @@ static void nv_redraw_all()
         return;
     }
 
+    nv_calculate_statline();
     nv_draw_background(); // clear
     nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height }); // TODO: add log buffer override
     nv_draw_cursor();
@@ -239,7 +240,6 @@ void nv_main()
         }
 
         nv_get_input(&ev);
-        nv_calculate_statline();
         nv_redraw_all();
     }
 }
