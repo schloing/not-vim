@@ -51,6 +51,10 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     tb_shutdown();
     nv_free_windows();
     nv_free_views();
+    editor->focus = NULL;
+    editor->window = NULL;
+    editor->logger = NULL;
+    editor->statline = NULL;
 }
 
 static void nv_cleanup()
@@ -195,7 +199,6 @@ int main(int argc, char** argv)
 #endif
 
     nv_main();
-
-    nv_editor_cleanup(&editor);
+    exit(editor.status);
     return editor.status;
 }
