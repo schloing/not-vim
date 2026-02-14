@@ -29,7 +29,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
 static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 static struct nv_window_node* nv_get_status_window();
-static int nv_draw_status();
+static int nv_calculate_statline();
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
 
@@ -139,7 +139,7 @@ int nv_editor_init(struct nv_editor* editor)
 static void nv_set_mode(nv_mode mode)
 {
     nv_editor->mode = mode;
-    nv_draw_status();
+    nv_calculate_statline();
 }
 
 static void nv_draw_cursor()
@@ -204,7 +204,6 @@ static void nv_redraw_all()
     nv_draw_background(); // clear
     nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height }); // TODO: add log buffer override
     nv_draw_cursor();
-    nv_draw_status();
     tb_present();
 }
 
@@ -240,6 +239,7 @@ void nv_main()
         }
 
         nv_get_input(&ev);
+        nv_calculate_statline();
         nv_redraw_all();
     }
 }
@@ -544,7 +544,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     return NV_OK;
 }
 
-static int nv_draw_status()
+static int nv_calculate_statline()
 {
     struct nv_context statline = nv_get_context(nv_editor->statline);
     struct nv_context focus = nv_get_context(nv_get_active_window());
