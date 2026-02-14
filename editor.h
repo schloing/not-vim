@@ -60,8 +60,8 @@ struct nv_editor {
     cvector(struct nv_window_node*) windows;
     cvector(struct nv_view*) views;
     POOL_MANAGED struct nv_window_node* focus;
-    struct nv_window_node* window;
-    struct nv_window_node* logger;
+    POOL_MANAGED struct nv_window_node* window;
+    POOL_MANAGED struct nv_window_node* logger;
     struct nv_status* statline;
     nv_mode mode;
     int width;
