@@ -72,8 +72,8 @@ static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window
     }
 
     size_t max_length = 0, gutter_offset = 0;
-    char* string = (char*)malloc(max_length + 1);
     max_length = length > area->w ? area->w : length;
+    char* string = (char*)malloc(max_length + 1);
 
     for (int i = 0; i < max_length; i++) {
         string[i] = lbuf[i];
