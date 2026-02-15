@@ -1,6 +1,6 @@
 #include "error.h"
 
-const char* nv_strerror(int code) {
+const char* nv_strerror(nv_err code) {
     switch (code) {
         case NV_OK:             return "NV_OK: No error";
         case NV_ERR:            return "NV_ERR: Generic error";
