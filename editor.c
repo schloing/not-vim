@@ -79,12 +79,14 @@ static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window
     }
 
     string[max_length] = '\0';
+    size_t gutter_offset = 0;
 
     if (view->gutter_width_cols > 0) {
+        gutter_offset = view->gutter_width_cols + view->gutter_gap;
         NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_width_cols, line_no);
     }
 
-    NV_PRINTF(area->x + view->gutter_width_cols + 1, area->y + row, NV_WHITE, "%s", string);
+    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_WHITE, "%s", string);
 
     free(string);
 }

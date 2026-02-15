@@ -82,6 +82,7 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
 
     view->top_line_index = 1;
     view->buffer = nv_buffer_init(buffer_file_path);
+    view->gutter_gap = 1;
 
     static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
     cvector_reserve(view->cursors, NV_CURSOR_CAP);
