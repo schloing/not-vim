@@ -282,6 +282,8 @@ static int nv_get_input(struct tb_event* ev)
         return NV_OK;
     }
 
+    struct nv_context focus = nv_get_context(nv_get_active_window());
+
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
 
@@ -289,10 +291,18 @@ static int nv_get_input(struct tb_event* ev)
     case TB_EVENT_MOUSE:
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
+            if (focus.view) {
+                focus.view->top_line_index--;
+                focus.view->top_line_index = focus.view->top_line_index < 0 ? 0 : focus.view->top_line_index;
+            }
             // nv_cursor_move_up(&ctx, cursor, 2);
             break;
 
         case TB_KEY_MOUSE_WHEEL_DOWN:
+            if (focus.view && focus.buffer) {
+                focus.view->top_line_index++;
+                focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
+            }
             // nv_cursor_move_down(&ctx, cursor, 2);
             break;
         }
