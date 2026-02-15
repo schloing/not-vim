@@ -57,9 +57,6 @@ struct nv_conf {
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
-    cvector(struct nv_window_node*) windows;
-    cvector(struct nv_view*) views;
-    POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
     nv_mode mode;
     int width;
     int height;
@@ -68,6 +65,9 @@ struct nv_editor {
     bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
     struct nv_conf config;
+    POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
+    cvector(struct nv_window_node*) windows;
+    cvector(struct nv_view*) views;
 };
 
 // defaults
