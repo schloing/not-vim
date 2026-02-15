@@ -71,7 +71,7 @@ static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window
         return;
     }
 
-    size_t max_length, gutter_offset;
+    size_t max_length = 0, gutter_offset = 0;
     char* string = (char*)malloc(max_length + 1);
     max_length = length > area->w ? area->w : length;
 
