@@ -71,15 +71,15 @@ static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window
         return;
     }
 
-    size_t max_length = length > area->w ? area->w : length;
+    size_t max_length, gutter_offset;
     char* string = (char*)malloc(max_length + 1);
+    max_length = length > area->w ? area->w : length;
 
     for (int i = 0; i < max_length; i++) {
         string[i] = lbuf[i];
     }
 
     string[max_length] = '\0';
-    size_t gutter_offset = 0;
 
     if (view->gutter_width_cols > 0) {
         gutter_offset = view->gutter_width_cols + view->gutter_gap;
