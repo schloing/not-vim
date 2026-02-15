@@ -194,10 +194,9 @@ void nv_log(const char* fmt, ...)
 
 void nv_fatal(const char* operation)
 {
-    // FIXME
-    // dont work like a fatal error function should
     nv_editor->running = false;
     nv_log("nv: %s: %s, %d", operation ? operation : "unknown operation", nv_strerror(nv_editor->status), nv_editor->status);
+    exit(nv_editor->status);
 }
 
 static void nv_redraw_all()
