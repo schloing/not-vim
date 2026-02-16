@@ -291,8 +291,9 @@ static int nv_get_input(struct tb_event* ev)
         switch (ev->key) {
         case TB_KEY_MOUSE_WHEEL_UP:
             if (focus.view) {
-                focus.view->top_line_index--;
-                focus.view->top_line_index = focus.view->top_line_index < 0 ? 0 : focus.view->top_line_index;
+                if (focus.view->top_line_index > 1) {
+                    focus.view->top_line_index--;
+                }
             }
             // nv_cursor_move_up(&ctx, cursor, 2);
             break;
