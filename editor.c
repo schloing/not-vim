@@ -27,7 +27,7 @@ static void nv_draw_background();
 static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area area);
 static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area);
 static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
-static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
+static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 static struct nv_window_node* nv_get_status_window();
 static int nv_calculate_statline();
 
@@ -420,7 +420,7 @@ static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_a
 }
 
 // FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
-static void nv_buffer_print_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
+static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
 {
     if (!view || !view->buffer) {
         return;
@@ -501,7 +501,7 @@ static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area
     }
 
     cvector_clear(view->buffer->lines); // FIXME, can reuse some lines depending on scroll shift
-    nv_buffer_print_tree(view->buffer->tree, view, area);
+    nv_buffer_flatten_tree(view->buffer->tree, view, area);
     size_t computed_lines = cvector_size(view->buffer->lines);
 
     for (size_t line_no = view->top_line_index; line_no < view->top_line_index + area->h; line_no++) {
