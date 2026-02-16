@@ -503,14 +503,19 @@ static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area
     cvector_clear(view->buffer->lines); // FIXME, can reuse some lines depending on scroll shift
     nv_buffer_flatten_tree(view->buffer->tree, view, area);
     size_t computed_lines = cvector_size(view->buffer->lines);
-
-    for (size_t line_no = view->top_line_index; line_no < view->top_line_index + area->h; line_no++) {
+    size_t line_no = view->top_line_index;
+    for (size_t row = 0; row < area->h;) {
         if (line_no - view->top_line_index >= computed_lines) {
             break;
         }
 
         struct nv_node node = view->buffer->lines[line_no - view->top_line_index];
-        nv_buffer_printf(view, area, line_no - view->top_line_index, line_no, &nv_buffers[node.buff_id][node.buff_index], node.length);
+#define VIEW_DRAWABLE_WIDTH (area->w - view->gutter_gap - view->gutter_width_cols)
+        for (int i = 0; i <= node.length; i += VIEW_DRAWABLE_WIDTH) {
+            nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index + i], VIEW_DRAWABLE_WIDTH);
+            row++;
+        }
+        line_no++;
     }
 
     return NV_OK;
