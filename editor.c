@@ -17,7 +17,7 @@
 
 static int nv_get_input(struct tb_event* ev);
 static int count_no_digits(int n);
-static struct nv_window_node* nv_get_active_window();
+static struct nv_window_node* nv_get_focused_window();
 static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area);
 static void nv_set_mode(nv_mode mode);
 static void nv_draw_cursor();
@@ -149,7 +149,7 @@ static void nv_set_mode(nv_mode mode)
 
 static void nv_draw_cursor()
 {
-    struct nv_context ctx = nv_get_context(nv_get_active_window());
+    struct nv_context ctx = nv_get_context(nv_get_focused_window());
 
     struct cursor c;
     int line_length = 0;
@@ -281,7 +281,7 @@ static int nv_get_input(struct tb_event* ev)
         return NV_OK;
     }
 
-    struct nv_context focus = nv_get_context(nv_get_active_window());
+    struct nv_context focus = nv_get_context(nv_get_focused_window());
 
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
@@ -347,7 +347,7 @@ static int nv_get_input(struct tb_event* ev)
 
     return NV_OK;
 }
-static struct nv_window_node* nv_get_active_window()
+static struct nv_window_node* nv_get_focused_window()
 {
     if (!nv_editor->focus) {
         return NULL;
@@ -561,7 +561,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 static int nv_calculate_statline()
 {
     struct nv_context statline = nv_get_context(nv_editor->statline);
-    struct nv_context focus = nv_get_context(nv_get_active_window());
+    struct nv_context focus = nv_get_context(nv_get_focused_window());
 
     if (!statline.buffer || !focus.buffer) {
         return NV_ERR_NOT_INIT;
