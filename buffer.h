@@ -35,14 +35,6 @@ typedef enum {
 extern char* nv_str_buff_type[NV_BUFF_TYPE_END];
 extern char* nv_str_buff_fmt[NV_FILE_FORMAT_END];
 
-struct nv_visual_row {
-    size_t line_index;
-    size_t wrap_index;
-    size_t offset;
-};
-
-#define NV_MAP_CAP 128
-
 struct nv_view {
     size_t top_line_index;
     size_t padding;
@@ -51,8 +43,6 @@ struct nv_view {
     bool visible;
     bool allow_split;
     struct nv_buff* buffer;
-    cvector(struct nv_visual_row) visual_rows;
-    cvector(size_t) map; // enough space to map ~100 lines to visual rows
     cvector(struct cursor) cursors;
 };
 
