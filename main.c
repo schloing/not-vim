@@ -176,10 +176,7 @@ int main(int argc, char** argv)
         return editor.status;
     }
 
-    nv_editor->width = tb_width();
-    nv_editor->height = tb_height();
-
-//  nv_resize_for_layout(tb_width(), tb_height());
+    nv_resize_for_layout(tb_width(), tb_height());
     nv_init_base_window();
     nv_init_logger_window();
     nv_init_primary_window();
