@@ -454,6 +454,12 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
         size_t right_lf = right ? right->data.lfcount : 0;
         size_t local_lf = current->data.lfcount - left_lf - right_lf;
 
+        if (left_lf == 0 && right_lf == 0 && local_lf == 0 && line == 0) {
+            // edge case - there is only 1 line
+            cvector_push_back(view->buffer->lines, current->data);
+            break;
+        }
+
         if (line < left_lf) {
             // line in left tree
             current = left;
