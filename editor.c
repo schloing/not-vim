@@ -214,7 +214,14 @@ static void nv_redraw_all()
 
     nv_calculate_statline();
     nv_draw_background(); // clear
-    nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height }); // TODO: add log buffer override
+    nv_draw_windows(nv_editor->logger, 
+        (struct nv_window_area) {
+            .x=0.5 * nv_editor->width * 0.2,
+            .y=0.5 * nv_editor->height * 0.2,
+            .w=nv_editor->width * 0.8, 
+            .h=nv_editor->height * 0.8
+    });
+    // nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height });
     nv_draw_cursor();
     tb_present();
 }
