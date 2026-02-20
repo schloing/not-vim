@@ -29,6 +29,8 @@ static void nv_must_be_no_errors(const char* message);
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename)
 {
+    nv_log("opening argument filepath %s\n", filename);
+
     struct nv_window_node* window = nv_window_node_init(NV_WM_VIEW);
 
     if (!window) {
@@ -179,6 +181,11 @@ int main(int argc, char** argv)
 
     assert(nv_editor);
 
+#define NV_DEBUG_OPEN_LOG
+#ifdef NV_DEBUG_OPEN_LOG
+    nv_editor->log_opened = true;
+#endif
+
     if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(editor.status));
         nv_editor_cleanup(&editor);
@@ -195,6 +202,8 @@ int main(int argc, char** argv)
     if (argc > 1) {
         nv_open_input_files(argc, argv);
     }
+
+    nv_log("notvim initialised\n");
 
 #ifdef NV_LUAJIT
     // load plugs
