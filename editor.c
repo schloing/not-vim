@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "buffer.h"
@@ -178,17 +179,23 @@ static void nv_draw_cursor()
 
 void nv_log(const char* fmt, ...)
 {
-    // FIXME
     va_list ap;
     va_start(ap, fmt);
-    
-//  struct nv_context ctx = {
-//      .window = nv_editor->logger,
-//      .view = nv_editor->logger->view,
-//      .buffer = nv_editor->logger->view->buffer,
-//  };
-//
-//  nv_buffer_printf(&ctx, fmt, ap);
+
+    struct nv_context logger = nv_get_context(nv_editor->logger);
+
+    if (!logger.buffer || !logger.buffer->buffer) {
+        return;
+    }
+
+    if (logger.buffer->append_cursor > NV_BUFF_CHUNK_SIZE) {
+        // FIXME: assumes entire buffer is loaded in single / contiguous chunks of total size NV_BUFF_CHUNK_SIZE
+        // this is not optimal for big files cuz they wont be loaded like that
+        // TODO: make a general function for appending in append only buffers
+        return;
+    }
+
+    snprintf(&logger.buffer->buffer[logger.buffer->append_cursor], strlen(fmt), fmt, ap);
     va_end(ap);
 }
 
