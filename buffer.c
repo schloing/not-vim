@@ -146,23 +146,15 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     }
 
     static size_t buff_id = 0;
-
     char* b = buff->buffer;
-
     nv_buffers[buff_id] = b;
-
-    // FIXME
-    if (buff->tree != NV_NULL_INDEX) {
-        nv_tree_free_all(buff->tree);
-    }
-
     buff->tree = nv_tree_init();
 
     struct nv_node node = {
         // .buff_purpose = NV_BUFF_ID_ORIGINAL,
-        .buff_id = buff_id++,
+        .buff_id = buff_id,
         .buff_index = 0,
-        .length = buff->chunk,
+        .length = 0,
         .length_left = 0,
         .lfcount = 0
     };
@@ -172,6 +164,10 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     int tree_pos = 0;
 
     while (abs_pos < buff->chunk) {
+        if (!b[abs_pos]) {
+            break;
+        }
+
         if (b[abs_pos] == '\n') {
             node.length++;
             buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
@@ -187,7 +183,13 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         abs_pos++;
     }
 
+    if (node.length > 0) {
+        buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
+        buff->tree = nv_tree_paint(buff->tree, B);
+    }
+
     buff->line_count = line_count;
+    buff_id++;
 
     return NV_OK;
 }
