@@ -198,20 +198,24 @@ void nv_log(const char* fmt, ...)
 
     clock_t ts = clock();
     float ts_seconds = (float)ts / (float)CLOCKS_PER_SEC;
-    char ts_buff[20]; // Adjust size as needed
+    char ts_buff[20];
     snprintf(ts_buff, sizeof(ts_buff), "[%.3f] ", ts_seconds);
 
     size_t ts_length = strlen(ts_buff);
     sprintf(&logger.buffer->buffer[logger.buffer->append_cursor], "%s", ts_buff);
     logger.buffer->append_cursor += ts_length;
 
-    size_t fmtsiz = strlen(fmt);
-    snprintf(&logger.buffer->buffer[logger.buffer->append_cursor], fmtsiz + 1, fmt, ap);
-    logger.buffer->append_cursor += fmtsiz + 1;
+    char* fmt_buff = NULL;
+    size_t fmt_length = asprintf(&fmt_buff, fmt, ap);
+    if (fmt_length == -1 || !fmt_buff) {
+        return;
+    }
+    memcpy(&logger.buffer->buffer[logger.buffer->append_cursor], fmt_buff, fmt_length);
+    logger.buffer->append_cursor += fmt_length;
     cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
-    logger.buffer->buffer[logger.buffer->append_cursor] = EOF;
+    logger.buffer->buffer[logger.buffer->append_cursor] = '\0';
     nv_buffer_build_tree(logger.buffer); // WARN: rebuilding tree every time could be inefficient for very large logs
-
+    free(fmt_buff);
     va_end(ap);
 }
 
