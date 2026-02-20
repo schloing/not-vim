@@ -151,6 +151,11 @@ int nv_buffer_build_tree(struct nv_buff* buff)
 
     nv_buffers[buff_id] = b;
 
+    // FIXME
+    if (buff->tree != NV_NULL_INDEX) {
+        nv_tree_free_all(buff->tree);
+    }
+
     buff->tree = nv_tree_init();
 
     struct nv_node node = {
