@@ -26,8 +26,11 @@ if(LuaJIT_FOUND)
     target_include_directories(nv PRIVATE ${LuaJIT_INCLUDE_DIRS})
     target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
     target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
+    target_compile_definitions(nv PRIVATE NV_LUAJIT)
+    message(STATUS "luajit found")
 else()
-    target_compile_definitions(nv PRIVATE) # append NV_LUAJIT to indicate luajit support
+    target_compile_definitions(nv PRIVATE)
+    message(STATUS "luajit not found")
 endif()
 
 target_compile_definitions(nv PRIVATE
