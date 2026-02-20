@@ -173,6 +173,7 @@ int nv_buffer_build_tree(struct nv_buff* buff)
             buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
             buff->tree = nv_tree_paint(buff->tree, B);
             tree_pos += node.length;
+            node.buff_index += node.length;
             node.length = 0;
             line_count++;
         }
