@@ -186,6 +186,7 @@ void nv_log(const char* fmt, ...)
     struct nv_context logger = nv_get_context(nv_editor->logger);
 
     if (!logger.buffer || !logger.buffer->buffer) {
+        va_end(ap);
         return;
     }
 
@@ -193,6 +194,7 @@ void nv_log(const char* fmt, ...)
         // FIXME: assumes entire buffer is loaded in single / contiguous chunks of total size NV_BUFF_CHUNK_SIZE
         // this is not optimal for big files cuz they wont be loaded like that
         // TODO: make a general function for appending in append only buffers
+        va_end(ap);
         return;
     }
 
@@ -208,6 +210,7 @@ void nv_log(const char* fmt, ...)
     char* fmt_buff = NULL;
     size_t fmt_length = asprintf(&fmt_buff, fmt, ap);
     if (fmt_length == -1 || !fmt_buff) {
+        va_end(ap);
         return;
     }
     memcpy(&logger.buffer->buffer[logger.buffer->append_cursor], fmt_buff, fmt_length);
