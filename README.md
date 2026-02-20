@@ -3,11 +3,7 @@
 ```sh
 git clone --recursive https://github.com/schloing/not-vim.git
 ```
-## usage
-```sh
-./bin/nv [file]...
-```
-## running
+## building
 ### Makefile
 ```sh
 cmake .
@@ -18,6 +14,10 @@ make
 ```sh
 cmake -G Ninja .
 ninja
+./bin/nv [file]...
+```
+## running
+```sh
 ./bin/nv [file]...
 ```
 ## debugging
