@@ -478,7 +478,6 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
 
     size_t line = view->top_line_index - 1;
     size_t lines_remaining = area->h; // how many lines after 'line' to flatten
-
     struct nv_tree_node* current = NODE_FROM_POOL(tree);
 
     while (current && lines_remaining > 0) {
@@ -501,7 +500,6 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
         }
         else if (line < left_lf + local_lf) {
             // line is within this node
-
             char* buf = nv_buffers[current->data.buff_id];
             size_t bufsiz = cvector_size(buf);
             // how many lines to skip to get the target line?
@@ -522,11 +520,9 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
                 line_node.buff_index++;
             }
 
-            line_node.length = 0;
             size_t lines_collected = 0;
-
             // collect the rest of the lines in this node
-            while (line_node.buff_index + line_node.length < bufsiz && lines_collected < lines_remaining) {
+            while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
                 if (buf[line_node.buff_index + line_node.length] == '\n') {
                     line_node.length++;
                     cvector_push_back(view->buffer->lines, line_node);
