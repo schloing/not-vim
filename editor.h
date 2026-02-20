@@ -63,6 +63,7 @@ struct nv_editor {
     int status;
     bool running;
     bool lua_loaded;
+    bool log_opened;
     char inputs[NV_INPUT_BACKLOG_CAP];
     struct nv_conf config;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
