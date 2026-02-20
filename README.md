@@ -1,4 +1,8 @@
 # not-vim
+## cloning
+```sh
+git clone --recursive https://github.com/schloing/not-vim.git
+```
 ## usage
 ```sh
 ./bin/nv [file]...
