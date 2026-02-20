@@ -157,11 +157,20 @@ static void nv_init_status_window()
     nv_editor->statline = status;
 }
 
+static void nv_open_input_files(int argc, char** argv)
+{
+    for (int i = 1; i < argc; i++) {
+        if (nv_open_file_in_window(nv_editor, (const char*)argv[i]) != NV_OK) {
+            nv_fatal("failed to open a file");
+            exit(nv_editor->status);
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     nv_setup_signal_handlers();
 
-    assert(argc >= 2);
     struct nv_editor editor = { 0 };
     if (nv_editor_init(&editor) != NV_OK) {
         nv_editor_cleanup(&editor);
@@ -183,11 +192,8 @@ int main(int argc, char** argv)
     nv_init_status_window();
     nv_window_set_focus(nv_editor->window->split.left); // set primary window as focus
 
-    for (int i = 1; i < argc; i++) {
-        if (nv_open_file_in_window(&editor, (const char*)argv[i]) != NV_OK) {
-            nv_fatal("failed to open a file");
-            exit(editor.status);
-        }
+    if (argc > 1) {
+        nv_open_input_files(argc, argv);
     }
 
 #ifdef NV_LUAJIT
