@@ -549,6 +549,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     }
 
     switch (view->buffer->type) {
+    case NV_BUFF_TYPE_LOG:
     case NV_BUFF_TYPE_PLAINTEXT:
         nv_buffer_printf(view, area, 0, 0, view->buffer->buffer, area->w);
 
