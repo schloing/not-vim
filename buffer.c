@@ -186,6 +186,7 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     if (node.length > 0) {
         buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
         buff->tree = nv_tree_paint(buff->tree, B);
+        line_count++;
     }
 
     buff->line_count = line_count;
