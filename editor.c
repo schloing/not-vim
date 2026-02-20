@@ -208,7 +208,7 @@ void nv_log(const char* fmt, ...)
     logger.buffer->append_cursor += ts_length;
 
     char* fmt_buff = NULL;
-    size_t fmt_length = asprintf(&fmt_buff, fmt, ap);
+    size_t fmt_length = vasprintf(&fmt_buff, fmt, ap);
     if (fmt_length == -1 || !fmt_buff) {
         va_end(ap);
         return;
