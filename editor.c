@@ -196,7 +196,22 @@ void nv_log(const char* fmt, ...)
         return;
     }
 
-    snprintf(&logger.buffer->buffer[logger.buffer->append_cursor], strlen(fmt), fmt, ap);
+    clock_t ts = clock();
+    float ts_seconds = (float)ts / (float)CLOCKS_PER_SEC;
+    char ts_buff[20]; // Adjust size as needed
+    snprintf(ts_buff, sizeof(ts_buff), "[%.3f] ", ts_seconds);
+
+    size_t ts_length = strlen(ts_buff);
+    sprintf(&logger.buffer->buffer[logger.buffer->append_cursor], "%s", ts_buff);
+    logger.buffer->append_cursor += ts_length;
+
+    size_t fmtsiz = strlen(fmt);
+    snprintf(&logger.buffer->buffer[logger.buffer->append_cursor], fmtsiz + 1, fmt, ap);
+    logger.buffer->append_cursor += fmtsiz + 1;
+    cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
+    logger.buffer->buffer[logger.buffer->append_cursor] = EOF;
+    nv_buffer_build_tree(logger.buffer); // WARN: rebuilding tree every time could be inefficient for very large logs
+
     va_end(ap);
 }
 
@@ -215,14 +230,16 @@ static void nv_redraw_all()
 
     nv_calculate_statline();
     nv_draw_background(); // clear
-    nv_draw_windows(nv_editor->logger, 
-        (struct nv_window_area) {
-            .x=0.5 * nv_editor->width * 0.2,
-            .y=0.5 * nv_editor->height * 0.2,
-            .w=nv_editor->width * 0.8, 
-            .h=nv_editor->height * 0.8
-    });
-    // nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height });
+    nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height });
+    if (nv_editor->log_opened) {
+        nv_draw_windows(nv_editor->logger,
+            (struct nv_window_area) {
+                .x=0.5 * nv_editor->width * 0.2,
+                .y=0.5 * nv_editor->height * 0.2,
+                .w=nv_editor->width * 0.8,
+                .h=nv_editor->height * 0.8
+        });
+    }
     nv_draw_cursor();
     tb_present();
 }
@@ -554,12 +571,12 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     }
 
     switch (view->buffer->type) {
-    case NV_BUFF_TYPE_LOG:
     case NV_BUFF_TYPE_PLAINTEXT:
         nv_buffer_printf(view, area, 0, 0, view->buffer->buffer, area->w);
 
         break;
 
+    case NV_BUFF_TYPE_LOG:
     case NV_BUFF_TYPE_SOURCE:
         if (!view->buffer->loaded) {
             view->gutter_width_cols = count_no_digits(view->buffer->line_count);
