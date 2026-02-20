@@ -4,6 +4,11 @@
 git clone --recursive https://github.com/schloing/not-vim.git
 ```
 ## building
+### requirements:
+- cmake >3.14
+- pkg-config / pkgconf
+- gcc
+- luajit (optional, for plugload)
 ### Makefile
 ```sh
 cmake .
@@ -47,15 +52,11 @@ sh run_gdb.sh [file]...
 - [ ] save editor state (open windows)
 - [ ] shell integration. maybe even primarily work as a terminal multiplexer with a shit ton of shit
 - [ ] make the code less ass
-### libraries
-inspired by
-https://github.com/adsr/mle
-
-termbox2 for tui
-https://github.com/termbox/termbox2
-
-vector
-https://github.com/eteran/c-vector/blob/master/cvector.h
+### dependencies & libraries:
+all functionally required dependencies are statically linked by default, so no additional installation is required
+- [cvector](https://github.com/eteran/c-vector/tree/master)
+- [termbox2](https://github.com/termbox/termbox2)
+- [nvtree](https://github.com/schloing/nvtree)
 
 ### read
 https://www.codingwiththomas.com/blog/a-lua-c-api-cheat-sheet
