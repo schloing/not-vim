@@ -464,6 +464,18 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
         return;
     }
 
+#ifdef NV_DEBUG_INEFFICIENT_TREE_FLATTEN
+    for (int line = view->top_line_index - 1; line < line + area->h; line++) {
+        nv_tree_pool_index l = nv_find_by_line(view->buffer->tree, line);
+        if (l == NV_NULL_INDEX) {
+            break;
+        }
+        cvector_push_back(view->buffer->lines, NODE_FROM_POOL(l)->data);
+    }
+
+    return;
+#endif
+
     size_t line = view->top_line_index - 1;
     size_t lines_remaining = area->h; // how many lines after 'line' to flatten
 
