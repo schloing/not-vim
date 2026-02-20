@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "buffer.h"
@@ -231,8 +232,6 @@ void nv_resize_for_layout(size_t width, size_t height)
     nv_editor->width = width;
     nv_editor->height = height;
 }
-
-#include <time.h>
 
 void nv_main()
 {
