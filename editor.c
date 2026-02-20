@@ -478,6 +478,7 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
 
     size_t line = view->top_line_index - 1;
     size_t lines_remaining = area->h; // how many lines after 'line' to flatten
+    bool searching_for_top = true;
     struct nv_tree_node* current = NODE_FROM_POOL(tree);
 
     while (current && lines_remaining > 0) {
@@ -498,7 +499,9 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
             // line in left tree
             current = left;
         }
-        else if (line < left_lf + local_lf) {
+        else if (searching_for_top ? (line < left_lf + local_lf) : false) {
+            searching_for_top = false; // this node has top_line_index
+
             // line is within this node
             char* buf = nv_buffers[current->data.buff_id];
             size_t bufsiz = cvector_size(buf);
