@@ -485,76 +485,73 @@ static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, con
     return;
 #endif
 
-    size_t line = view->top_line_index - 1;
-    size_t lines_remaining = area->h; // how many lines after 'line' to flatten
-    bool searching_for_top = true;
-    struct nv_tree_node* current = NODE_FROM_POOL(tree);
+    nv_pool_index stack[NVTREE_MAX_STACK_DEPTH];
+    int stack_top = 0;
+    size_t lf_index = 0, lines_collected = 0, bufsiz = 0;
+    nv_pool_index node_idx = nv_find_by_line(tree, view->top_line_index - 1, stack, &stack_top, &lf_index);
 
-    while (current && lines_remaining > 0) {
-        struct nv_tree_node* left = current->left ? NODE_FROM_POOL(current->left) : NULL;
-        struct nv_tree_node* right = current->right ? NODE_FROM_POOL(current->right) : NULL;
+    if (node_idx == NV_NULL_INDEX) {
+        return;
+    }
 
-        size_t left_lf = left ? left->data.lfcount : 0;
-        size_t right_lf = right ? right->data.lfcount : 0;
-        size_t local_lf = current->data.lfcount - left_lf - right_lf;
+    struct nv_tree_node* node = NULL;
+    char* buf = NULL;
 
-        if (left_lf == 0 && right_lf == 0 && local_lf == 0 && line == 0) {
-            // edge case - there is only 1 line
-            cvector_push_back(view->buffer->lines, current->data);
+    while (node_idx != NV_NULL_INDEX && lines_collected < area->h) {
+        node = NODE_FROM_POOL(node_idx);
+        if (!node) {
+            nv_editor->status = NV_ERR;
             break;
         }
 
-        if (line < left_lf) {
-            // line in left tree
-            current = left;
+        buf = nv_buffers[node->data.buff_id];
+        if (!buf) {
+            nv_editor->status = NV_ERR;
+            break;
         }
-        else if (searching_for_top ? (line < left_lf + local_lf) : false) {
-            searching_for_top = false; // this node has top_line_index
+        bufsiz = cvector_size(buf);
 
-            // line is within this node
-            char* buf = nv_buffers[current->data.buff_id];
-            size_t bufsiz = cvector_size(buf);
-            // how many lines to skip to get the target line?
-            size_t lines_to_skip = line - left_lf;
-            
-            struct nv_node line_node = {
-                .buff_id = current->data.buff_id,
-                .buff_index = current->data.buff_index,
-                .length = 0,
-                .lfcount = 1,
-            };
+        struct nv_node line = {
+            .buff_id = node->data.buff_id,
+            .buff_index = node->data.buff_index,
+            .length = 0,
+            .lfcount = 1,
+        };
 
-            // skip necessary amt of lines
-            while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
-                if (buf[line_node.buff_index] == '\n') {
-                    lines_to_skip--;
-                }
-                line_node.buff_index++;
+        node->data.length = node->data.buff_index + node->data.length;
+        // find first line within the node
+        while (line.buff_index < node->data.length && lf_index > 0) {
+            if (buf[line.buff_index++] == '\n') {
+                lf_index--;
+            }
+        }
+
+        // push all the lines after the first one
+        while (line.buff_index < node->data.length && lines_collected < area->h) {
+            line.length = 0;
+            while (line.buff_index + line.length < node->data.length &&
+                buf[line.buff_index + line.length] != '\n') {
+                line.length++;
             }
 
-            size_t lines_collected = 0;
-            // collect the rest of the lines in this node
-            while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
-                if (buf[line_node.buff_index + line_node.length] == '\n') {
-                    line_node.length++;
-                    cvector_push_back(view->buffer->lines, line_node);
-                    line_node.buff_index += line_node.length;
-                    line_node.length = 0;
-                    lines_collected++;
-                } else {
-                    line_node.length++;
-                }
+            if (line.buff_index + line.length < node->data.length &&
+                buf[line.buff_index + line.length] == '\n') {
+                line.length = line.length + 1; // include newline
+                line.lfcount = 1;
+            } else {
+                line.lfcount = 0;
             }
 
-            lines_remaining -= lines_collected;
-            line = 0;
-            current = right;
+            cvector_push_back(view->buffer->lines, line);
+            lines_collected++;
+            line.buff_index += line.length;
+            line.length = 0;
         }
-        else {
-            // line in right tree
-            line -= left_lf + local_lf;
-            current = right;
-        }
+
+        // restore original node->data.length
+        node->data.length = node->data.length - node->data.buff_index;
+        node_idx = nv_successor_with_stack(node_idx, stack, &stack_top);
+        lf_index = 0;
     }
 }
 
