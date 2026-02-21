@@ -119,7 +119,7 @@ static void nv_must_be_no_errors(const char* message)
 static void nv_init_base_window()
 {
     nv_editor->window = nv_window_node_init(NV_WM_SPLIT);
-    nv_must_be_no_errors("failed to create editor base window");
+    nv_must_be_no_errors("failed to create editor base window\n");
     assert(nv_editor->window->kind == NV_WM_SPLIT);
     nv_editor->window->split.kind = NV_SPLIT_HORIZONTAL;
     nv_editor->window->split.ratio = 0.98;
@@ -128,9 +128,9 @@ static void nv_init_base_window()
 static void nv_init_logger_window()
 {
     nv_editor->logger = nv_window_node_init(NV_WM_VIEW);
-    nv_must_be_no_errors("failed to create log window");
+    nv_must_be_no_errors("failed to create log window\n");
     nv_editor->logger->leaf.view = nv_view_init(NULL);
-    nv_must_be_no_errors("failed to create log buffer");
+    nv_must_be_no_errors("failed to create log buffer\n");
 
     struct nv_context logger_ctx = nv_get_context(nv_editor->logger);
     logger_ctx.buffer->type = NV_BUFF_TYPE_LOG;
@@ -142,7 +142,7 @@ static void nv_init_primary_window()
 {
     assert(nv_editor->window->kind == NV_WM_SPLIT);
     struct nv_window_node* primary = nv_window_node_init(NV_WM_VIEW);
-    nv_must_be_no_errors("failed to create primary window");
+    nv_must_be_no_errors("failed to create primary window\n");
     nv_editor->window->split.left = primary;
 }
 
@@ -150,9 +150,9 @@ static void nv_init_status_window()
 {
     assert(nv_editor->window->kind == NV_WM_SPLIT);
     struct nv_window_node* status = nv_window_node_init(NV_WM_VIEW);
-    nv_must_be_no_errors("failed to create status window");
+    nv_must_be_no_errors("failed to create status window\n");
     status->leaf.view = nv_view_init(NULL);
-    nv_must_be_no_errors("failed to create status view");
+    nv_must_be_no_errors("failed to create status view\n");
     status->leaf.view->allow_split = false;
     status->leaf.view->gutter_width_cols = 0;
     nv_editor->window->split.right = status;
@@ -163,7 +163,7 @@ static void nv_open_input_files(int argc, char** argv)
 {
     for (int i = 1; i < argc; i++) {
         if (nv_open_file_in_window(nv_editor, (const char*)argv[i]) != NV_OK) {
-            nv_fatal("failed to open a file");
+            nv_fatal("failed to open a file\n");
             exit(nv_editor->status);
         }
     }
