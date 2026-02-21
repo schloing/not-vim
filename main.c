@@ -181,11 +181,6 @@ int main(int argc, char** argv)
 
     assert(nv_editor);
 
-#define NV_DEBUG_OPEN_LOG
-#ifdef NV_DEBUG_OPEN_LOG
-    nv_editor->log_opened = true;
-#endif
-
     if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(editor.status));
         nv_editor_cleanup(&editor);
@@ -195,6 +190,10 @@ int main(int argc, char** argv)
     nv_resize_for_layout(tb_width(), tb_height());
     nv_init_base_window();
     nv_init_logger_window();
+#define NV_DEBUG_OPEN_LOG
+#ifdef NV_DEBUG_OPEN_LOG
+    nv_editor->logger->leaf.view->visible = true;
+#endif
     nv_init_primary_window();
     nv_init_status_window();
     nv_window_set_focus(nv_editor->window->split.left); // set primary window as focus

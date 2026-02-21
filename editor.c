@@ -259,7 +259,7 @@ static void nv_redraw_all()
     nv_calculate_statline();
     nv_draw_background(); // clear
     nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height });
-    if (nv_editor->log_opened) {
+    if (nv_editor->logger->leaf.view->visible) {
         nv_draw_windows(nv_editor->logger,
             (struct nv_window_area) {
                 .x=0.5 * nv_editor->width * 0.2,
