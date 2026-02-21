@@ -333,60 +333,82 @@ static void nv_draw_background()
     tb_clear();
 }
 
+static void nv_handle_mouse_input(struct tb_event* ev)
+{
+    struct nv_context focus = nv_get_context(nv_get_focused_window());
+
+    if (!ev || !focus.window) {
+        return;
+    }
+
+    switch (ev->key) {
+    case TB_KEY_MOUSE_WHEEL_UP:
+        if (focus.view) {
+            if (focus.view->top_line_index > 1) {
+                focus.view->top_line_index--;
+            }
+        }
+        // nv_cursor_move_up(&ctx, cursor, 2);
+        break;
+
+    case TB_KEY_MOUSE_WHEEL_DOWN:
+        if (focus.view && focus.buffer) {
+            focus.view->top_line_index++;
+            focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
+        }
+        // nv_cursor_move_down(&ctx, cursor, 2);
+        break;
+    }
+}
+
+static void nv_handle_key_input(struct tb_event* ev)
+{
+    struct nv_context focus = nv_get_context(nv_get_focused_window());
+
+    if (!ev || !focus.window) {
+        return;
+    }
+
+    if (nv_editor->mode == NV_MODE_INSERT) {
+        if (isprint(ev->ch)) {
+            // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
+        }
+        else if (ev->key == TB_KEY_ESC) {
+            nv_set_mode(NV_MODE_NAVIGATE);
+        }
+    }
+    else {
+        if (ev->key == TB_KEY_ESC) {
+            nv_editor->running = false;
+        }
+        else {
+            switch (ev->ch) {
+                case 'i': nv_set_mode(NV_MODE_INSERT); break;
+                // case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
+                // case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
+                // case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
+                // case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
+            }
+        }
+    }
+}
+
 static int nv_get_input(struct tb_event* ev)
 {
     if (nv_editor->config.show_headless) {
         return NV_OK;
     }
 
-    struct nv_context focus = nv_get_context(nv_get_focused_window());
-
     nv_editor->inputs[0] = ev->key;
     nv_editor->inputs[1] = 0;
 
     switch (ev->type) {
     case TB_EVENT_MOUSE:
-        switch (ev->key) {
-        case TB_KEY_MOUSE_WHEEL_UP:
-            if (focus.view) {
-                if (focus.view->top_line_index > 1) {
-                    focus.view->top_line_index--;
-                }
-            }
-            // nv_cursor_move_up(&ctx, cursor, 2);
-            break;
-
-        case TB_KEY_MOUSE_WHEEL_DOWN:
-            if (focus.view && focus.buffer) {
-                focus.view->top_line_index++;
-                focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
-            }
-            // nv_cursor_move_down(&ctx, cursor, 2);
-            break;
-        }
+        nv_handle_mouse_input(ev);
         break;
 
     case TB_EVENT_KEY:
-        if (nv_editor->mode == NV_MODE_INSERT) {
-            if (isprint(ev->ch)) {
-                // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
-            } else if (ev->key == TB_KEY_ESC) {
-                nv_set_mode(NV_MODE_NAVIGATE);
-            }
-        }
-        else {
-            if (ev->key == TB_KEY_ESC) {
-                nv_editor->running = false;
-            } else {
-                switch (ev->ch) {
-                case 'i': nv_set_mode(NV_MODE_INSERT); break;
-                // case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
-                // case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
-                // case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
-                // case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
-                }
-            }
-        }
+        nv_handle_key_input(ev);
         break;
 
     case TB_EVENT_RESIZE:
