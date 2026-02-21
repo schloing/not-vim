@@ -111,6 +111,6 @@ struct nv_context nv_get_context(struct nv_window_node* window)
     return (struct nv_context) {
         .window = window,
         .view = window ? window->leaf.view : NULL,
-        .buffer = window->leaf.view ? window->leaf.view->buffer : NULL,
+        .buffer = window && window->leaf.view ? window->leaf.view->buffer : NULL,
     };
 }
