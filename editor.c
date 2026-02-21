@@ -214,9 +214,12 @@ void nv_log(const char* fmt, ...)
         return;
     }
     memcpy(&logger.buffer->buffer[logger.buffer->append_cursor], fmt_buff, fmt_length);
+
     logger.buffer->append_cursor += fmt_length;
     cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
     logger.buffer->buffer[logger.buffer->append_cursor] = '\0';
+    logger.buffer->loaded = false;
+
     nv_buffer_build_tree(logger.buffer); // WARN: rebuilding tree every time could be inefficient for very large logs
     free(fmt_buff);
     va_end(ap);
