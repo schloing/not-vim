@@ -34,7 +34,7 @@ struct nv_window_node {
             POOL_MANAGED struct nv_window_node* left;
             POOL_MANAGED struct nv_window_node* right;
             enum nv_window_node_split kind;
-            float ratio;
+            double ratio;
         } split;
 
         struct {
