@@ -11,6 +11,8 @@ CMakeCache.txt
 build/
 build.ninja
 cmake_install.cmake
+massif.out
+test/hundred_million.txt
 .ninja_deps
 .ninja_log
 NOTES
