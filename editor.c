@@ -383,7 +383,13 @@ static void nv_handle_key_input(struct tb_event* ev)
         }
         else {
             switch (ev->ch) {
-                case 'i': nv_set_mode(NV_MODE_INSERT); break;
+                case 'i':
+                    nv_set_mode(NV_MODE_INSERT);
+                    break;
+
+                case '\\':
+                    nv_editor->logger->leaf.view->visible = !nv_editor->logger->leaf.view->visible;
+                    break;
                 // case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
                 // case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
                 // case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;

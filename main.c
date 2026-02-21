@@ -190,7 +190,6 @@ int main(int argc, char** argv)
     nv_resize_for_layout(tb_width(), tb_height());
     nv_init_base_window();
     nv_init_logger_window();
-#define NV_DEBUG_OPEN_LOG
 #ifdef NV_DEBUG_OPEN_LOG
     nv_editor->logger->leaf.view->visible = true;
 #endif
