@@ -18,10 +18,10 @@ enum nv_window_kind {
 };
 
 struct nv_window_area {
-    float x;
-    float y;
-    float w;
-    float h;
+    int x;
+    int y;
+    int w;
+    int h;
 };
 
 #define POOL_MANAGED
