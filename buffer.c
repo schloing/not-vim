@@ -11,6 +11,8 @@
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
 
+static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff);
+
 bool is_elf(const char* buffer)
 {
     const char e_ident[] = { 0x7f, 45, 0x4c, 46 };
@@ -138,6 +140,38 @@ static void print_current_only(nv_pool_index tree)
 }
 #endif
 
+#define NV_MIN_GRANULARITY 64
+#define NV_MAX_GRANULARITY (64 * 1024)
+
+static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff)
+{
+    if (!buff) {
+        nv_editor->status = NV_ERR_NOT_INIT;
+        return 0;
+    }
+
+    size_t granularity = (buff->chunk * 1024) / buff->bytes_loaded;
+
+    if (granularity < 0) {
+        granularity = 1;
+    }
+
+    granularity = granularity * 1024;
+
+    if (granularity < NV_MIN_GRANULARITY) {
+        granularity = NV_MIN_GRANULARITY;
+    }
+    else if (granularity > NV_MAX_GRANULARITY) {
+        granularity = NV_MAX_GRANULARITY;
+    }
+
+    if (granularity > buff->chunk) {
+        granularity = buff->chunk;
+    }
+
+    return granularity;
+}
+
 // FIXME: name does not indicate that it performs important set up for nvtree to work
 int nv_buffer_build_tree(struct nv_buff* buff)
 {
@@ -149,6 +183,11 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     nv_buffers[buff->buff_id] = b;
     buff->tree = nv_tree_init();
 
+    int line_count = 0;
+    int abs_pos = 0;
+    int tree_pos = 0;
+    size_t granularity = nv_calculate_tree_node_granularity(buff);
+
     struct nv_node node = {
         // .buff_purpose = NV_BUFF_ID_ORIGINAL,
         .buff_id = buff->buff_id,
@@ -158,26 +197,24 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         .lfcount = 0
     };
 
-    int line_count = 0;
-    int abs_pos = 0;
-    int tree_pos = 0;
-
     while (abs_pos < buff->chunk) {
         if (!b[abs_pos]) {
             break;
         }
 
+        node.length++;
         if (b[abs_pos] == '\n') {
-            node.length++;
+            node.lfcount++;
+            line_count++;
+        }
+
+        if (node.length >= granularity) {
             buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
             buff->tree = nv_tree_paint(buff->tree, B);
             tree_pos += node.length;
             node.buff_index += node.length;
             node.length = 0;
-            line_count++;
-        }
-        else {
-            node.length++;
+            node.lfcount = 0;
         }
 
         abs_pos++;
@@ -186,7 +223,6 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     if (node.length > 0) {
         buff->tree = nv_tree_insert(buff->tree, tree_pos, node);
         buff->tree = nv_tree_paint(buff->tree, B);
-        line_count++;
     }
 
     buff->line_count = line_count;
