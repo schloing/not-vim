@@ -226,7 +226,10 @@ nv_pool_index line(struct nv_context* ctx, int lineno)
         return NV_NULL_INDEX;
     }
 
-    return nv_find_by_line(ctx->buffer->tree, lineno);
+    nv_pool_index stack[NVTREE_MAX_STACK_DEPTH];
+    int stack_top;
+    size_t lf_index;
+    return nv_find_by_line(ctx->buffer->tree, lineno, stack, &stack_top, &lf_index);
 }
 
 int nv_free_view(struct nv_view* view)
