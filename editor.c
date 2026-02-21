@@ -610,12 +610,25 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     }
 
     switch (view->buffer->type) {
-    case NV_BUFF_TYPE_PLAINTEXT:
-        nv_buffer_printf(view, area, 0, 0, view->buffer->buffer, area->w);
+    case NV_BUFF_TYPE_LOG:
+    case NV_BUFF_TYPE_PLAINTEXT: {
+        char *p = view->buffer->buffer, *nl = NULL;
+        size_t lines_read = 0;
+
+        while ((nl = strchr(p, '\n')) != NULL) {
+            if (lines_read <= view->buffer->line_count && lines_read < area->h) {
+                nv_buffer_printf(view, area, lines_read, lines_read, p, nl - p);
+            }
+            p = nl + 1;
+            lines_read++;
+        }
+
+        if (*p) {
+            nv_buffer_printf(view, area, lines_read, 0, p, area->w);
+        }
 
         break;
-
-    case NV_BUFF_TYPE_LOG:
+    }
     case NV_BUFF_TYPE_SOURCE:
         if (!view->buffer->loaded) {
             view->gutter_width_cols = count_no_digits(view->buffer->line_count);
