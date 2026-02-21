@@ -12,7 +12,7 @@
 
 #define NV_BUFFID_UNSET        0
 #define NV_BUFF_CHUNK_SIZE     1024 * 16
-#define NV_LINE_CAP            32
+#define NV_LINE_CAP            2048
 
 typedef enum {
     NV_BUFF_TYPE_STDIN        = 0,
