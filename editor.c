@@ -260,7 +260,7 @@ static void nv_redraw_all()
     tb_present();
 }
 
-void nv_resize_for_layout(size_t width, size_t height)
+void nv_resize_for_layout(int width, int height)
 {
     nv_editor->width = width;
     nv_editor->height = height;

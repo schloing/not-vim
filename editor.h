@@ -122,7 +122,7 @@ extern _Thread_local struct nv_editor* nv_editor;
 void nv_log(const char* fmt, ...);
 void nv_log_err(const char* fmt, ...);
 void nv_fatal(const char* operation);
-void nv_resize_for_layout(size_t width, size_t height);
+void nv_resize_for_layout(int width, int height);
 void nv_main();
 int nv_editor_init(struct nv_editor* editor);
 int nv_render_term();
