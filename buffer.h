@@ -55,6 +55,7 @@ struct nv_buff {
     int line_count;
     size_t buff_id;
     size_t chunk;
+    size_t bytes_loaded;
     size_t append_cursor;
     nv_buff_type type;
     nv_buff_fmt format;

@@ -54,7 +54,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
             return NV_ERR;
         }
 
-        fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
+        buff->bytes_loaded = fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
         cvector_set_size(buff->buffer, buff->chunk);
 
         break;
