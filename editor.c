@@ -184,50 +184,62 @@ void nv_log(const char* fmt, ...)
     va_start(ap, fmt);
 
     struct nv_context logger = nv_get_context(nv_editor->logger);
-
     if (!logger.buffer || !logger.buffer->buffer) {
         va_end(ap);
         return;
     }
 
-    if (logger.buffer->append_cursor > NV_BUFF_CHUNK_SIZE) {
-        // FIXME: assumes entire buffer is loaded in single / contiguous chunks of total size NV_BUFF_CHUNK_SIZE
-        // this is not optimal for big files cuz they wont be loaded like that
-        // TODO: make a general function for appending in append only buffers
+    size_t cur = logger.buffer->append_cursor, cap = logger.buffer->chunk;
+    char* buf = logger.buffer->buffer;
+    if (cur >= cap || cap == 0) {
         va_end(ap);
         return;
     }
-
-    size_t ts_length, fmt_length;
-    char ts_buff[20], fmt_buff[256];
 
     clock_t ts = clock();
     float ts_seconds = (float)ts / (float)CLOCKS_PER_SEC;
+    int ts_written = snprintf(buf + cur, cap - cur, "[%.3f] ", ts_seconds);
 
-    snprintf(ts_buff, sizeof(ts_buff), "[%.3f] ", ts_seconds);
-    ts_length = strlen(ts_buff);
-
-    sprintf(&logger.buffer->buffer[logger.buffer->append_cursor], "%s", ts_buff);
-    logger.buffer->append_cursor += ts_length;
-    fmt_length = vsnprintf(fmt_buff, sizeof(fmt_buff) / sizeof(char), fmt, ap);
-
-    if (fmt_length == -1) {
+    if (ts_written <= 0) {
         va_end(ap);
         return;
     }
 
-    if (logger.buffer->append_cursor + fmt_length > NV_BUFF_CHUNK_SIZE) {
+    if ((size_t)ts_written >= cap - cur) {
         va_end(ap);
         return;
     }
 
-    memcpy(&logger.buffer->buffer[logger.buffer->append_cursor], fmt_buff, fmt_length);
-    logger.buffer->append_cursor += fmt_length;
+    cur += (size_t)ts_written;
+
+    va_list ap2;
+    va_copy(ap2, ap);
+    int msg_len = vsnprintf(buf + cur, cap - cur, fmt, ap2);
+    va_end(ap2);
+
+    if (msg_len < 0) {
+        va_end(ap);
+        return;
+    }
+
+    if ((size_t)msg_len >= cap - cur) {
+        logger.buffer->append_cursor = 0;
+        va_end(ap);
+        return;
+    }
+
+    for (size_t i = 0, end = cur + (size_t)msg_len; cur + i < end; ++i) {
+        if (buf[cur + i] == '\n') {
+            logger.buffer->line_count++;
+        }
+    }
+
+    cur += (size_t)msg_len;
+    buf[cur] = '\0';
+    logger.buffer->append_cursor = cur;
     cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
-    logger.buffer->buffer[logger.buffer->append_cursor] = '\0';
-    logger.buffer->loaded = false;
 
-    nv_buffer_build_tree(logger.buffer); // WARN: rebuilding tree every time could be inefficient for very large logs
+    logger.buffer->loaded = false;
     va_end(ap);
 }
 
