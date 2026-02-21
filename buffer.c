@@ -145,14 +145,13 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         return NV_ERR_NOT_INIT;
     }
 
-    static size_t buff_id = 0;
     char* b = buff->buffer;
-    nv_buffers[buff_id] = b;
+    nv_buffers[buff->buff_id] = b;
     buff->tree = nv_tree_init();
 
     struct nv_node node = {
         // .buff_purpose = NV_BUFF_ID_ORIGINAL,
-        .buff_id = buff_id,
+        .buff_id = buff->buff_id,
         .buff_index = 0,
         .length = 0,
         .length_left = 0,
@@ -191,7 +190,6 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     }
 
     buff->line_count = line_count;
-    buff_id++;
 
     return NV_OK;
 }
@@ -205,8 +203,10 @@ struct nv_buff* nv_buffer_init(const char* path)
         return NULL;
     }
 
+    static size_t buff_id;
     buffer->type = NV_BUFF_TYPE_PLAINTEXT;
     buffer->chunk = NV_BUFF_CHUNK_SIZE;
+    buffer->buff_id = buff_id++;
     cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CHUNK_SIZE);
     cvector_reserve(buffer->add_buffer, (size_t)NV_BUFF_CHUNK_SIZE); // TODO: determine size to allocate here
     cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
