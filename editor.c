@@ -189,7 +189,7 @@ void nv_log(const char* fmt, ...)
         return;
     }
 
-    size_t cur = logger.buffer->append_cursor, cap = logger.buffer->chunk;
+    size_t cur = logger.buffer->append_cursor, cap = logger.buffer->chunk_size;
     char* buf = logger.buffer->buffer;
     if (cur >= cap || cap == 0) {
         va_end(ap);
@@ -239,7 +239,6 @@ void nv_log(const char* fmt, ...)
     logger.buffer->append_cursor = cur;
     cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
 
-    logger.buffer->loaded = false;
     va_end(ap);
 }
 
@@ -669,10 +668,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         break;
     }
     case NV_BUFF_TYPE_SOURCE:
-        if (!view->buffer->loaded) {
-            view->gutter_width_cols = count_no_digits(view->buffer->line_count);
-            view->buffer->loaded = true;
-        }
+        view->gutter_width_cols = count_no_digits(view->buffer->line_count);
 
         if (nv_draw_text_buffer(view, area) != NV_OK) {
             nv_fatal("failed to draw buffer");
