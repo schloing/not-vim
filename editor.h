@@ -58,8 +58,8 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
 struct nv_editor {
     nv_mode mode;
-    double width;
-    double height;
+    double width;                      // NOTE: guaranteed to be integer
+    double height;                     // NOTE: guaranteed to be integer
     int status;
     bool running;
     bool lua_loaded;
