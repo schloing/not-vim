@@ -305,8 +305,6 @@ void nv_main()
     }
 }
 
-#define NV_DEBUG_WINDOW_BACKGROUND_COLOURS
-
 static void nv_draw_background_rect(int x1, int y1, int x2, int y2)
 {
 #ifdef NV_DEBUG_WINDOW_BACKGROUND_COLOURS
