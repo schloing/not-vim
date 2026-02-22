@@ -56,8 +56,8 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path)
             return NV_ERR;
         }
 
-        buff->bytes_loaded = fread(buff->buffer, sizeof(char), buff->chunk, buff->file);
-        cvector_set_size(buff->buffer, buff->chunk);
+        buff->bytes_loaded = fread(buff->buffer, sizeof(char), buff->chunk_size, buff->file);
+        cvector_set_size(buff->buffer, buff->chunk_size);
 
         break;
 
@@ -150,7 +150,7 @@ static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff)
         return 0;
     }
 
-    size_t granularity = (buff->chunk * 1024) / buff->bytes_loaded;
+    size_t granularity = (buff->chunk_size * 1024) / buff->bytes_loaded;
 
     if (granularity < 0) {
         granularity = 1;
@@ -165,8 +165,8 @@ static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff)
         granularity = NV_MAX_GRANULARITY;
     }
 
-    if (granularity > buff->chunk) {
-        granularity = buff->chunk;
+    if (granularity > buff->chunk_size) {
+        granularity = buff->chunk_size;
     }
 
     return granularity;
@@ -197,7 +197,7 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         .lfcount = 0
     };
 
-    while (abs_pos < buff->chunk) {
+    while (abs_pos < buff->chunk_size) {
         if (!b[abs_pos]) {
             break;
         }
@@ -241,7 +241,7 @@ struct nv_buff* nv_buffer_init(const char* path)
 
     static size_t buff_id;
     buffer->type = NV_BUFF_TYPE_PLAINTEXT;
-    buffer->chunk = NV_BUFF_CHUNK_SIZE;
+    buffer->chunk_size = NV_BUFF_CHUNK_SIZE;
     buffer->buff_id = buff_id++;
     cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CHUNK_SIZE);
     cvector_reserve(buffer->add_buffer, (size_t)NV_BUFF_CHUNK_SIZE); // TODO: determine size to allocate here

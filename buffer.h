@@ -53,7 +53,7 @@ struct nv_buff {
     char* path;
     int line_count;
     size_t buff_id;
-    size_t chunk;
+    size_t chunk_size;
     size_t bytes_loaded;
     size_t append_cursor;
     nv_buff_type type;
