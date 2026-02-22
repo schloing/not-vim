@@ -676,7 +676,6 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 
     case NV_BUFF_TYPE_BROWSER:
         // TODO: implement this as a plugin
-        break;
 
     default:
         nv_log("unsupported bufftype %d\n", view->buffer->type);
