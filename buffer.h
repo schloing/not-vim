@@ -51,7 +51,6 @@ typedef nv_pool_index nv_tree_pool_index;
 struct nv_buff {
     FILE* file;
     char* path;
-    bool loaded;
     int line_count;
     size_t buff_id;
     size_t chunk;
