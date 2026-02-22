@@ -679,8 +679,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         break;
 
     default:
-        // TODO: log to log buffer
-        // fprintf(stderr, "unsupported bufftype %d %f %f %f %f\n", ctx.buffer->type, window->w, window->h, window->x, window->y);
+        nv_log("unsupported bufftype %d\n", view->buffer->type);
         break;
     }
 
