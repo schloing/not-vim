@@ -27,6 +27,42 @@ static int nv_log_lua(lua_State* L)
     return NV_OK;
 }
 
+static int nv_open_plugdir(char* path)
+{
+    if (!path) {
+        return NV_ERR_NOT_INIT;
+    }
+
+    size_t path_length = strlen(path);
+    // all plugdirs must contain a NV_PLUGIN_ENTRYPOINT
+    char* plugin_entry_path = (char*)calloc(path_length + NV_PLUGIN_ENTRYPOINT_LENGTH + 1, sizeof(char)); // null terminator
+
+    if (!plugin_entry_path) {
+        return NV_ERR_MEM;
+    }
+
+    memcpy(plugin_entry_path, path, path_length); // base path prefix
+    memcpy(plugin_entry_path + path_length, NV_PLUGIN_ENTRYPOINT, NV_PLUGIN_ENTRYPOINT_LENGTH); // entrypoint suffix
+
+    if (stat(plugin_entry_path, &sb) == -1) {
+        free(plugin_entry_path);
+        return NV_ERR;
+    }
+
+    if ((sb.st_mode & S_IFMT) == S_IFREG) {
+        if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
+            // TODO: LOG
+            nv_log("lua entrypoint loaded succesfully\n");
+        } else {
+            const char* strerr = lua_tostring(L, -1);
+            nv_log(strerr);
+        }
+    }
+
+    free(plugin_entry_path);
+    return NV_OK;
+}
+
 static int nv_load_plugin(lua_State* L, char* path)
 {
     if (!path) {
@@ -39,35 +75,9 @@ static int nv_load_plugin(lua_State* L, char* path)
     }
 
     switch (sb.st_mode & S_IFMT) {
-    case S_IFDIR: {
-        size_t path_length = strlen(path);
-        char* plugin_entry_path = (char*)calloc(path_length + NV_PLUGIN_ENTRYPOINT_LENGTH + 1, sizeof(char)); // null terminator
-
-        if (!plugin_entry_path) {
-            return NV_ERR_MEM;
-        }
-
-        memcpy(plugin_entry_path, path, path_length); // base path prefix
-        memcpy(plugin_entry_path + path_length, NV_PLUGIN_ENTRYPOINT, NV_PLUGIN_ENTRYPOINT_LENGTH); // entrypoint suffix
-
-        if (stat(plugin_entry_path, &sb) == -1) {
-            free(plugin_entry_path);
-            return NV_ERR;
-        }
-
-        if ((sb.st_mode & S_IFMT) == S_IFREG) {
-            if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
-                // TODO: LOG
-                nv_log("lua entrypoint loaded succesfully\n");
-            } else {
-                const char* strerr = lua_tostring(L, -1);
-                nv_log(strerr);
-            }
-        }
-
-        free(plugin_entry_path);
+    case S_IFDIR:
+        (void)nv_open_plugdir(path);
         break;
-    }
 
     default:
         return NV_ERR;
