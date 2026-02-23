@@ -19,6 +19,7 @@
 #define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
 
 static int nv_load_plugin(lua_State* L, char* path);
+static int nv_open_plugdir(char* path);
 
 static int nv_log_lua(lua_State* L)
 {
