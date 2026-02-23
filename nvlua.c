@@ -20,20 +20,26 @@
 #define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
 
 // forwards
-static int nv_load_plugin(lua_State* L, char* path);
-static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb);
+static int nv_load_plugin(char* path);
+static int nv_open_plugdir(char* path, struct stat* sb);
 // end forwards
 
-static int nv_log_lua(lua_State* L)
+lua_State* L; // global lua state
+
+static int nv_log_lua()
 {
+    if (!L) {
+        return NV_ERR;
+    }
+
     const char* str = luaL_checkstring(L, 1);
     nv_log(str);
     return NV_OK;
 }
 
-static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb)
+static int nv_open_plugdir(char* path, struct stat* sb)
 {
-    if (!path) {
+    if (!path || !L) {
         return NV_ERR_NOT_INIT;
     }
 
@@ -66,9 +72,9 @@ static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb)
     return NV_OK;
 }
 
-static int nv_load_plugin(lua_State* L, char* path)
+static int nv_load_plugin(char* path)
 {
-    if (!path) {
+    if (!path || !L) {
         return NV_ERR_NOT_INIT;
     }
 
@@ -79,7 +85,7 @@ static int nv_load_plugin(lua_State* L, char* path)
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFDIR:
-        (void)nv_open_plugdir(L, path, &sb);
+        (void)nv_open_plugdir(path, &sb);
         break;
 
     default:
@@ -97,7 +103,12 @@ int luaopen_mylib(lua_State* L)
 
 int nvlua_main()
 {
-    lua_State* L = luaL_newstate(); /* opens Lua */
+    L = luaL_newstate(); /* opens Lua */
+
+    if (!L) {
+        return NV_ERR;
+    }
+
     luaopen_base(L); /* opens the basic library */
     luaopen_table(L); /* opens the table library */
     luaopen_io(L); /* opens the I/O library */
@@ -106,7 +117,7 @@ int nvlua_main()
 
     lua_register(L, "echo", nv_log_lua);
 
-    nv_load_plugin(L, "./plugload/");
+    nv_load_plugin("./plugload/");
 
     lua_close(L);
     return NV_OK;
