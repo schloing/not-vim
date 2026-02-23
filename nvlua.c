@@ -13,13 +13,16 @@
 
 #include "editor.h"
 #include "error.h"
+#include "events.h"
 #include "nvlua.h"
 
 #define NV_PLUGIN_ENTRYPOINT "main.lua"
 #define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
 
+// forwards
 static int nv_load_plugin(lua_State* L, char* path);
 static int nv_open_plugdir(char* path);
+// end forwards
 
 static int nv_log_lua(lua_State* L)
 {
