@@ -7,6 +7,7 @@
 
 int nvlua_main();
 int l_dir(lua_State* L);
+void nvlua_free();
 
 #endif
 

@@ -119,7 +119,13 @@ int nvlua_main()
 
     nv_load_plugin("./plugload/");
 
-    lua_close(L);
     return NV_OK;
+}
+
+void nvlua_free()
+{
+    if (L) {
+        lua_close(L);
+    }
 }
 #endif
