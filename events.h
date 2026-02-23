@@ -10,6 +10,9 @@ enum nv_event_sub {
 };
 
 const char* nv_event_str(enum nv_event_sub event);
-void nv_register_event(enum nv_event_sub event, const char* name, void (*callback)(void));
+void nv_event_register_sub(enum nv_event_sub event, int lua_callback_ref);
+enum nv_event_sub nv_str_event(const char* str);
+void nv_event_init();
+void nv_event_free();
 
 #endif

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "cvector.h"
 #include "editor.h"
 #include "error.h"
 #include "events.h"
@@ -22,6 +23,10 @@
 // forwards
 static int nv_load_plugin(char* path);
 static int nv_open_plugdir(char* path, struct stat* sb);
+static void nvlua_register_library();
+// lua wrappers
+static int nv_log_lua();                // for nv_log
+static int nvlua_subscribe_event();     // for nv_event_register_sub
 // end forwards
 
 lua_State* L; // global lua state
@@ -95,10 +100,67 @@ static int nv_load_plugin(char* path)
     return NV_OK;
 }
 
-int luaopen_mylib(lua_State* L)
+static int nvlua_get_event(lua_State* L, int idx) {
+    if (lua_type(L, idx) == LUA_TNUMBER) {
+        int id = (int)luaL_checkinteger(L, idx);
+
+        if (id < 0 || id >= NV_EVENT_COUNT) {
+            nv_log("invalid event id\n");
+            luaL_argerror(L, idx, "invalid event id");
+        }
+
+        return id;
+    }
+    else {
+        const enum nv_event_sub event = nv_str_event(luaL_checkstring(L, idx));
+    
+        if (event == NV_EVENT_COUNT) {
+            nv_log("unknown event name\n");
+            luaL_argerror(L, idx, "unknown event name");
+            return NV_EVENT_COUNT;
+        }
+
+        return event;
+    }
+}
+
+static int nvlua_subscribe_event()
 {
-    luaL_openlibs(L);
-    return 1;
+    // event id / name
+    enum nv_event_sub event = nvlua_get_event(L, 1);
+    if (event == NV_EVENT_COUNT) {
+        nv_log("failed event registration\n");
+        return NV_ERR;
+    }
+
+    // callback
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    nv_event_register_sub(NV_EVENT_COUNT, ref);
+
+    lua_pushinteger(L, ref);
+    nv_log("subscribed to event %s\n", nv_event_str(event));
+    return NV_OK;
+}
+
+static void nvlua_register_library()
+{
+    lua_newtable(L);
+
+    // register nv_event_sub enum
+    // event.EVENT_STR_NAME
+    for (enum nv_event_sub event = 0; event < NV_EVENT_COUNT; event++) {
+        lua_pushinteger(L, event);
+        lua_setfield(L, -2, nv_event_str(event));
+    }
+
+    // register core api
+    // event.subscribe()
+    lua_pushcfunction(L, nvlua_subscribe_event);
+    lua_setfield(L, -2, "subscribe");
+
+    lua_setglobal(L, "event"); 
+    nv_log("registered nvlua library\n");
 }
 
 int nvlua_main()
@@ -109,11 +171,17 @@ int nvlua_main()
         return NV_ERR;
     }
 
+    luaL_openlibs(L); // FIXME: needs sandboxing, allows arbitrary loading of c modules from lua
+
+#ifdef NVLUA_SANDBOXED
     luaopen_base(L); /* opens the basic library */
     luaopen_table(L); /* opens the table library */
     luaopen_io(L); /* opens the I/O library */
     luaopen_string(L); /* opens the string lib. */
     luaopen_math(L); /* opens the math lib. */
+#endif
+
+    nvlua_register_library();
 
     lua_register(L, "echo", nv_log_lua);
 
