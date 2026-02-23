@@ -52,7 +52,6 @@ static int nv_open_plugdir(char* path)
 
     if ((sb.st_mode & S_IFMT) == S_IFREG) {
         if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
-            // TODO: LOG
             nv_log("lua entrypoint loaded succesfully\n");
         } else {
             const char* strerr = lua_tostring(L, -1);
