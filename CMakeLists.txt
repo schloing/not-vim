@@ -29,7 +29,7 @@ if(LuaJIT_FOUND)
     target_compile_definitions(nv PRIVATE NV_LUAJIT)
     message(STATUS "luajit found")
 else()
-    target_compile_definitions(nv PRIVATE)
+    target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
     message(STATUS "luajit not found")
 endif()
 
