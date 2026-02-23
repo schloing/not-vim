@@ -16,3 +16,4 @@ test/hundred_million.txt
 .ninja_deps
 .ninja_log
 NOTES
+compile_commands.json
