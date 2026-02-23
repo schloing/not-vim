@@ -21,7 +21,7 @@
 
 // forwards
 static int nv_load_plugin(lua_State* L, char* path);
-static int nv_open_plugdir(char* path);
+static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb);
 // end forwards
 
 static int nv_log_lua(lua_State* L)
@@ -31,7 +31,7 @@ static int nv_log_lua(lua_State* L)
     return NV_OK;
 }
 
-static int nv_open_plugdir(char* path)
+static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb)
 {
     if (!path) {
         return NV_ERR_NOT_INIT;
@@ -48,12 +48,12 @@ static int nv_open_plugdir(char* path)
     memcpy(plugin_entry_path, path, path_length); // base path prefix
     memcpy(plugin_entry_path + path_length, NV_PLUGIN_ENTRYPOINT, NV_PLUGIN_ENTRYPOINT_LENGTH); // entrypoint suffix
 
-    if (stat(plugin_entry_path, &sb) == -1) {
+    if (stat(plugin_entry_path, sb) == -1) {
         free(plugin_entry_path);
         return NV_ERR;
     }
 
-    if ((sb.st_mode & S_IFMT) == S_IFREG) {
+    if ((sb->st_mode & S_IFMT) == S_IFREG) {
         if (luaL_dofile(L, plugin_entry_path) == LUA_OK) {
             nv_log("%s loaded succesfully\n", path);
         } else {
@@ -79,7 +79,7 @@ static int nv_load_plugin(lua_State* L, char* path)
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFDIR:
-        (void)nv_open_plugdir(path);
+        (void)nv_open_plugdir(L, path, &sb);
         break;
 
     default:
