@@ -9,6 +9,7 @@ enum nv_event_sub {
     NV_EVENT_COUNT,
 };
 
+const char* nv_event_str(enum nv_event_sub event);
 void nv_register_event(enum nv_event_sub event, const char* name, void (*callback)(void));
 
 #endif
