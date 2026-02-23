@@ -10,7 +10,6 @@ const char* nv_event_str(enum nv_event_sub event)
     case NV_EVENT_BUFFCLOSE:        return "BUFFCLOSE";
     case NV_EVENT_KEYPRESS:         return "KEYPRESS";
     case NV_EVENT_HOTKEY:           return "HOTKEY";
-    case NV_EVENT_COUNT:            return "COUNT";
     default:                        return "UNKNOWN";
     }
 }
