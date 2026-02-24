@@ -23,7 +23,10 @@
 // forwards
 static int nv_load_plugin(char* path);
 static int nv_open_plugdir(char* path, struct stat* sb);
-static void nvlua_register_library();
+static void nvlua_set_metatable(const char* name);
+static int nvlua_context_gc();
+static void nvlua_register_es();
+static void nvlua_register_nv_api();
 // lua wrappers
 static int nv_log_lua();                // for nv_log
 static int nvlua_subscribe_event();     // for nv_event_register_sub
@@ -136,14 +139,49 @@ static int nvlua_subscribe_event()
     // callback
     luaL_checktype(L, 2, LUA_TFUNCTION);
     int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    nv_event_register_sub(NV_EVENT_COUNT, ref);
+    nv_event_register_sub(event, ref);
 
-    lua_pushinteger(L, ref);
     nv_log("subscribed to event %s\n", nv_event_str(event));
     return NV_OK;
 }
 
-static void nvlua_register_library()
+static void nvlua_set_metatable(const char* name)
+{
+    luaL_getmetatable(L, name);
+    lua_setmetatable(L, -2); // userdata remains on stack
+}
+
+int nvlua_push_nv_context(struct nv_context* ctx)
+{
+    struct nv_context** uc = (struct nv_context**)lua_newuserdata(L, sizeof(struct nv_context*));
+    *uc = ctx;
+    nvlua_set_metatable("nv_context");
+    return NV_OK;
+}
+
+static int nvlua_context_gc()
+{
+    struct nv_context** uc = (struct nv_context**)luaL_checkudata(L, 1, "nv_context");
+    *uc = NULL; // clear pointer so gc can't free it
+    return NV_OK;
+}
+
+static void nvlua_register_nv_api()
+{
+    luaL_newmetatable(L, "nv_context");
+    lua_newtable(L);
+    // TODO: context methods
+    lua_pushcfunction(L, nvlua_context_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_pop(L, 1);
+    nv_log("registered nv_context\n");
+
+    lua_setglobal(L, "nv");
+
+    nv_log("registered nvlua api structures\n");
+}
+
+static void nvlua_register_es()
 {
     lua_newtable(L);
 
@@ -161,6 +199,16 @@ static void nvlua_register_library()
 
     lua_setglobal(L, "event"); 
     nv_log("registered nvlua library\n");
+}
+
+void nvlua_pcall(int lua_func_ref, struct nv_context* ctx)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lua_func_ref);
+    nvlua_push_nv_context(ctx);
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        const char* strerr = lua_tostring(L, -1);
+        nv_log("%s\n", strerr);
+    }
 }
 
 int nvlua_main()
@@ -181,7 +229,8 @@ int nvlua_main()
     luaopen_math(L); /* opens the math lib. */
 #endif
 
-    nvlua_register_library();
+    nvlua_register_nv_api();
+    nvlua_register_es();
 
     lua_register(L, "echo", nv_log_lua);
 

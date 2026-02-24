@@ -4,7 +4,19 @@
 #include <string.h>
 
 #include "cvector.h"
+#include "error.h"
 #include "events.h"
+
+// extern'd events.h
+const struct lua_func_sig lua_callback_func_sigs[NV_EVENT_COUNT] = {
+    [NV_EVENT_BUFFLOAD] = {
+        .nargs = 1, // struct nv_context container_context
+        .nresults = 0,
+        .errfunc = 0,
+    },
+    // TODO: finish signature table for each function
+    // TODO: indicate function signature in table, so they can be verified at registration
+};
 
 #define NV_LUA_DEFAULT_CALLBACK_CAP 32
 static cvector(int) event_lua_callbacks[NV_EVENT_COUNT]; // each [NV_EVENT] can map to multiple luaL_ref values
@@ -29,13 +41,11 @@ void nv_event_free()
 // does NOT type check lua_callback_ref, caller is expected to do that from lua context
 void nv_event_register_sub(enum nv_event_sub event, int lua_callback_ref)
 {
-    if (event < 0 || event >= NV_EVENT_COUNT) {
+    if (!nv_event_is_valid(event)) {
         return;
     }
 
-    if (event_lua_callbacks[(int)event]) {
-        cvector_push_back(event_lua_callbacks[(int)event], lua_callback_ref);
-    }
+    cvector_push_back(event_lua_callbacks[(int)event], lua_callback_ref);
 }
 
 const char* nv_event_str(enum nv_event_sub event)
@@ -58,5 +68,27 @@ enum nv_event_sub nv_str_event(const char* str)
     }
 
     return NV_EVENT_COUNT;
+}
+
+const bool nv_event_is_valid(enum nv_event_sub event)
+{
+    return (int)event >= 0 && (int)event < NV_EVENT_COUNT;
+}
+
+// TODO: support specific emitters for different event types, or have varargs for different event callback types
+int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx)
+{
+    if (!nv_event_is_valid(event)) {
+        return NV_ERR;
+    }
+
+    size_t callbacks = cvector_size(event_lua_callbacks[(int)event]);
+
+    for (int i = 0; i < callbacks; i++) {
+        int ref = event_lua_callbacks[(int)event][i];
+        nvlua_pcall(ref, ctx);
+    }
+
+    return NV_OK;
 }
 #endif

@@ -12,6 +12,7 @@
 #include "cursorhelp.h"
 #include "cvector.h"
 #include "editor.h"
+#include "events.h"
 #include "error.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
@@ -152,29 +153,30 @@ static void nv_set_mode(nv_mode mode)
 static void nv_draw_cursor()
 {
     struct nv_context ctx = nv_get_context(nv_get_focused_window());
-
     struct cursor c;
-    int line_length = 0;
-    int effective_row = 0;
 
-    if (!ctx.view) {
+    if (!ctx.view || !ctx.buffer) {
         // FIXME
         return;
     }
 
+    int line_length = 0, effective_row = 0;
+    struct nv_node l;
+
     for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
-        struct nv_tree_node* l = NODE_FROM_POOL(line(&ctx, c.line));
+        if (c.line > ctx.buffer->line_count) {
+            continue;
+        }
+        l = ctx.buffer->lines[c.line - 1];
+        line_length = l.length - 1;
 
-        line_length = l ? l->data.length - 1 : 0; // FIXME: only works if *local* lfcount = 1
-
-        // FIXME
-        // effective_row =
-        //     ctx.view->area.x +                       // window position
-        //     ctx.view->gutter_digit_width + 1 +       // space taken by line numbers
-        //     (c.x > line_length ? line_length : c.x); // cap the cursor to the end of the line
+        effective_row =
+            ctx.window->leaf.area.x +                                   // window position
+            ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
+            (c.x > line_length ? line_length : c.x);                    // cap the cursor to the end of the line
     
-        // tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
+        tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
     }
 }
 
@@ -366,6 +368,8 @@ static void nv_handle_key_input(struct tb_event* ev)
         return;
     }
 
+    struct cursor* cursor = &focus.view->cursors[NV_PRIMARY_CURSOR];
+
     if (nv_editor->mode == NV_MODE_INSERT) {
         if (isprint(ev->ch)) {
             // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
@@ -387,10 +391,11 @@ static void nv_handle_key_input(struct tb_event* ev)
                 case '\\':
                     nv_editor->logger->leaf.view->visible = !nv_editor->logger->leaf.view->visible;
                     break;
-                // case 'j': nv_cursor_move_down(&ctx, cursor, 1); break;
-                // case 'k': nv_cursor_move_up(&ctx, cursor, 1); break;
-                // case 'h': nv_cursor_move_x(&ctx, cursor, -1); break;
-                // case 'l': nv_cursor_move_x(&ctx, cursor, 1); break;
+
+                case 'j': nv_cursor_move_down(&focus, cursor, 1); break;
+                case 'k': nv_cursor_move_up(&focus, cursor, 1); break;
+                case 'h': nv_cursor_move_x(&focus, cursor, -1); break;
+                case 'l': nv_cursor_move_x(&focus, cursor, 1); break;
             }
         }
     }
@@ -431,6 +436,7 @@ static int nv_get_input(struct tb_event* ev)
 
     return NV_OK;
 }
+
 static struct nv_window_node* nv_get_focused_window()
 {
     if (!nv_editor->focus) {
@@ -496,6 +502,7 @@ static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_a
     if (root->leaf.view) {          // TODO: this shouldn't be necessary here, all view drawing logic (null or not)
                                     // needa be moved into draw_view
         // FIXME: doing this only for ez compile, there's no reason 2 pass area in nv_draw_windows
+        root->leaf.area = area;
         nv_draw_background_rect(area.x, area.y, area.x + area.w, area.y + area.h);
         nv_draw_view(root->leaf.view, &area);
     }
@@ -644,6 +651,16 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
     if (!view || !view->buffer || !area) {
         return NV_ERR_NOT_INIT;
     }
+
+#ifndef NV_NO_LUAJIT
+    // TODO: indicate window = NULL?
+    struct nv_context ctx = {
+        .window = NULL,
+        .view = view,
+        .buffer = view->buffer,
+    };
+    nv_event_emit(NV_EVENT_BUFFLOAD, &ctx);
+#endif
 
     switch (view->buffer->type) {
     case NV_BUFF_TYPE_LOG:

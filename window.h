@@ -39,6 +39,7 @@ struct nv_window_node {
 
         struct {
             POOL_MANAGED struct nv_view* view;
+            struct nv_window_area area;
         } leaf;
     };
 };
