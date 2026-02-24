@@ -20,20 +20,33 @@
 #define NV_PLUGIN_ENTRYPOINT_LENGTH (sizeof(NV_PLUGIN_ENTRYPOINT) - 1)
 
 // forwards
-static int nv_load_plugin(char* path);
-static int nv_open_plugdir(char* path, struct stat* sb);
-static void nvlua_set_metatable(const char* name);
-static int nvlua_context_gc();
-static void nvlua_register_es();
-static void nvlua_register_nv_api();
+
+static int nv_load_plugin(lua_State* L, char* path);
+static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb);
+static void nvlua_set_metatable(lua_State* L, const char* name);
+static void nvlua_register_es(lua_State* L);
+static void nvlua_register_nv_api(lua_State* L);
+
 // lua wrappers
-static int nv_log_lua();                // for nv_log
-static int nvlua_subscribe_event();     // for nv_event_register_sub
+static int nv_log_lua(lua_State* L);                // for nv_log
+static int nvlua_subscribe_event(lua_State* L);     // for nv_event_register_sub
+static int nvctx_get_buffer(lua_State* L);
+static int nvlua_context_gc(lua_State* L);
+
+// api
+static struct nv_context* nvlua_check_nv_context(lua_State* L, int idx);
+static struct nv_buff* nvlua_check_nv_buff(lua_State* L, int idx);
+// nv_buff getters
+static int nvbuff_get_path(lua_State* L);
+static int nvbuff_get_line_count(lua_State* L);
+static int nvbuff_get_bytes_loaded(lua_State* L);
+static int nvbuff_get_buffer_size(lua_State* L);
+
 // end forwards
 
 lua_State* L; // global lua state
 
-static int nv_log_lua()
+static int nv_log_lua(lua_State* L)
 {
     if (!L) {
         return NV_ERR;
@@ -44,7 +57,7 @@ static int nv_log_lua()
     return NV_OK;
 }
 
-static int nv_open_plugdir(char* path, struct stat* sb)
+static int nv_open_plugdir(lua_State* L, char* path, struct stat* sb)
 {
     if (!path || !L) {
         return NV_ERR_NOT_INIT;
@@ -79,7 +92,7 @@ static int nv_open_plugdir(char* path, struct stat* sb)
     return NV_OK;
 }
 
-static int nv_load_plugin(char* path)
+static int nv_load_plugin(lua_State* L, char* path)
 {
     if (!path || !L) {
         return NV_ERR_NOT_INIT;
@@ -92,7 +105,7 @@ static int nv_load_plugin(char* path)
 
     switch (sb.st_mode & S_IFMT) {
     case S_IFDIR:
-        (void)nv_open_plugdir(path, &sb);
+        (void)nv_open_plugdir(L, path, &sb);
         break;
 
     default:
@@ -126,7 +139,7 @@ static int nvlua_get_event(lua_State* L, int idx) {
     }
 }
 
-static int nvlua_subscribe_event()
+static int nvlua_subscribe_event(lua_State* L)
 {
     // event id / name
     enum nv_event_sub event = nvlua_get_event(L, 1);
@@ -144,35 +157,127 @@ static int nvlua_subscribe_event()
     return NV_OK;
 }
 
-static void nvlua_set_metatable(const char* name)
+static void nvlua_set_metatable(lua_State* L, const char* name)
 {
     luaL_getmetatable(L, name);
     lua_setmetatable(L, -2); // userdata remains on stack
+}
+
+static struct nv_context* nvlua_check_nv_context(lua_State* L, int idx)
+{
+    struct nv_context** uc = (struct nv_context**)luaL_checkudata(L, idx, "nv_context");
+    if (!uc || !*uc) {
+        luaL_error(L, "invalid nv_context");
+    }
+    return *uc;
 }
 
 int nvlua_push_nv_context(struct nv_context* ctx)
 {
     struct nv_context** uc = (struct nv_context**)lua_newuserdata(L, sizeof(struct nv_context*));
     *uc = ctx;
-    nvlua_set_metatable("nv_context");
-    return NV_OK;
+    nvlua_set_metatable(L, "nv_context");
+    return 1;
 }
 
-static int nvlua_context_gc()
+int nvlua_push_nv_buff(struct nv_buff* b)
+{
+    struct nv_buff** ub = (struct nv_buff**)lua_newuserdata(L, sizeof(struct nv_buff*));
+    *ub = b;
+    nvlua_set_metatable(L, "nv_buff");
+    return 1;
+}
+
+static int nvctx_get_buffer(lua_State* L)
+{
+    struct nv_context* ctx = nvlua_check_nv_context(L, 1);
+    if (!ctx->buffer) {
+        lua_pushnil(L);
+        return 1;
+    }
+    return nvlua_push_nv_buff(ctx->buffer);
+}
+
+static int nvlua_context_gc(lua_State* L)
 {
     struct nv_context** uc = (struct nv_context**)luaL_checkudata(L, 1, "nv_context");
     *uc = NULL; // clear pointer so gc can't free it
     return NV_OK;
 }
 
-static void nvlua_register_nv_api()
+static struct nv_buff* nvlua_check_nv_buff(lua_State* L, int idx)
 {
+    struct nv_buff** ub = (struct nv_buff**)luaL_checkudata(L, idx, "nv_buff");
+    if (!ub || !*ub) {
+        luaL_error(L, "invalid nv_buff");
+    }
+    return *ub;
+}
+
+static int nvbuff_get_path(lua_State* L)
+{
+    struct nv_buff* b = nvlua_check_nv_buff(L, 1);
+    if (b->path) {
+        lua_pushstring(L, b->path);
+    }
+    else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+static int nvbuff_get_line_count(lua_State* L)
+{
+    struct nv_buff* b = nvlua_check_nv_buff(L, 1);
+    lua_pushinteger(L, b->line_count);
+    return 1;
+}
+
+static int nvbuff_get_bytes_loaded(lua_State* L)
+{
+    struct nv_buff* b = nvlua_check_nv_buff(L, 1);
+    lua_pushinteger(L, (lua_Integer)b->bytes_loaded);
+    return 1;
+}
+
+static int nvbuff_get_buffer_size(lua_State* L)
+{
+    struct nv_buff* b = nvlua_check_nv_buff(L, 1);
+    lua_pushinteger(L, (lua_Integer)(b->chunk_size));
+    return 1;
+}
+
+static void nvlua_register_nv_api(lua_State* L)
+{
+    luaL_newmetatable(L, "nv_buff");
+
+    lua_newtable(L);
+    // TODO: buffer methods
+    lua_pushcfunction(L, nvbuff_get_path);
+    lua_setfield(L, -2, "path");
+    lua_pushcfunction(L, nvbuff_get_line_count);
+    lua_setfield(L, -2, "line_count");
+    lua_pushcfunction(L, nvbuff_get_bytes_loaded);
+    lua_setfield(L, -2, "bytes_loaded");
+    lua_pushcfunction(L, nvbuff_get_buffer_size);
+    lua_setfield(L, -2, "buffer_size");
+    lua_setfield(L, -2, "__index");
+
+    // TODO: __gc
+    lua_pop(L, 1);                              // end nv_buff metatable
+
     luaL_newmetatable(L, "nv_context");
     lua_newtable(L);
     // TODO: context methods
+    lua_pushcfunction(L, nvctx_get_buffer);
+    lua_setfield(L, -2, "get_buffer");   // ctx:get_buffer()
+    lua_setfield(L, -2, "__index");
+
     lua_pushcfunction(L, nvlua_context_gc);
     lua_setfield(L, -2, "__gc");
-    lua_pop(L, 1);
+
+    lua_pop(L, 1);                              // end nv_context metatable
+
     nv_log("registered nv_context\n");
 
     lua_setglobal(L, "nv");
@@ -180,7 +285,7 @@ static void nvlua_register_nv_api()
     nv_log("registered nvlua api structures\n");
 }
 
-static void nvlua_register_es()
+static void nvlua_register_es(lua_State* L)
 {
     lua_newtable(L);
 
@@ -228,12 +333,12 @@ int nvlua_main()
     luaopen_math(L); /* opens the math lib. */
 #endif
 
-    nvlua_register_nv_api();
-    nvlua_register_es();
+    nvlua_register_nv_api(L);
+    nvlua_register_es(L);
 
     lua_register(L, "echo", nv_log_lua);
 
-    nv_load_plugin("./plugload/");
+    nv_load_plugin(L, "./plugload/");
 
     return NV_OK;
 }

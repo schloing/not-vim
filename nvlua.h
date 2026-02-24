@@ -8,6 +8,8 @@
 
 int nvlua_main();
 int l_dir(lua_State* L);
+int nvlua_push_nv_buff(struct nv_buff* b);
+int nvlua_push_nv_context(struct nv_context* ctx);
 void nvlua_free();
 void nvlua_pcall(int lua_func_ref, struct nv_context* ctx);
 
