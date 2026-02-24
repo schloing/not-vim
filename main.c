@@ -197,11 +197,11 @@ int main(int argc, char** argv)
     nv_init_status_window();
     nv_window_set_focus(nv_editor->window->split.left); // set primary window as focus
 
+    nv_log("notvim initialised\n");
+
     if (argc > 1) {
         nv_open_input_files(argc, argv);
     }
-
-    nv_log("notvim initialised\n");
 
 #ifdef NV_LUAJIT
     // load plugs
