@@ -31,7 +31,6 @@ static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_a
 static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area);
 static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
 static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
-static struct nv_window_node* nv_get_status_window();
 static int nv_calculate_statline();
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
