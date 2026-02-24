@@ -11,7 +11,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "cvector.h"
 #include "editor.h"
 #include "error.h"
 #include "events.h"
