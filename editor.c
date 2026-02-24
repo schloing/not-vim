@@ -658,7 +658,7 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         .view = view,
         .buffer = view->buffer,
     };
-    nv_event_emit(NV_EVENT_BUFFLOAD, &ctx);
+    nv_event_emit(NV_EVENT_BUFFDRAW, &ctx);
 #endif
 
     switch (view->buffer->type) {
