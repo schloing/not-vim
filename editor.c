@@ -9,13 +9,13 @@
 #include "buffer.h"
 #include "color.h"
 #include "cursor.h"
-#include "cursorhelp.h"
 #include "cvector.h"
 #include "editor.h"
 #include "events.h"
 #include "error.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
+#include "view.h"
 #include "window.h"
 
 static int nv_get_input(struct tb_event* ev);

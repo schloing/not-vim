@@ -1,5 +1,4 @@
 #include "cursor.h"
-#include "cursorhelp.h"
 #include "buffer.h"
 #include "termbox2.h"
 

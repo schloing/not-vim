@@ -2,7 +2,6 @@
 #define NV_WINDOW_H
 
 #include <stddef.h>
-#include "cvector.h"
 #include "error.h"
 
 struct nv_window_node;
@@ -42,12 +41,6 @@ struct nv_window_node {
             struct nv_window_area area;
         } leaf;
     };
-};
-
-struct nv_context {
-    struct nv_window_node* window;
-    struct nv_view* view;
-    struct nv_buff* buffer;
 };
 
 struct nv_window_node* nv_window_node_init(enum nv_window_kind kind);

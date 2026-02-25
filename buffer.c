@@ -10,6 +10,7 @@
 #include "error.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
+#include "view.h"
 
 static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff);
 
