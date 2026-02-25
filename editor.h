@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 #define TUI
 #include "buffer.h"
 #include "cvector.h"
@@ -64,6 +65,7 @@ struct nv_editor {
     bool running;
     bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
+    struct timespec start;
     struct nv_conf config;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
     cvector(struct nv_window_node*) windows;
