@@ -100,6 +100,7 @@ int nv_editor_init(struct nv_editor* editor)
     }
 
     nv_editor->mode = (nv_mode)NV_MODE_NAVIGATE;
+    clock_gettime(CLOCK_MONOTONIC, &nv_editor->start);
 #define NV_WINDOW_CAP 16
     cvector_reserve(nv_editor->windows, (size_t)NV_WINDOW_CAP);
     cvector_reserve(nv_editor->views, (size_t)NV_WINDOW_CAP);
@@ -197,9 +198,12 @@ void nv_log(const char* fmt, ...)
         return;
     }
 
-    clock_t ts = clock();
-    float ts_seconds = (float)ts / (float)CLOCKS_PER_SEC;
-    int ts_written = snprintf(buf + cur, cap - cur, "[%.3f] ", ts_seconds);
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    double time_taken;
+    time_taken = (now.tv_sec - nv_editor->start.tv_sec) * 1e9;
+    time_taken = (time_taken + (now.tv_nsec - nv_editor->start.tv_nsec)) * 1e-9;
+    int ts_written = snprintf(buf + cur, cap - cur, "[%.3f] ", time_taken);
 
     if (ts_written <= 0) {
         va_end(ap);
