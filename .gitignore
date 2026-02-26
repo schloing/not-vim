@@ -17,3 +17,6 @@ massif.out
 compile_commands.json
 .cache
 *.gitignore
+*.dylib
+*.so
+*.dll
