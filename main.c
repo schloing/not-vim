@@ -26,6 +26,7 @@ static void nv_cleanup();
 static void nv_setup_signal_handlers();
 static void nv_must_be_no_errors(const char* message);
 static void nvlua_load();
+static int get_exe_path(char* buf, size_t bufsiz);
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename)
 {
@@ -169,6 +170,78 @@ static void nv_open_input_files(int argc, char** argv)
     }
 }
 
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
+
+// returns path of folder which contains nv
+static int get_exe_path(char* buf, size_t bufsiz) {
+#if defined(__APPLE__)
+    uint32_t size = (uint32_t)bufsiz;
+    char exe_path[PATH_MAX];
+
+    if (_NSGetExecutablePath(exe_path, &size) != 0) {
+        return -1;
+    }
+
+    char resolved[PATH_MAX];
+    if (realpath(exe_path, resolved) == NULL) {
+        return -1;
+    }
+
+    char* last_slash = strrchr(resolved, '/');
+    if (!last_slash) {
+        return -1;
+    }
+
+    size_t dirlen = (size_t)(last_slash - resolved);
+    if (dirlen == 0) {
+        if (bufsiz < 2) {
+            return -1;
+        }
+        strcpy(buf, "/");
+        return 1;
+    }
+
+    if (dirlen >= bufsiz) {
+        return -1;
+    }
+
+    memcpy(buf, resolved, dirlen);
+    buf[dirlen] = '\0';
+    return (int)dirlen;
+#elif defined(__linux__)
+    ssize_t len = readlink("/proc/self/exe", buf, bufsiz - 1);
+    if (len <= 0 || (size_t)len >= bufsiz) {
+        return -1;
+    }
+
+    buf[len] = '\0';
+
+    char* last_slash = strrchr(buf, '/');
+    if (!last_slash) {
+        return -1;
+    }
+
+    size_t dirlen = (size_t)(last_slash - buf);
+    if (dirlen == 0) {
+        if (bufsiz < 2) {
+            return -1;
+        }
+        strcpy(buf, "/");
+        return 1;
+    }
+
+    buf[dirlen] = '\0';
+    return (int)dirlen;
+#else
+#warning "UNSUPPORTED"
+    (void)buf; (void)bufsiz;
+    return -1;
+#endif
+}
+
+
 static void nvlua_load()
 {
     struct nv_api nv_api = {
@@ -178,14 +251,28 @@ static void nvlua_load()
         .nv_str_event = nv_str_event,
     };
 
-#ifdef __linux__
-    void* nvlua = dlopen("libnvlua.so", RTLD_NOW);
-#elif defined(__APPLE__)
-    void* nvlua_handle = dlopen("libnvlua.dylib", RTLD_NOW);
-#endif
+    char buf[128];
+    int bufsiz = sizeof(buf) / sizeof(char);
+    bufsiz = get_exe_path(buf, bufsiz);
+
+    if (bufsiz < 0) {
+        return;
+    }
+
+    const char libnvlua_path[] =
+        "/"
+        #ifdef __linux__
+            "libnvlua.so"
+        #elif defined(__APPLE__)
+            "libnvlua.dylib"
+        #endif
+    ;
+
+    strcpy(&buf[bufsiz], libnvlua_path);
+    void* nvlua_handle = dlopen(buf, RTLD_NOW);
 
     if (!nvlua_handle) {
-        nv_log("nvlua not found\n");
+        nv_log("nvlua not found at %s\n", buf);
         return;
     }
 
