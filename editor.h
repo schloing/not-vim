@@ -63,10 +63,10 @@ struct nv_editor {
     double height;                     // NOTE: guaranteed to be integer
     int status;
     bool running;
-    bool lua_loaded;
     char inputs[NV_INPUT_BACKLOG_CAP];
     struct timespec start;
     struct nv_conf config;
+    const struct nvlua_api* nvlua;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
     cvector(struct nv_window_node*) windows;
     cvector(struct nv_view*) views;

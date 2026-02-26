@@ -1,3 +1,5 @@
+#include "events.h"
+#include "nvapi.h"
 #include <assert.h>
 #include <dlfcn.h>
 #include <execinfo.h>
@@ -12,9 +14,6 @@
 #include "color.h"
 #include "editor.h"
 #include "error.h"
-#ifdef NV_LUAJIT
-#include "nvlua.h"
-#endif
 #define TB_IMPL
 #include "termbox2.h"
 #undef TB_IMPL
@@ -26,6 +25,7 @@ static void nv_editor_cleanup(struct nv_editor* editor);
 static void nv_cleanup();
 static void nv_setup_signal_handlers();
 static void nv_must_be_no_errors(const char* message);
+static void nvlua_load();
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename)
 {
@@ -169,6 +169,48 @@ static void nv_open_input_files(int argc, char** argv)
     }
 }
 
+static void nvlua_load()
+{
+    struct nv_api nv_api = {
+        .nv_log = nv_log,
+        .nv_event_register_sub = nv_event_register_sub,
+        .nv_event_str = nv_event_str,
+        .nv_str_event = nv_str_event,
+    };
+
+#ifdef __linux__
+    void* nvlua = dlopen("libnvlua.so", RTLD_NOW);
+#elif defined(__APPLE__)
+    void* nvlua_handle = dlopen("libnvlua.dylib", RTLD_NOW);
+#endif
+
+    if (!nvlua_handle) {
+        nv_log("nvlua not found\n");
+        return;
+    }
+
+    nv_log("nvlua found and loaded\n");
+
+    nvlua_plugin_init_t plugin_init = (nvlua_plugin_init_t)dlsym(nvlua_handle, "nvlua_plugin_init");
+
+    if (!plugin_init) {
+        nv_log("failed to find nvlua_plugin_init\n");
+        dlclose(nvlua_handle);
+        return;
+    }
+
+    const struct nvlua_api* nvlua = plugin_init(&nv_api);
+
+    if (!nvlua) {
+        nv_log("nvlua plugin_init failed\n");
+        dlclose(nvlua_handle);
+        return;
+    }
+
+    nv_editor->nvlua = nvlua;
+    (void)nv_editor->nvlua->nvlua_main();
+}
+
 int main(int argc, char** argv)
 {
     nv_setup_signal_handlers();
@@ -197,16 +239,13 @@ int main(int argc, char** argv)
     nv_init_status_window();
     nv_window_set_focus(nv_editor->window->split.left); // set primary window as focus
 
+    nvlua_load();
+
     nv_log("notvim initialised\n");
 
     if (argc > 1) {
         nv_open_input_files(argc, argv);
     }
-
-#ifdef NV_LUAJIT
-    // load plugs
-    nvlua_main();
-#endif
 
     nv_main();
     exit(editor.status);

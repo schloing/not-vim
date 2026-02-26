@@ -18,20 +18,25 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     #    add_compile_options(-Wextra)
 endif()
 
-file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h" "*.c" "*.h")
+file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h"
+    "buffer.c" "editor.c" "events.c"
+    "cursor.c" "error.c" "main.c" "window.c"
+    "*.h"
+)
 
 add_executable(nv ${SRC_FILES})
 
 if(LuaJIT_FOUND)
-    target_include_directories(nv PRIVATE ${LuaJIT_INCLUDE_DIRS})
-    target_link_libraries(nv PRIVATE ${LuaJIT_LIBRARIES})
-    target_link_directories(nv PRIVATE ${LuaJIT_LIBRARY_DIRS})
-    target_compile_definitions(nv PRIVATE NV_LUAJIT)
-    message(STATUS "luajit found")
+    add_library(nvlua SHARED nvlua.c)
+    target_include_directories(nvlua PRIVATE ${LuaJIT_INCLUDE_DIRS})
+    target_link_directories(nvlua PRIVATE ${LuaJIT_LIBRARY_DIRS})
+    target_link_libraries(nvlua PRIVATE ${LuaJIT_LIBRARIES})
+    target_compile_definitions(nvlua PRIVATE NV_LUAJIT)
+    set_target_properties(nvlua PROPERTIES OUTPUT_NAME "nvlua")
 else()
+    message(STATUS "luajit not found, nvlua NOT built")
     target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
-    message(STATUS "luajit not found")
-endif()
+endif() 
 
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64
