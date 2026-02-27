@@ -3,7 +3,7 @@ project(notvim C)
 
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -37,6 +37,34 @@ else()
     message(STATUS "luajit not found, nvlua NOT built")
     target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
 endif() 
+
+include(ExternalProject)
+set(NN_INSTALL_DIR ${CMAKE_BINARY_DIR}/nng/install)
+
+ExternalProject_Add(nng
+    GIT_REPOSITORY https://github.com/nanomsg/nng.git
+    GIT_TAG stable
+    PREFIX ${CMAKE_BINARY_DIR}/nng/build
+    INSTALL_DIR ${NN_INSTALL_DIR}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    BUILD_BYPRODUCTS
+        ${NN_INSTALL_DIR}/lib/libnng.so
+        ${NN_INSTALL_DIR}/lib/libnng.dylib
+        ${NN_INSTALL_DIR}/lib/libnng.a
+)
+
+add_library(nvrpc SHARED rpc.c)
+add_dependencies(nvrpc nng)
+
+find_library(NNG_LIB NAMES nng PATHS ${NN_INSTALL_DIR}/lib NO_DEFAULT_PATH)
+if(NNG_LIB)
+    target_link_libraries(nvrpc PRIVATE ${NNG_LIB})
+    target_include_directories(nvrpc PRIVATE ${NN_INSTALL_DIR}/include/nng)
+else()
+    message(STATUS "nng library not found in ${NN_INSTALL_DIR}/lib")
+endif()
 
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64

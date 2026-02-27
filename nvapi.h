@@ -17,6 +17,10 @@ struct nvlua_api {
     void* reserved[16];
 };
 
-typedef const struct nvlua_api* (*nvlua_plugin_init_t)(const struct nv_api* api);
+struct nvrpc_api {
+    // TODO:
+};
+
+typedef const void* (*nv_plugin_init_t)(const struct nv_api* api);
 
 #endif
