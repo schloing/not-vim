@@ -67,6 +67,7 @@ struct nv_editor {
     struct timespec start;
     struct nv_conf config;
     const struct nvlua_api* nvlua;
+    const struct nvrpc_api* nvrpc;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
     cvector(struct nv_window_node*) windows;
     cvector(struct nv_view*) views;
