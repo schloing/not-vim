@@ -20,7 +20,7 @@ struct nvlua_api {
 
 struct nvrpc_api {
     int (*nvrpc_main)();
-    int (*nvrpc_free)();
+    void (*nvrpc_free)();
     void* reserved[16];
     // TODO:
 };
