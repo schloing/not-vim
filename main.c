@@ -57,6 +57,12 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     editor->focus = NULL;
     editor->window = NULL;
     editor->logger = NULL;
+    if (editor->nvlua) {
+        editor->nvlua->nvlua_free();
+    }
+    if (editor->nvrpc) {
+        editor->nvrpc->nvrpc_free();
+    }
 }
 
 static void nv_cleanup()
