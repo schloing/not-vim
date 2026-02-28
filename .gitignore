@@ -20,4 +20,6 @@ compile_commands.json
 *.dylib
 *.so
 *.dll
-nng/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+CPackConfig-*.cmake
