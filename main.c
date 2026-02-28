@@ -306,6 +306,7 @@ static int nvlua_load()
     if (!nvrpc_handle) {
         nv_log("nvrpc not found at %s\n", buf);
         nv_log("nvrpc is required for full nvlua functionality\n");
+        dlclose(nvlua_handle);
         return NV_ERR;
     }
 
@@ -315,6 +316,7 @@ static int nvlua_load()
 
     if (!(plug_init = nv_call_plugin_init(nvlua_handle, "nvlua_plugin_init"))) {
         nv_log("nvlua plugin_init not found\n");
+        dlclose(nvlua_handle);
         return NV_ERR;
     }
 
@@ -323,11 +325,14 @@ static int nvlua_load()
     if (!nvlua) {
         nv_log("nvlua plugin_init failed\n");
         dlclose(nvlua_handle);
+        dlclose(nvrpc_handle);
         return NV_ERR;
     }
 
     if (!(plug_init = nv_call_plugin_init(nvrpc_handle, "nvrpc_plugin_init"))) {
         nv_log("nvrpc plugin_init not found\n");
+        dlclose(nvlua_handle);
+        dlclose(nvrpc_handle);
         return NV_ERR;
     }
 
@@ -336,6 +341,7 @@ static int nvlua_load()
     if (!nvrpc) {
         nv_log("nvrpc plugin_init failed\n");
         dlclose(nvlua_handle);
+        dlclose(nvrpc_handle);
         return NV_ERR;
     }
 
