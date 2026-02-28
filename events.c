@@ -7,17 +7,6 @@
 #include "error.h"
 #include "events.h"
 
-// extern'd events.h
-const struct lua_func_sig lua_callback_func_sigs[NV_EVENT_COUNT] = {
-    [NV_EVENT_BUFFLOAD] = {
-        .nargs = 1, // struct nv_context container_context
-        .nresults = 0,
-        .errfunc = 0,
-    },
-    // TODO: finish signature table for each function
-    // TODO: indicate function signature in table, so they can be verified at registration
-};
-
 #define NV_LUA_DEFAULT_CALLBACK_CAP 32
 static cvector(int) event_lua_callbacks[NV_EVENT_COUNT]; // each [NV_EVENT] can map to multiple luaL_ref values
 
@@ -88,7 +77,6 @@ int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx)
 
     for (int i = 0; i < callbacks; i++) {
         int ref = event_lua_callbacks[(int)event][i];
-        nvlua_pcall(ref, ctx);
     }
 
     return NV_OK;

@@ -2,7 +2,6 @@
 #define NV_EVENTS_H
 
 #include <stdbool.h>
-#include "nvlua.h"
 #include "window.h"
 
 enum nv_event_sub {
@@ -22,7 +21,5 @@ int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx);
 const bool nv_event_is_valid(enum nv_event_sub event);
 void nv_event_init();
 void nv_event_free();
-
-extern const struct lua_func_sig lua_callback_func_sigs[NV_EVENT_COUNT];
 
 #endif
