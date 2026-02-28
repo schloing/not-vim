@@ -2,7 +2,7 @@
 #include <stddef.h>
 
 #include "nvapi.h"
-#include "rpc.h"
+#include "nvrpc.h"
 
 static const struct nv_api* nvapi;
 static struct nvrpc_api nvrpc_api;

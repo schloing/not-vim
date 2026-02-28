@@ -55,7 +55,7 @@ ExternalProject_Add(nng
         ${NN_INSTALL_DIR}/lib/libnng.a
 )
 
-add_library(nvrpc SHARED rpc.c)
+add_library(nvrpc SHARED nvrpc.c)
 add_dependencies(nvrpc nng)
 
 find_library(NNG_LIB NAMES nng PATHS ${NN_INSTALL_DIR}/lib NO_DEFAULT_PATH)
