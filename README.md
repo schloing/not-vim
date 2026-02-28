@@ -8,7 +8,12 @@ git clone --recursive https://github.com/schloing/not-vim.git
 - cmake >3.14
 - pkg-config / pkgconf
 - gcc
-- luajit (optional, for plugload)
+- luajit (optional)
+- libuv
+- nng
+
+libuv and nng are automatically installed by the build script
+
 ### Makefile
 ```sh
 cmake .
@@ -57,6 +62,8 @@ all functionally required dependencies are statically linked by default, so no a
 - [cvector](https://github.com/eteran/c-vector/tree/master)
 - [termbox2](https://github.com/termbox/termbox2)
 - [nvtree](https://github.com/schloing/nvtree)
+- [libuv](https://github.com/libuv/libuv)
+- [nng](https://github.com/nanomsg/nng)
 
 ### read
 https://www.codingwiththomas.com/blog/a-lua-c-api-cheat-sheet
