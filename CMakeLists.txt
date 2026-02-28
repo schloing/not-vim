@@ -22,14 +22,14 @@ endif()
 file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h"
     "buffer.c" "editor.c" "events.c"
     "cursor.c" "error.c" "main.c" "window.c"
-    "*.h"
 )
 
 add_executable(nv ${SRC_FILES})
+target_include_directories(nv PRIVATE "./include" "./")
 
 if(LuaJIT_FOUND)
     add_library(nvlua SHARED nvlua.c)
-    target_include_directories(nvlua PRIVATE ${LuaJIT_INCLUDE_DIRS})
+    target_include_directories(nvlua PRIVATE ${LuaJIT_INCLUDE_DIRS} "./include" "./")
     target_link_directories(nvlua PRIVATE ${LuaJIT_LIBRARY_DIRS})
     target_link_libraries(nvlua PRIVATE ${LuaJIT_LIBRARIES})
     target_compile_definitions(nvlua PRIVATE NV_LUAJIT)
@@ -49,6 +49,7 @@ set(NNG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(nng EXCLUDE_FROM_ALL)
 
 add_library(nvrpc SHARED nvrpc.c)
+target_include_directories(nvrpc PRIVATE "./include" "./")
 target_link_libraries(nvrpc PRIVATE nng)
 
 target_compile_definitions(nv PRIVATE
