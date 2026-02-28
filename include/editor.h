@@ -7,7 +7,6 @@
 #define TUI
 #include "buffer.h"
 #include "cvector.h"
-#include "status.h"
 #include "window.h"
 
 #define NV_INPUT_BACKLOG_CAP 5
