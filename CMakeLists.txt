@@ -39,6 +39,11 @@ else()
     target_compile_definitions(nv PRIVATE NV_NO_LUAJIT)
 endif() 
 
+# libuv
+set(LIBUV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(libuv EXCLUDE_FROM_ALL)
+target_link_libraries(nv PRIVATE uv)
+
 # nng
 set(NNG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(nng EXCLUDE_FROM_ALL)
