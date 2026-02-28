@@ -161,19 +161,38 @@ static void nvlua_register_es(lua_State* L)
 }
 
 static struct nvlua_api nvlua_api;
+static const struct nv_api_version version = {
+    .min = 0,
+    .max = 0,
+};
 
-const struct nvlua_api* nvlua_plugin_init(const struct nv_api* api)
+nv_plugin_init_t nvlua_plugin_init(size_t indicated_version, const struct nv_api* api)
 {
     if (!api) {
         // trust that caller closes plugin
         return NULL;
     }
+
     nvapi = api;
+
     nvlua_api = (struct nvlua_api) {
         .nvlua_main = nvlua_main,
         .nvlua_free = nvlua_free,
     };
-    return &nvlua_api;
+
+    if (indicated_version > version.max) {
+        nvapi->nv_log("nvlua indicated nvapi version %zu is greater than max supported nvapi version %zu\n", indicated_version, version.max);
+        nvapi = NULL;
+        return NULL;
+    }
+
+    if (indicated_version < version.min) {
+        nvapi->nv_log("nvlua indicated nvapi version %zu is less than min supported nvapi version %zu\n", indicated_version, version.min);
+        nvapi = NULL;
+        return NULL;
+    }
+
+    return (void*)&nvlua_api;
 }
 
 static int nvlua_main()

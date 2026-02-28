@@ -1,6 +1,7 @@
 #ifndef NV_API_H
 #define NV_API_H
 
+#include <stddef.h>
 #include "events.h"
 
 struct nv_api {
@@ -18,9 +19,17 @@ struct nvlua_api {
 };
 
 struct nvrpc_api {
+    int (*nvrpc_main)();
+    int (*nvrpc_free)();
+    void* reserved[16];
     // TODO:
 };
 
-typedef const void* (*nv_plugin_init_t)(const struct nv_api* api);
+struct nv_api_version {
+    size_t min;
+    size_t max;
+};
+
+typedef const void* (*nv_plugin_init_t)(size_t indicated_version, const struct nv_api* api);
 
 #endif

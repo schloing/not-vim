@@ -254,6 +254,7 @@ static nv_plugin_init_t nv_call_plugin_init(void* handle, const char* symbol)
     return plugin_init;
 }
 
+// loads nvrpc as well
 static int nvlua_load()
 {
     struct nv_api nv_api = {
@@ -317,7 +318,7 @@ static int nvlua_load()
         return NV_ERR;
     }
 
-    const struct nvlua_api* nvlua = (struct nvlua_api*)plug_init(&nv_api);
+    const struct nvlua_api* nvlua = (struct nvlua_api*)plug_init(0, &nv_api);
 
     if (!nvlua) {
         nv_log("nvlua plugin_init failed\n");
@@ -330,7 +331,7 @@ static int nvlua_load()
         return NV_ERR;
     }
 
-    const struct nvrpc_api* nvrpc = (struct nvrpc_api*)plug_init(&nv_api);
+    const struct nvrpc_api* nvrpc = (struct nvrpc_api*)plug_init(0, &nv_api);
 
     if (!nvrpc) {
         nv_log("nvrpc plugin_init failed\n");
