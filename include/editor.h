@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <time.h>
 #define TUI
+#include <uv.h>
 #include "buffer.h"
 #include "cvector.h"
 #include "window.h"
@@ -56,6 +57,12 @@ struct nv_conf {
 
 extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 
+enum nv_poller_index {
+    NV_POLLER_INDEX_TTY,
+    NV_POLLER_INDEX_RESIZE,
+    NV_POLLER_COUNT,
+};
+
 struct nv_editor {
     nv_mode mode;
     double width;                      // NOTE: guaranteed to be integer
@@ -65,6 +72,7 @@ struct nv_editor {
     char inputs[NV_INPUT_BACKLOG_CAP];
     struct timespec start;
     struct nv_conf config;
+    uv_poll_t* pollers[NV_POLLER_COUNT];
     const struct nvlua_api* nvlua;
     const struct nvrpc_api* nvrpc;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;

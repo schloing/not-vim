@@ -15,6 +15,7 @@
 #include "error.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
+#include <uv.h>
 #include "view.h"
 #include "window.h"
 
@@ -282,6 +283,33 @@ void nv_resize_for_layout(int width, int height)
     nv_editor->height = height;
 }
 
+static void nv_close_pollers()
+{
+    for (int i = 0; i < NV_POLLER_COUNT; i++) {
+        if (!nv_editor->pollers[i]) {
+            continue;
+        }
+        uv_poll_stop(nv_editor->pollers[i]);
+        nv_editor->pollers[i] = NULL;
+    }
+}
+
+static void nv_on_tty(uv_poll_t* handle, int status, int events)
+{
+    if ((events & UV_READABLE) != true) {
+        return;
+    }
+
+    struct tb_event ev;
+    tb_peek_event(&ev, 0); // consume
+    nv_get_input(&ev);
+    nv_redraw_all();
+
+    if (!nv_editor->running) {
+        nv_close_pollers();
+    }
+}
+
 void nv_main()
 {
     if (nv_editor->running) {
@@ -298,16 +326,30 @@ void nv_main()
     nv_editor->running = true;
     nv_redraw_all();
 
-    struct tb_event ev;
-
-    while (nv_editor->running) {
-        if (tb_poll_event(&ev) != TB_OK) {
-            continue;
-        }
-
-        nv_get_input(&ev);
-        nv_redraw_all();
+    uv_loop_t* loop = (uv_loop_t*)malloc(sizeof(uv_loop_t));
+    if (!loop) {
+        nv_editor->status = NV_ERR_MEM;
+        exit(nv_editor->status);
     }
+    uv_loop_init(loop);
+
+    int tb_fds[2];
+    tb_get_fds(&tb_fds[NV_POLLER_INDEX_TTY], &tb_fds[NV_POLLER_INDEX_RESIZE]);
+
+    int poller_indexes[] = { NV_POLLER_INDEX_TTY, NV_POLLER_INDEX_RESIZE };
+    for (int i = 0; i < sizeof(poller_indexes) / sizeof(int); i++) {
+        uv_poll_t** poller = &nv_editor->pollers[poller_indexes[i]];
+        if (!poller) {
+            break;
+        }
+        *poller = (uv_poll_t*)malloc(sizeof(uv_poll_t));
+        uv_poll_init(loop, *poller, tb_fds[i]);
+        uv_poll_start(*poller, UV_READABLE, nv_on_tty);
+    }
+
+    uv_run(loop, UV_RUN_DEFAULT);
+    uv_loop_close(loop);
+    free(loop);
 }
 
 static void nv_draw_background_rect(int x1, int y1, int x2, int y2)
