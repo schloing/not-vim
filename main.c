@@ -341,6 +341,7 @@ static int nvlua_load()
 
     nv_editor->nvlua = nvlua;
     (void)nv_editor->nvlua->nvlua_main();
+    (void)nvrpc->nvrpc_main();
 
     return NV_OK;
 }
