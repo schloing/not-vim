@@ -1,6 +1,7 @@
 #include <nng/nng.h>
 #include <nng/protocol/reqrep0/req.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "error.h"
 #include "nvapi.h"
@@ -68,6 +69,8 @@ int nvrpc_main()
     nvapi->nv_log("succesfully opened rpc socket\n");
     nvrpc.s = sock;
     nvrpc.l = listener;
+    nng_socket_get_int(sock, NNG_OPT_SENDFD, &nvrpc_api.nng_send_fd);
+    nng_socket_get_int(sock, NNG_OPT_RECVFD, &nvrpc_api.nng_send_fd);
     return NV_OK;
 }
 

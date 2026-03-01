@@ -60,6 +60,8 @@ extern char* nv_mode_str[NV_MODE_INSERTS + 1];
 enum nv_poller_index {
     NV_POLLER_INDEX_TTY,
     NV_POLLER_INDEX_RESIZE,
+    NV_POLLER_INDEX_NNG_SEND,
+    NV_POLLER_INDEX_NNG_RECV,
     NV_POLLER_COUNT,
 };
 

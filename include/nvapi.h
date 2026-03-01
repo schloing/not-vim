@@ -21,6 +21,8 @@ struct nvlua_api {
 struct nvrpc_api {
     int (*nvrpc_main)();
     void (*nvrpc_free)();
+    int nng_send_fd;
+    int nng_recv_fd;
     void* reserved[16];
     // TODO:
 };
