@@ -35,6 +35,9 @@ static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
 static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 static int nv_calculate_statline();
+static void nv_close_pollers();
+static void nv_on_tty(uv_poll_t* handle, int status, int events);
+static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds);
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
 
