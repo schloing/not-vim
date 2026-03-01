@@ -312,12 +312,6 @@ static void nv_on_tty(uv_poll_t* handle, int status, int events)
     }
 }
 
-struct nv_poller_fd {
-    int fd;
-    int poller_index;
-    uv_poll_cb cb;
-};
-
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds)
 {
     for (int i = 0; i < (int)nfds; i++) {

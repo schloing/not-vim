@@ -65,6 +65,12 @@ enum nv_poller_index {
     NV_POLLER_COUNT,
 };
 
+struct nv_poller_fd {
+    int fd;
+    int poller_index;
+    uv_poll_cb cb;
+};
+
 struct nv_editor {
     nv_mode mode;
     double width;                      // NOTE: guaranteed to be integer
