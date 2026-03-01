@@ -13,6 +13,8 @@
 #include "editor.h"
 #include "events.h"
 #include "error.h"
+#include "nng/include/nng/compat/nanomsg/nn.h"
+#include "nvapi.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
 #include <uv.h>
@@ -310,6 +312,25 @@ static void nv_on_tty(uv_poll_t* handle, int status, int events)
     }
 }
 
+struct nv_poller_fd {
+    int fd;
+    int poller_index;
+    uv_poll_cb cb;
+};
+
+static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds)
+{
+    for (int i = 0; i < (int)nfds; i++) {
+        uv_poll_t** poller = &nv_editor->pollers[fds[i].poller_index];
+        if (!poller) {
+            break;
+        }
+        *poller = (uv_poll_t*)malloc(sizeof(uv_poll_t));
+        uv_poll_init(loop, *poller, fds[i].fd);
+        uv_poll_start(*poller, UV_READABLE, fds[i].cb);
+    }
+}
+
 void nv_main()
 {
     if (nv_editor->running) {
@@ -333,18 +354,35 @@ void nv_main()
     }
     uv_loop_init(loop);
 
-    int tb_fds[2];
-    tb_get_fds(&tb_fds[NV_POLLER_INDEX_TTY], &tb_fds[NV_POLLER_INDEX_RESIZE]);
-
-    int poller_indexes[] = { NV_POLLER_INDEX_TTY, NV_POLLER_INDEX_RESIZE };
-    for (int i = 0; i < sizeof(poller_indexes) / sizeof(int); i++) {
-        uv_poll_t** poller = &nv_editor->pollers[poller_indexes[i]];
-        if (!poller) {
-            break;
+    int tb_tty_fd, tb_resize_fd;
+    tb_get_fds(&tb_tty_fd, &tb_resize_fd);
+    // register termbox pollers
+    nv_register_pollers(loop, (struct nv_poller_fd[]) {
+        {
+            .fd = tb_tty_fd,
+            .poller_index = NV_POLLER_INDEX_TTY,
+            .cb = nv_on_tty,
+        },
+        {
+            .fd = tb_resize_fd,
+            .poller_index = NV_POLLER_INDEX_RESIZE,
+            .cb = nv_on_tty,
         }
-        *poller = (uv_poll_t*)malloc(sizeof(uv_poll_t));
-        uv_poll_init(loop, *poller, tb_fds[i]);
-        uv_poll_start(*poller, UV_READABLE, nv_on_tty);
+    }, 2);
+    // register nng pollers if rpc api is on
+    if (nv_editor->nvrpc) {
+        nv_register_pollers(loop, (struct nv_poller_fd[]) {
+            {
+                .fd = nv_editor->nvrpc->nng_recv_fd,
+                .poller_index = NV_POLLER_INDEX_NNG_RECV,
+                .cb = nv_on_tty,
+            },
+            {
+                .fd = nv_editor->nvrpc->nng_send_fd,
+                .poller_index = NV_POLLER_INDEX_NNG_SEND,
+                .cb = nv_on_tty,
+            }
+        }, 2);
     }
 
     uv_run(loop, UV_RUN_DEFAULT);
