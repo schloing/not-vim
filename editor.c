@@ -314,16 +314,51 @@ static void nv_on_tty(uv_poll_t* handle, int status, int events)
     }
 }
 
+static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
+{
+    (void)stream;
+    (void)nread;
+    (void)buf;
+    nv_on_tty(NULL, 0, UV_READABLE);
+
+    if (!nv_editor->running) {
+        uv_close((uv_handle_t*)stream, NULL);
+    }
+}
+
+static void nv_tty_stream_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
+{
+    (void)handle;
+    (void)suggested_size;
+    (void)buf;
+}
+
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds)
 {
+    int rv;
+    uv_poll_t** poller;
     for (int i = 0; i < (int)nfds; i++) {
-        uv_poll_t** poller = &nv_editor->pollers[fds[i].poller_index];
-        if (!poller) {
+        if (fds[i].poller_index >= NV_POLLER_COUNT || fds[i].fd < 0) {
+            continue;
+        }
+
+        poller = &nv_editor->pollers[fds[i].poller_index];
+        *poller = (uv_poll_t*)malloc(sizeof(uv_poll_t));
+        if (!*poller) {
+            nv_editor->status = NV_ERR_MEM;
             break;
         }
-        *poller = (uv_poll_t*)malloc(sizeof(uv_poll_t));
-        uv_poll_init(loop, *poller, fds[i].fd);
-        uv_poll_start(*poller, UV_READABLE, fds[i].cb);
+
+        if ((rv = uv_poll_init(loop, *poller, fds[i].fd)) != 0) {
+            tb_shutdown();
+            printf("failed to register poller: %s\n", uv_strerror(rv));
+            exit(NV_ERR);
+        }
+        if ((rv = uv_poll_start(*poller, UV_READABLE, fds[i].cb)) != 0) {
+            tb_shutdown();
+            printf("failed to start poller: %s\n", uv_strerror(rv));
+            exit(NV_ERR);
+        }
     }
 }
 
@@ -353,18 +388,24 @@ void nv_main()
     int tb_tty_fd, tb_resize_fd;
     tb_get_fds(&tb_tty_fd, &tb_resize_fd);
     // register termbox pollers
+    uv_tty_t tty;
+    // tb_tty_fd is an fd for /dev/tty which cannot be kqueue'd on macos,
+    // do not register that as a traditional poller
+    if (uv_tty_init(loop, &tty, STDIN_FILENO, UV_READABLE) != 0) {
+        nv_editor->status = NV_ERR;
+        exit(nv_editor->status);
+    }
+    (void)uv_tty_set_mode(&tty, UV_TTY_MODE_RAW);
+    (void)uv_read_start((uv_stream_t*)&tty, nv_tty_stream_alloc, nv_on_tty_stream);
+
     nv_register_pollers(loop, (struct nv_poller_fd[]) {
-        {
-            .fd = tb_tty_fd,
-            .poller_index = NV_POLLER_INDEX_TTY,
-            .cb = nv_on_tty,
-        },
         {
             .fd = tb_resize_fd,
             .poller_index = NV_POLLER_INDEX_RESIZE,
             .cb = nv_on_tty,
         }
-    }, 2);
+    }, 1);
+
     // register nng pollers if rpc api is on
     if (nv_editor->nvrpc) {
         nv_register_pollers(loop, (struct nv_poller_fd[]) {
