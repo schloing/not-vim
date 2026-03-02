@@ -25,7 +25,8 @@ static void nv_editor_cleanup(struct nv_editor* editor);
 static void nv_cleanup();
 static void nv_setup_signal_handlers();
 static void nv_must_be_no_errors(const char* message);
-static int nvlua_load();
+static int nvrpc_load(struct nv_api* nv_api);
+static int nvlua_load(struct nv_api* nv_api);
 static int get_exe_path(char* buf, size_t bufsiz);
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename)
@@ -260,15 +261,64 @@ static nv_plugin_init_t nv_call_plugin_init(void* handle, const char* symbol)
     return plugin_init;
 }
 
-// loads nvrpc as well
-static int nvlua_load()
+static int nvrpc_load(struct nv_api* nv_api)
 {
-    struct nv_api nv_api = {
-        .nv_log = nv_log,
-        .nv_event_register_sub = nv_event_register_sub,
-        .nv_event_str = nv_event_str,
-        .nv_str_event = nv_str_event,
-    };
+    char buf[128];
+    int bufsiz = sizeof(buf) / sizeof(char);
+    size_t nread = get_exe_path(buf, bufsiz);
+
+    if (nread < 0) {
+        return NV_ERR;
+    }
+
+    const char libnvrpc_path[] =
+        "/"
+        #ifdef __linux__
+            "libnvrpc.so"
+        #elif defined(__APPLE__)
+            "libnvrpc.dylib"
+        #endif
+    ;
+
+    strcpy(&buf[nread], libnvrpc_path);
+    void* nvrpc_handle = dlopen(buf, RTLD_NOW);
+
+    if (!nvrpc_handle) {
+        nv_log("nvrpc not found at %s\n", buf);
+        nv_log("nvrpc is required for full nvlua functionality\n");
+        return NV_ERR;
+    }
+
+    nv_log("nvrpc found and loaded\n");
+
+    nv_plugin_init_t plug_init;
+    if (!(plug_init = nv_call_plugin_init(nvrpc_handle, "nvrpc_plugin_init"))) {
+        nv_log("nvrpc plugin_init not found\n");
+        dlclose(nvrpc_handle);
+        return NV_ERR;
+    }
+
+    const struct nvrpc_api* nvrpc = (struct nvrpc_api*)plug_init(0, nv_api);
+
+    if (!nvrpc) {
+        nv_log("nvrpc plugin_init failed\n");
+        dlclose(nvrpc_handle);
+        return NV_ERR;
+    }
+
+    nv_editor->nvrpc = nvrpc;
+    (void)nv_editor->nvrpc->nvrpc_main();
+
+    return NV_OK;
+}
+
+static int nvlua_load(struct nv_api* nv_api)
+{
+    if (!nv_editor->nvrpc) {
+        // don't bother loading lua if rpc isn't running
+        nv_log("nvlua requires nvrpc for lua functionality, aborting\n");
+        return NV_ERR;
+    }
 
     char buf[128];
     int bufsiz = sizeof(buf) / sizeof(char);
@@ -297,64 +347,23 @@ static int nvlua_load()
 
     nv_log("nvlua found and loaded\n");
 
-    const char libnvrpc_path[] =
-        "/"
-        #ifdef __linux__
-            "libnvrpc.so"
-        #elif defined(__APPLE__)
-            "libnvrpc.dylib"
-        #endif
-    ;
-
-    strcpy(&buf[nread], libnvrpc_path);
-    void* nvrpc_handle = dlopen(buf, RTLD_NOW);
-
-    if (!nvrpc_handle) {
-        nv_log("nvrpc not found at %s\n", buf);
-        nv_log("nvrpc is required for full nvlua functionality\n");
-        dlclose(nvlua_handle);
-        return NV_ERR;
-    }
-
-    nv_log("nvrpc found and loaded\n");
-
     nv_plugin_init_t plug_init;
-
     if (!(plug_init = nv_call_plugin_init(nvlua_handle, "nvlua_plugin_init"))) {
         nv_log("nvlua plugin_init not found\n");
         dlclose(nvlua_handle);
         return NV_ERR;
     }
 
-    const struct nvlua_api* nvlua = (struct nvlua_api*)plug_init(0, &nv_api);
+    const struct nvlua_api* nvlua = (struct nvlua_api*)plug_init(0, nv_api);
 
     if (!nvlua) {
         nv_log("nvlua plugin_init failed\n");
         dlclose(nvlua_handle);
-        dlclose(nvrpc_handle);
-        return NV_ERR;
-    }
-
-    if (!(plug_init = nv_call_plugin_init(nvrpc_handle, "nvrpc_plugin_init"))) {
-        nv_log("nvrpc plugin_init not found\n");
-        dlclose(nvlua_handle);
-        dlclose(nvrpc_handle);
-        return NV_ERR;
-    }
-
-    const struct nvrpc_api* nvrpc = (struct nvrpc_api*)plug_init(0, &nv_api);
-
-    if (!nvrpc) {
-        nv_log("nvrpc plugin_init failed\n");
-        dlclose(nvlua_handle);
-        dlclose(nvrpc_handle);
         return NV_ERR;
     }
 
     nv_editor->nvlua = nvlua;
     (void)nv_editor->nvlua->nvlua_main();
-    nv_editor->nvrpc = nvrpc;
-    (void)nv_editor->nvrpc->nvrpc_main();
 
     return NV_OK;
 }
@@ -387,8 +396,19 @@ int main(int argc, char** argv)
     nv_init_status_window();
     nv_window_set_focus(nv_editor->window->split.left); // set primary window as focus
 
-    if (nvlua_load() != NV_OK) {
-        nv_log("nvlua has not been loaded. lua functionality will not work this session.\n");
+    struct nv_api nv_api = {
+        .nv_log = nv_log,
+        .nv_event_register_sub = nv_event_register_sub,
+        .nv_event_str = nv_event_str,
+        .nv_str_event = nv_str_event,
+    };
+
+    if (nvrpc_load(&nv_api) != NV_OK) {
+        nv_log("nvrpc failed to load\n");
+    }
+    
+    if (nvlua_load(&nv_api) != NV_OK) {
+        nv_log("nvlua failed to load\n");
     }
 
     nv_log("notvim initialised\n");
