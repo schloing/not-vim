@@ -58,6 +58,14 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     editor->focus = NULL;
     editor->window = NULL;
     editor->logger = NULL;
+
+    for (int i = 0; i < NV_POLLER_COUNT; i++) {
+        if (!editor->pollers[i]) {
+            continue;
+        }
+        free(editor->pollers[i]);
+    }
+
     if (editor->nvlua) {
         editor->nvlua->nvlua_free();
     }

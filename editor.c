@@ -423,13 +423,6 @@ void nv_main()
     }
 
     uv_run(loop, UV_RUN_DEFAULT);
-
-    for (int i = 0; i < NV_POLLER_COUNT; i++) {
-        if (!nv_editor->pollers[i]) {
-            continue;
-        }
-        free(nv_editor->pollers[i]);
-    }
     uv_loop_close(loop);
     free(loop);
 }
