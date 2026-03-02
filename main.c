@@ -68,9 +68,12 @@ static void nv_editor_cleanup(struct nv_editor* editor)
 
     if (editor->nvlua) {
         editor->nvlua->nvlua_free();
+        (void)dlclose(editor->nvlua->dl_handle);
     }
+
     if (editor->nvrpc) {
         editor->nvrpc->nvrpc_free();
+        (void)dlclose(editor->nvrpc->dl_handle);
     }
 }
 
