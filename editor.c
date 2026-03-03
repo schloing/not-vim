@@ -175,6 +175,11 @@ static void nv_draw_cursor()
         }
 
         l = nv_get_computed_line(&ctx, c.line);
+
+        if (!l) {
+            continue;
+        }
+
         line_length = l->length - 1;
 
         effective_row =
@@ -460,22 +465,27 @@ static void nv_handle_mouse_input(struct tb_event* ev)
         return;
     }
 
+    struct cursor* cursor = nv_primary_cursor(&focus);
+
     switch (ev->key) {
     case TB_KEY_MOUSE_WHEEL_UP:
         if (focus.view) {
             if (focus.view->top_line_index > 1) {
                 focus.view->top_line_index--;
+                cursor->line--;
             }
         }
-        // nv_cursor_move_up(&ctx, cursor, 2);
+
         break;
 
     case TB_KEY_MOUSE_WHEEL_DOWN:
         if (focus.view && focus.buffer) {
             focus.view->top_line_index++;
             focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
+            cursor->line++;
+            cursor->line = cursor->line > focus.buffer->line_count ? focus.buffer->line_count : cursor->line;
         }
-        // nv_cursor_move_down(&ctx, cursor, 2);
+
         break;
     }
 }
