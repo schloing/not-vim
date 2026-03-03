@@ -184,9 +184,9 @@ int nv_buffer_build_tree(struct nv_buff* buff)
     nv_buffers[buff->buff_id] = b;
     buff->tree = nv_tree_init();
 
-    int line_count = 0;
-    int abs_pos = 0;
-    int tree_pos = 0;
+    size_t line_count = 0;
+    size_t abs_pos = 0;
+    size_t tree_pos = 0;
     size_t granularity = nv_calculate_tree_node_granularity(buff);
 
     struct nv_node node = {
