@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "context.h"
 #include "cvector.h"
 #include "view.h"
 #include "nvtree/nvtree.h"
@@ -60,6 +61,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path);
 int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count);
 int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
+struct nv_node* nv_get_computed_line(struct nv_context* ctx, int lineno);
 nv_pool_index line(struct nv_context* ctx, int lineno);
 
 #endif

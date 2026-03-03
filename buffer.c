@@ -266,6 +266,23 @@ nv_pool_index line(struct nv_context* ctx, int lineno)
     return nv_find_by_line(ctx->buffer->tree, lineno);
 }
 
+struct nv_node* nv_get_computed_line(struct nv_context* ctx, int lineno)
+{
+    if (!ctx || !ctx->buffer || !ctx->view) {
+        return NULL;
+    }
+
+    if (lineno - ctx->view->top_line_index < 0) {
+        return NULL;
+    }
+
+    if (cvector_size(ctx->buffer->lines) <= lineno - ctx->view->top_line_index) {
+        return NULL;
+    }
+
+    return &ctx->buffer->lines[lineno - ctx->view->top_line_index];
+}
+
 int nv_free_view(struct nv_view* view)
 {
     if (!view) {
