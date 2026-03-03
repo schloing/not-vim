@@ -1,5 +1,6 @@
 #include "cursor.h"
 #include "buffer.h"
+#include "context.h"
 #include "editor.h"
 #include "termbox2.h"
 #include "window.h"
@@ -81,7 +82,11 @@ void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
         cursor->x = 0;
 }
 
-// struct cursor* nv_primary_cursor(struct nv_buff* buffer)
-// {
-//     return &buffer->cursors[NV_PRIMARY_CURSOR];
-// }
+struct cursor* nv_primary_cursor(struct nv_context* ctx)
+{
+    if (!ctx || !ctx->view) {
+        return NULL;
+    }
+
+    return &ctx->view->cursors[NV_PRIMARY_CURSOR];
+}
