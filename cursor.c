@@ -1,6 +1,7 @@
 #include "cursor.h"
 #include "buffer.h"
 #include "termbox2.h"
+#include "window.h"
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
 {
@@ -19,18 +20,17 @@ void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
         return;
     }
 
-    if (cursor->line + amt < ctx->buffer->line_count) {
+    if (cursor->line + amt <= ctx->buffer->line_count) {
         cursor->y += amt;
         cursor->line += amt;
     }
 
-    // FIXME
-    // if (cursor->y > ctx->view->area.h * nv_editor->height - 1) {
-    //     ctx->view->top_line_index++;
-    //     cursor->y = ctx->view->area.h * nv_editor->height - 1;
-    //     cursor->line -= amt;
-    //     cursor->line++;
-    // }
+    if (cursor->y > ctx->window->leaf.area.h - 1) {
+        ctx->view->top_line_index++;
+        cursor->y = ctx->window->leaf.area.h - 1;
+        cursor->line -= amt;
+        cursor->line++;
+    }
 }
 
 void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
@@ -49,12 +49,20 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
         cursor->y = 0;
         cursor->line--;
     }
+
+    if (cursor->line <= 1) {
+        cursor->line = 1;
+    }
+
+    if (ctx->view->top_line_index <= 1) {
+        ctx->view->top_line_index = 1;
+    }
 }
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    struct nv_tree_node* l = NODE_FROM_POOL(line(ctx, cursor->line));
-    int length = l ? (int)l->data.length : 0;
+    struct nv_node* l = &ctx->buffer->lines[cursor->line - ctx->view->top_line_index];
+    int length = l ? (int)l->length : 0;
 
     // cursor could be out of range before any change to the cursor
     if (cursor->x > length)
