@@ -61,17 +61,20 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    struct nv_node* l = &ctx->buffer->lines[cursor->line - ctx->view->top_line_index];
-    int length = l ? (int)l->length : 0;
+    struct nv_node* l = nv_get_computed_line(ctx, cursor->line);
+
+    if (!l) {
+        return;
+    }
 
     // cursor could be out of range before any change to the cursor
-    if (cursor->x > length)
-        cursor->x = length;
+    if (cursor->x > l->length)
+        cursor->x = l->length;
 
     cursor->x += amt;
 
-    if (cursor->x > length)
-        cursor->x = length;
+    if (cursor->x > l->length)
+        cursor->x = l->length;
 
     if (cursor->x < 0)
         cursor->x = 0;

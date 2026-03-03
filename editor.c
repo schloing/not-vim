@@ -167,15 +167,16 @@ static void nv_draw_cursor()
     }
 
     int line_length = 0, effective_row = 0;
-    struct nv_node l;
+    struct nv_node* l;
 
     for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
         if (c.line > ctx.buffer->line_count) {
             continue;
         }
-        l = ctx.buffer->lines[c.line - 1];
-        line_length = l.length - 1;
+
+        l = nv_get_computed_line(&ctx, c.line);
+        line_length = l->length - 1;
 
         effective_row =
             ctx.window->leaf.area.x +                                   // window position
