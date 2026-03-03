@@ -1,15 +1,16 @@
 #include "cursor.h"
 #include "buffer.h"
+#include "editor.h"
 #include "termbox2.h"
 #include "window.h"
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
 {
-//  struct nv_node* l = line(ctx, cursor->line);
-//  size_t row = l->begin + (cursor->x > l->length ? l->length : cursor->x);
-
-//  cvector_insert(ctx->view->buffer->buffer, row, ch);
-
+    // TODO: implement
+    nv_log("unimplemented %s\n", __PRETTY_FUNCTION__);
+    (void)ctx;
+    (void)cursor;
+    (void)ch;
     cursor->x++;
 }
 
