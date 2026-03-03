@@ -226,6 +226,10 @@ int nv_buffer_build_tree(struct nv_buff* buff)
         buff->tree = nv_tree_paint(buff->tree, B);
     }
 
+    if (line_count == 0) {
+        line_count = 1;
+    }
+
     buff->line_count = line_count;
 
     return NV_OK;
