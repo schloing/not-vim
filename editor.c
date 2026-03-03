@@ -13,7 +13,6 @@
 #include "editor.h"
 #include "events.h"
 #include "error.h"
-#include "nng/include/nng/compat/nanomsg/nn.h"
 #include "nvapi.h"
 #include "nvtree/nvtree.h"
 #include "termbox2.h"
