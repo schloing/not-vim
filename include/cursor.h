@@ -5,7 +5,7 @@
 #include "context.h"
 
 struct cursor {
-    int x;
+    size_t x;
     int y;
     int line; // 1-indexed
     char ch;
