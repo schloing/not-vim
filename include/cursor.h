@@ -7,7 +7,7 @@
 struct cursor {
     int x;
     int y;
-    int line;
+    int line; // 1-indexed
     char ch;
     size_t buff_id;
 };
