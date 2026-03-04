@@ -13,6 +13,7 @@
 #include "view.h"
 
 static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff);
+static size_t nv_collect_lines(struct nv_view* view, struct nv_tree_node* current, size_t line_no, size_t left_lf, size_t lines_remaining);
 
 bool is_elf(const char* buffer)
 {
@@ -324,6 +325,54 @@ int nv_free_buffer(struct nv_buff* buff)
     return NV_OK;
 }
 
+static size_t nv_collect_lines(struct nv_view* view, struct nv_tree_node* current, size_t line_no, size_t left_lf, size_t lines_remaining)
+{
+    // line is within this node
+    char* buf = nv_buffers[current->data.buff_id];
+    if (!buf) {
+        return 0;
+    }
+
+    size_t bufsiz = cvector_size(buf);
+    // how many lines to skip to get the target line?
+    size_t lines_to_skip = line_no - left_lf;
+
+    struct nv_node line_node = {
+        .buff_id = current->data.buff_id,
+        .buff_index = current->data.buff_index,
+        .length = 0,
+        .lfcount = 1,
+    };
+
+    // skip necessary amt of lines
+    while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
+        if (buf[line_node.buff_index] == '\n') {
+            lines_to_skip--;
+        }
+        line_node.buff_index++;
+    }
+
+    size_t lines_collected = 0;
+    // collect the rest of the lines in this node
+    while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
+        if (line_node.buff_index + line_node.length >= bufsiz) {
+            return lines_collected;
+        }
+
+        if (buf[line_node.buff_index + line_node.length] == '\n') {
+            line_node.length++;
+            cvector_push_back(view->buffer->lines, line_node);
+            line_node.buff_index += line_node.length;
+            line_node.length = 0;
+            lines_collected++;
+        } else {
+            line_node.length++;
+        }
+    }
+
+    return lines_collected;
+}
+
 // FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
 void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
 {
@@ -368,51 +417,7 @@ void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const stru
         }
         else if (searching_for_top ? (line < left_lf + local_lf) : false) {
             searching_for_top = false; // this node has top_line_index
-
-            // line is within this node
-            char* buf = nv_buffers[current->data.buff_id];
-            if (!buf) {
-                return;
-            }
-
-            size_t bufsiz = cvector_size(buf);
-            // how many lines to skip to get the target line?
-            size_t lines_to_skip = line - left_lf;
-
-            struct nv_node line_node = {
-                .buff_id = current->data.buff_id,
-                .buff_index = current->data.buff_index,
-                .length = 0,
-                .lfcount = 1,
-            };
-
-            // skip necessary amt of lines
-            while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
-                if (buf[line_node.buff_index] == '\n') {
-                    lines_to_skip--;
-                }
-                line_node.buff_index++;
-            }
-
-            size_t lines_collected = 0;
-            // collect the rest of the lines in this node
-            while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
-                if (line_node.buff_index + line_node.length >= bufsiz) {
-                    return;
-                }
-
-                if (buf[line_node.buff_index + line_node.length] == '\n') {
-                    line_node.length++;
-                    cvector_push_back(view->buffer->lines, line_node);
-                    line_node.buff_index += line_node.length;
-                    line_node.length = 0;
-                    lines_collected++;
-                } else {
-                    line_node.length++;
-                }
-            }
-
-            lines_remaining -= lines_collected;
+            lines_remaining -= nv_collect_lines(view, current, line, left_lf, lines_remaining);
             line = 0;
             current = right;
         }
