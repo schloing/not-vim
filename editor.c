@@ -381,8 +381,3 @@ static int nv_get_input(struct tb_event* ev)
 
     return NV_OK;
 }
-
-int netrw_filename_sort(const void* a, const void* b)
-{
-    return strcmp(*(const char**)a, *(const char**)b);
-}
