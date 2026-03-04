@@ -8,23 +8,20 @@
 
 #include "buffer.h"
 #include "color.h"
-#include "cursor.h"
 #include "cvector.h"
 #include "draw.h"
 #include "editor.h"
 #include "events.h"
+#include "input.h"
 #include "error.h"
 #include "nvapi.h"
-#include "nvtree/nvtree.h"
 #include "termbox2.h"
 #include <uv.h>
 #include "view.h"
 #include "window.h"
 
 static int nv_get_input(struct tb_event* ev);
-static void nv_set_mode(nv_mode mode);
 static void nv_redraw_all();
-static int nv_calculate_statline();
 static void nv_close_pollers();
 static void nv_on_tty(uv_poll_t* handle, int status, int events);
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds);
@@ -106,12 +103,6 @@ int nv_editor_init(struct nv_editor* editor)
     };
 
     return NV_OK;
-}
-
-static void nv_set_mode(nv_mode mode)
-{
-    nv_editor->mode = mode;
-    nv_calculate_statline();
 }
 
 void nv_log(const char* fmt, ...)
@@ -355,80 +346,6 @@ void nv_main()
     free(loop);
 }
 
-static void nv_handle_mouse_input(struct tb_event* ev)
-{
-    struct nv_context focus = nv_get_context(nv_get_focused_window());
-
-    if (!ev || !focus.window) {
-        return;
-    }
-
-    struct cursor* cursor = nv_primary_cursor(&focus);
-
-    switch (ev->key) {
-    case TB_KEY_MOUSE_WHEEL_UP:
-        if (focus.view) {
-            if (focus.view->top_line_index > 1) {
-                focus.view->top_line_index--;
-                cursor->line--;
-            }
-        }
-
-        break;
-
-    case TB_KEY_MOUSE_WHEEL_DOWN:
-        if (focus.view && focus.buffer) {
-            focus.view->top_line_index++;
-            focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
-            cursor->line++;
-            cursor->line = cursor->line > focus.buffer->line_count ? focus.buffer->line_count : cursor->line;
-        }
-
-        break;
-    }
-}
-
-static void nv_handle_key_input(struct tb_event* ev)
-{
-    struct nv_context focus = nv_get_context(nv_get_focused_window());
-
-    if (!ev || !focus.window) {
-        return;
-    }
-
-    struct cursor* cursor = &focus.view->cursors[NV_PRIMARY_CURSOR];
-
-    if (nv_editor->mode == NV_MODE_INSERT) {
-        if (isprint(ev->ch)) {
-            // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
-        }
-        else if (ev->key == TB_KEY_ESC) {
-            nv_set_mode(NV_MODE_NAVIGATE);
-        }
-    }
-    else {
-        if (ev->key == TB_KEY_ESC) {
-            nv_editor->running = false;
-        }
-        else {
-            switch (ev->ch) {
-                case 'i':
-                    nv_set_mode(NV_MODE_INSERT);
-                    break;
-
-                case '\\':
-                    nv_editor->logger->leaf.view->visible = !nv_editor->logger->leaf.view->visible;
-                    break;
-
-                case 'j': nv_cursor_move_down(&focus, cursor, 1); break;
-                case 'k': nv_cursor_move_up(&focus, cursor, 1); break;
-                case 'h': nv_cursor_move_x(&focus, cursor, -1); break;
-                case 'l': nv_cursor_move_x(&focus, cursor, 1); break;
-            }
-        }
-    }
-}
-
 static int nv_get_input(struct tb_event* ev)
 {
     if (nv_editor->config.show_headless) {
@@ -468,22 +385,4 @@ static int nv_get_input(struct tb_event* ev)
 int netrw_filename_sort(const void* a, const void* b)
 {
     return strcmp(*(const char**)a, *(const char**)b);
-}
-
-static int nv_calculate_statline()
-{
-    struct nv_context statline = nv_get_context(nv_editor->statline);
-    struct nv_context focus = nv_get_context(nv_get_focused_window());
-
-    if (!statline.buffer || !focus.buffer) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    if (snprintf(statline.buffer->buffer, NV_BUFF_CHUNK_SIZE, "%s (%s, %s) --%s--"/* "%d %d,%d/%ld" */, focus.buffer->path,
-                nv_str_buff_type[focus.buffer->type], nv_str_buff_fmt[focus.buffer->format],
-                nv_mode_str[nv_editor->mode] /*, c.y, c.line, c.x, l ? l->data.length : 0 */) == -1) {
-        return NV_ERR_MEM;
-    }
-
-    return NV_OK;
 }

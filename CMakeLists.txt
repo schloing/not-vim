@@ -22,7 +22,7 @@ endif()
 file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h"
     "buffer.c" "editor.c" "events.c"
     "cursor.c" "error.c" "main.c" "window.c"
-    "draw.c"
+    "draw.c" "input.c"
 )
 
 add_executable(nv ${SRC_FILES})

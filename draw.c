@@ -253,3 +253,21 @@ void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, i
 
     free(string);
 }
+
+int nv_calculate_statline()
+{
+    struct nv_context statline = nv_get_context(nv_editor->statline);
+    struct nv_context focus = nv_get_context(nv_get_focused_window());
+
+    if (!statline.buffer || !focus.buffer) {
+        return NV_ERR_NOT_INIT;
+    }
+
+    if (snprintf(statline.buffer->buffer, NV_BUFF_CHUNK_SIZE, "%s (%s, %s) --%s--"/* "%d %d,%d/%ld" */, focus.buffer->path,
+                nv_str_buff_type[focus.buffer->type], nv_str_buff_fmt[focus.buffer->format],
+                nv_mode_str[nv_editor->mode] /*, c.y, c.line, c.x, l ? l->data.length : 0 */) == -1) {
+        return NV_ERR_MEM;
+    }
+
+    return NV_OK;
+}
