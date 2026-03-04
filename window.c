@@ -114,3 +114,12 @@ struct nv_context nv_get_context(struct nv_window_node* window)
         .buffer = window && window->leaf.view ? window->leaf.view->buffer : NULL,
     };
 }
+
+struct nv_window_node* nv_get_focused_window()
+{
+    if (!nv_editor->focus) {
+        return NULL;
+    }
+
+    return nv_editor->focus;
+}

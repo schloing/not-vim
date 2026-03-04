@@ -49,6 +49,7 @@ nv_err nv_window_set_focus(struct nv_window_node* focus);
 void nv_free_windows();
 void nv_free_views();
 struct nv_context nv_get_context(struct nv_window_node* window);
+struct nv_window_node* nv_get_focused_window();
 // TODO:
 void nv_window_remove(struct nv_window_node* window);
 void nv_window_resize_split(struct nv_window_node* split_node, float new_ratio);

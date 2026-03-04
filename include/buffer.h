@@ -9,6 +9,7 @@
 #include "cvector.h"
 #include "view.h"
 #include "nvtree/nvtree.h"
+#include "window.h"
 
 #define NV_BUFFID_UNSET        0
 #define NV_BUFF_CHUNK_SIZE     1024 * 16
@@ -62,5 +63,6 @@ int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
 struct nv_node* nv_get_computed_line(struct nv_context* ctx, int lineno);
 nv_pool_index line(struct nv_context* ctx, int lineno);
+void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 
 #endif

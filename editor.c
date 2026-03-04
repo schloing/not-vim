@@ -10,6 +10,7 @@
 #include "color.h"
 #include "cursor.h"
 #include "cvector.h"
+#include "draw.h"
 #include "editor.h"
 #include "events.h"
 #include "error.h"
@@ -21,18 +22,8 @@
 #include "window.h"
 
 static int nv_get_input(struct tb_event* ev);
-static int count_no_digits(int n);
-static struct nv_window_node* nv_get_focused_window();
-static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area);
 static void nv_set_mode(nv_mode mode);
-static void nv_draw_cursor();
 static void nv_redraw_all();
-static void nv_draw_background_rect(int x1, int y1, int x2, int y2);
-static void nv_draw_background();
-static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area area);
-static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area);
-static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length);
-static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 static int nv_calculate_statline();
 static void nv_close_pollers();
 static void nv_on_tty(uv_poll_t* handle, int status, int events);
@@ -65,38 +56,6 @@ char* nv_str_buff_fmt[NV_FILE_FORMAT_END] = {
     "source",
     "plaintext",
 };
-
-// wrappers
-
-#define NV_PRINTF(x, y, fg, fmt, ...) \
-    tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
-
-// FIXME
-static inline void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length)
-{
-    if (!lbuf || !view) {
-        return;
-    }
-
-    size_t max_length = 0, gutter_offset = 0;
-    max_length = length > area->w ? area->w : length;
-    char* string = (char*)malloc(max_length + 1);
-
-    for (int i = 0; i < max_length; i++) {
-        string[i] = lbuf[i];
-    }
-
-    string[max_length] = '\0';
-
-    if (view->gutter_width_cols > 0) {
-        gutter_offset = view->gutter_width_cols + view->gutter_gap;
-        NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_width_cols, line_no);
-    }
-
-    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_WHITE, "%s", string);
-
-    free(string);
-}
 
 int nv_editor_init(struct nv_editor* editor)
 {
@@ -153,42 +112,6 @@ static void nv_set_mode(nv_mode mode)
 {
     nv_editor->mode = mode;
     nv_calculate_statline();
-}
-
-static void nv_draw_cursor()
-{
-    struct nv_context ctx = nv_get_context(nv_get_focused_window());
-    struct cursor c;
-
-    if (!ctx.view || !ctx.buffer) {
-        // FIXME
-        return;
-    }
-
-    int line_length = 0, effective_row = 0;
-    struct nv_node* l;
-
-    for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
-        c = ctx.view->cursors[cindex];
-        if (c.line > ctx.buffer->line_count) {
-            continue;
-        }
-
-        l = nv_get_computed_line(&ctx, c.line);
-
-        if (!l) {
-            continue;
-        }
-
-        line_length = l->length - 1;
-
-        effective_row =
-            ctx.window->leaf.area.x +                                   // window position
-            ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
-            (c.x > line_length ? line_length : c.x);                    // cap the cursor to the end of the line
-    
-        tb_set_cell(effective_row, c.y, ' ', NV_BLACK, NV_WHITE);
-    }
 }
 
 void nv_log(const char* fmt, ...)
@@ -432,31 +355,6 @@ void nv_main()
     free(loop);
 }
 
-static void nv_draw_background_rect(int x1, int y1, int x2, int y2)
-{
-#ifdef NV_DEBUG_WINDOW_BACKGROUND_COLOURS
-    int colour = rand() % 0x1000000;
-#endif
-
-    for (int i = x1; i < x2; i++) {
-        for (int j = y1; j < y2; j++) {
-#ifdef NV_DEBUG_WINDOW_BACKGROUND_COLOURS
-            tb_set_cell(i, j, ' ', nv_editor->config.fg_main, colour);
-#else
-            tb_set_cell(i, j, ' ', nv_editor->config.fg_main, nv_editor->config.bg_main);
-#endif
-        }
-    }
-
-    // caller needa call tb_present()
-}
-
-static void nv_draw_background()
-{
-    tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);
-    tb_clear();
-}
-
 static void nv_handle_mouse_input(struct tb_event* ev)
 {
     struct nv_context focus = nv_get_context(nv_get_focused_window());
@@ -567,269 +465,9 @@ static int nv_get_input(struct tb_event* ev)
     return NV_OK;
 }
 
-static struct nv_window_node* nv_get_focused_window()
-{
-    if (!nv_editor->focus) {
-        return NULL;
-    }
-
-    return nv_editor->focus;
-}
-
-// calculate the # of digits in n
-static int count_no_digits(int n)
-{
-    if (n < 0) {
-        return count_no_digits((n == INT_MIN) ? INT_MAX : -n);
-    }
-
-    if (n < 10) {
-        return 1;
-    }
-    
-    return 1 + count_no_digits(n / 10);
-}
-
-static int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area area)
-{
-    if (!root) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    if (root->kind == NV_WM_SPLIT) {
-        struct nv_window_area child_area = { 0 };
-
-        if (root->split.kind == NV_SPLIT_HORIZONTAL) {
-            // top split
-            child_area.h = root->split.ratio * area.h;
-            child_area.w = area.w;
-            child_area.x = area.x;
-            child_area.y = area.y;
-            (void)nv_draw_windows(root->split.left, child_area);
-            
-            // bottom split
-            child_area.y += child_area.h;
-            child_area.h = area.h - child_area.h;
-            (void)nv_draw_windows(root->split.right, child_area);
-        }
-        else {
-            // left split
-            child_area.h = area.h;
-            child_area.w = root->split.ratio * area.w;
-            child_area.x = area.x;
-            child_area.y = area.y;
-            (void)nv_draw_windows(root->split.left, child_area);
-
-            // right split
-            child_area.x += child_area.w;
-            child_area.w = area.w - child_area.w;
-            (void)nv_draw_windows(root->split.right, child_area);
-        }
-
-        return NV_OK;
-    }
-
-    if (root->leaf.view) {          // TODO: this shouldn't be necessary here, all view drawing logic (null or not)
-                                    // needa be moved into draw_view
-        // FIXME: doing this only for ez compile, there's no reason 2 pass area in nv_draw_windows
-        root->leaf.area = area;
-        nv_draw_background_rect(area.x, area.y, area.x + area.w, area.y + area.h);
-        nv_draw_view(root->leaf.view, &area);
-    }
-
-    return NV_OK;
-}
-
-// FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
-static void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
-{
-    if (!view || !view->buffer) {
-        return;
-    }
-
-#ifdef NV_DEBUG_INEFFICIENT_TREE_FLATTEN
-    for (int line = view->top_line_index - 1; line < line + area->h; line++) {
-        nv_tree_pool_index l = nv_find_by_line(view->buffer->tree, line);
-        if (l == NV_NULL_INDEX) {
-            break;
-        }
-        cvector_push_back(view->buffer->lines, NODE_FROM_POOL(l)->data);
-    }
-
-    return;
-#endif
-
-    size_t line = view->top_line_index - 1;
-    size_t lines_remaining = area->h; // how many lines after 'line' to flatten
-    bool searching_for_top = true;
-    struct nv_tree_node* current = NODE_FROM_POOL(tree);
-
-    while (current && lines_remaining > 0) {
-        struct nv_tree_node* left = current->left ? NODE_FROM_POOL(current->left) : NULL;
-        struct nv_tree_node* right = current->right ? NODE_FROM_POOL(current->right) : NULL;
-
-        size_t left_lf = left ? left->data.lfcount : 0;
-        size_t right_lf = right ? right->data.lfcount : 0;
-        size_t local_lf = current->data.lfcount - left_lf - right_lf;
-
-        if (left_lf == 0 && right_lf == 0 && local_lf == 0 && line == 0) {
-            // edge case - there is only 1 line
-            cvector_push_back(view->buffer->lines, current->data);
-            break;
-        }
-
-        if (line < left_lf) {
-            // line in left tree
-            current = left;
-        }
-        else if (searching_for_top ? (line < left_lf + local_lf) : false) {
-            searching_for_top = false; // this node has top_line_index
-
-            // line is within this node
-            char* buf = nv_buffers[current->data.buff_id];
-            if (!buf) {
-                return;
-            }
-
-            size_t bufsiz = cvector_size(buf);
-            // how many lines to skip to get the target line?
-            size_t lines_to_skip = line - left_lf;
-
-            struct nv_node line_node = {
-                .buff_id = current->data.buff_id,
-                .buff_index = current->data.buff_index,
-                .length = 0,
-                .lfcount = 1,
-            };
-
-            // skip necessary amt of lines
-            while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
-                if (buf[line_node.buff_index] == '\n') {
-                    lines_to_skip--;
-                }
-                line_node.buff_index++;
-            }
-
-            size_t lines_collected = 0;
-            // collect the rest of the lines in this node
-            while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
-                if (line_node.buff_index + line_node.length >= bufsiz) {
-                    return;
-                }
-
-                if (buf[line_node.buff_index + line_node.length] == '\n') {
-                    line_node.length++;
-                    cvector_push_back(view->buffer->lines, line_node);
-                    line_node.buff_index += line_node.length;
-                    line_node.length = 0;
-                    lines_collected++;
-                } else {
-                    line_node.length++;
-                }
-            }
-
-            lines_remaining -= lines_collected;
-            line = 0;
-            current = right;
-        }
-        else {
-            // line in right tree
-            line -= left_lf + local_lf;
-            current = right;
-        }
-    }
-}
-
-static int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area)
-{
-    if (!view || !view->buffer || !area) {
-        return NV_ERR_NOT_INIT;
-    }
-
-    cvector_clear(view->buffer->lines); // FIXME, can reuse some lines depending on scroll shift
-    nv_buffer_flatten_tree(view->buffer->tree, view, area);
-    size_t computed_lines = cvector_size(view->buffer->lines);
-    size_t line_no = view->top_line_index;
-#define VIEW_DRAWABLE_WIDTH (area->w - (view->gutter_gap + view->gutter_width_cols))
-#define RELATIVE_LINE_INDEX (line_no - view->top_line_index)
-    for (size_t row = 0; row < area->h;) {
-        if (RELATIVE_LINE_INDEX > computed_lines) {
-            break;
-        }
-
-        struct nv_node node = view->buffer->lines[RELATIVE_LINE_INDEX];
-        for (int i = 0; i < node.length; i += VIEW_DRAWABLE_WIDTH) {
-            if (view->top_line_index + row > view->buffer->line_count) {
-                break;
-            }
-            nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index + i], VIEW_DRAWABLE_WIDTH);
-            row++;
-        }
-        line_no++;
-    }
-
-    return NV_OK;
-}
-
 int netrw_filename_sort(const void* a, const void* b)
 {
     return strcmp(*(const char**)a, *(const char**)b);
-}
-
-static int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
-{
-    if (!view || !view->buffer || !area) {
-        return NV_ERR_NOT_INIT;
-    }
-
-#ifndef NV_NO_LUAJIT
-    // TODO: indicate window = NULL?
-    struct nv_context ctx = {
-        .window = NULL,
-        .view = view,
-        .buffer = view->buffer,
-    };
-    nv_event_emit(NV_EVENT_BUFFDRAW, &ctx);
-#endif
-
-    switch (view->buffer->type) {
-    case NV_BUFF_TYPE_LOG:
-    case NV_BUFF_TYPE_PLAINTEXT: {
-        char *p = view->buffer->buffer, *nl = NULL;
-        size_t lines_read = 0;
-
-        while ((nl = strchr(p, '\n')) != NULL) {
-            if (lines_read <= view->buffer->line_count && lines_read < area->h) {
-                nv_buffer_printf(view, area, lines_read, lines_read, p, nl - p);
-            }
-            p = nl + 1;
-            lines_read++;
-        }
-
-        if (*p) {
-            nv_buffer_printf(view, area, lines_read, 0, p, area->w);
-        }
-
-        break;
-    }
-    case NV_BUFF_TYPE_SOURCE:
-        view->gutter_width_cols = count_no_digits(view->buffer->line_count);
-
-        if (nv_draw_text_buffer(view, area) != NV_OK) {
-            nv_fatal("failed to draw buffer");
-        }
-
-        break;
-
-    case NV_BUFF_TYPE_BROWSER:
-        // TODO: implement this as a plugin
-
-    default:
-        nv_log("unsupported bufftype %d\n", view->buffer->type);
-        break;
-    }
-
-    return NV_OK;
 }
 
 static int nv_calculate_statline()
