@@ -51,7 +51,7 @@ void nv_draw_cursor()
     int effective_row = 0;
     struct nv_node* l;
 
-    for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
+    for (int cindex = 0; cindex < cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
         if (c.line > ctx.buffer->line_count) {
             continue;
@@ -67,7 +67,7 @@ void nv_draw_cursor()
             ctx.window->leaf.area.x +                                   // window position
             ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
             (c.x > l->length ? l->length : c.x);                        // cap the cursor to the end of the line
-    
+
         tb_set_cell(effective_row, c.line - ctx.view->top_line_index, ' ', NV_BLACK, NV_WHITE);
     }
 }
@@ -140,13 +140,21 @@ int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area)
         }
 
         struct nv_node node = view->buffer->lines[RELATIVE_LINE_INDEX];
-        for (int i = 0; i < node.length; i += VIEW_DRAWABLE_WIDTH) {
-            if (view->top_line_index + row > view->buffer->line_count) {
-                break;
+
+        if (node.length > 0) {
+            for (int i = 0; i < node.length; i += VIEW_DRAWABLE_WIDTH) {
+                if (view->top_line_index + row > view->buffer->line_count) {
+                    break;
+                }
+                nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index + i], VIEW_DRAWABLE_WIDTH);
+                row++;
             }
-            nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index + i], VIEW_DRAWABLE_WIDTH);
+        }
+        else {
+            nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index], 0);
             row++;
         }
+
         line_no++;
     }
 
@@ -232,15 +240,14 @@ void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, i
         return;
     }
 
-    size_t max_length = 0, gutter_offset = 0;
-    max_length = length > area->w ? area->w : length;
-    char* string = (char*)malloc(max_length + 1);
-
-    for (int i = 0; i < max_length; i++) {
-        string[i] = lbuf[i];
+    if (length > area->w) {
+        return;
     }
 
-    string[max_length] = '\0';
+    size_t gutter_offset = 0;
+    char* string = (char*)malloc(length + 1);
+    (void)stpncpy(string, lbuf, length);
+    string[length + 1] = '\0';
 
     if (view->gutter_width_cols > 0) {
         gutter_offset = view->gutter_width_cols + view->gutter_gap;
