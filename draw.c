@@ -48,7 +48,7 @@ void nv_draw_cursor()
         return;
     }
 
-    int line_length = 0, effective_row = 0;
+    int effective_row = 0;
     struct nv_node* l;
 
     for (int cindex = 0; cindex <= cvector_size(ctx.view->cursors); cindex++) {
@@ -63,12 +63,10 @@ void nv_draw_cursor()
             continue;
         }
 
-        line_length = l->length - 1;
-
         effective_row =
             ctx.window->leaf.area.x +                                   // window position
             ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
-            (c.x > line_length ? line_length : c.x);                    // cap the cursor to the end of the line
+            (c.x > l->length ? l->length : c.x);                        // cap the cursor to the end of the line
     
         tb_set_cell(effective_row, c.line - ctx.view->top_line_index, ' ', NV_BLACK, NV_WHITE);
     }
