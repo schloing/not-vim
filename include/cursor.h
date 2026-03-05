@@ -6,7 +6,6 @@
 
 struct cursor {
     size_t x;
-    int y;
     int line; // 1-indexed
     char ch;
     size_t buff_id;

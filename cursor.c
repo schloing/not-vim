@@ -22,16 +22,18 @@ void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
         return;
     }
 
-    if (cursor->line + amt <= ctx->buffer->line_count) {
-        cursor->y += amt;
-        cursor->line += amt;
+    cursor->line += amt;
+
+    if (cursor->line > ctx->buffer->line_count) {
+        cursor->line = ctx->buffer->line_count;
     }
 
-    if (cursor->y > ctx->window->leaf.area.h - 1) {
+    if (cursor->line >= ctx->view->top_line_index + ctx->window->leaf.area.h) {
         ctx->view->top_line_index++;
-        cursor->y = ctx->window->leaf.area.h - 1;
-        cursor->line -= amt;
-        cursor->line++;
+    }
+
+    if (ctx->view->top_line_index > ctx->buffer->line_count) {
+        ctx->view->top_line_index = ctx->buffer->line_count;
     }
 }
 
@@ -42,21 +44,13 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
         return;
     }
 
-    if (cursor->y - amt >= 0) {
-        cursor->y -= amt;
-        cursor->line -= amt;
-    }
-    else {
-        ctx->view->top_line_index--;
-        cursor->y = 0;
-        cursor->line--;
-    }
+    cursor->line -= amt;
 
-    if (cursor->line <= 1) {
+    if (cursor->line < 1) {
         cursor->line = 1;
     }
 
-    if (ctx->view->top_line_index <= 1) {
+    if (ctx->view->top_line_index < 1) {
         ctx->view->top_line_index = 1;
     }
 }
