@@ -360,14 +360,14 @@ static size_t nv_collect_lines(struct nv_view* view, struct nv_tree_node* curren
         }
 
         if (buf[line_node.buff_index + line_node.length] == '\n') {
-            line_node.length++;
-            cvector_push_back(view->buffer->lines, line_node);
-            line_node.buff_index += line_node.length;
+            cvector_push_back(view->buffer->lines, line_node);      // do not include the \n in line nodes
+            line_node.buff_index += line_node.length + 1;           // \n increases length by 1
             line_node.length = 0;
             lines_collected++;
-        } else {
-            line_node.length++;
+            continue;
         }
+
+        line_node.length++;
     }
 
     return lines_collected;
