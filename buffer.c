@@ -91,6 +91,7 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
     static_assert(NV_CURSOR_CAP > NV_PRIMARY_CURSOR, "");
     cvector_reserve(view->cursors, NV_CURSOR_CAP);
     view->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { .line = 1 };
+    cvector_set_size(view->cursors, 1);
     
     if (nv_editor->status != NV_OK) {
         return NULL;
