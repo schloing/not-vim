@@ -49,9 +49,13 @@ target_link_libraries(nv PRIVATE uv)
 set(NNG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(nng EXCLUDE_FROM_ALL)
 
-add_library(nvrpc SHARED nvrpc.c)
+# yyjson
+set(YYJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(yyjson EXCLUDE_FROM_ALL)
+
+add_library(nvrpc SHARED nvrpc.c rpc.c)
 target_include_directories(nvrpc PRIVATE "./include" "./")
-target_link_libraries(nvrpc PRIVATE nng)
+target_link_libraries(nvrpc PRIVATE nng yyjson)
 
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64

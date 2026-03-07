@@ -8,3 +8,6 @@
 	path = nng
 	url = https://github.com/nanomsg/nng.git
 	branch = stable
+[submodule "yyjson"]
+	path = yyjson
+	url = https://github.com/ibireme/yyjson.git

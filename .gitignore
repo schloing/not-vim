@@ -23,3 +23,4 @@ compile_commands.json
 CPackConfig.cmake
 CPackSourceConfig.cmake
 CPackConfig-*.cmake
+*.pc
