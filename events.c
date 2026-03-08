@@ -78,7 +78,7 @@ int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx)
 
     for (int i = 0; i < callbacks; i++) {
         int ref = event_lua_callbacks[(int)event][i];
-        (void)nv_editor->nvlua->nvlua_call_func_ref(ref);
+        (void)nv_editor->nvlua->nvlua_pcall(ref);
     }
 
     return NV_OK;
