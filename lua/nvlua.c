@@ -161,6 +161,7 @@ static int nvlua_main()
     nvlua_register_es(L);
 
     lua_register(L, "echo", nv_log_lua);
+    lua_register(L, "print", nv_log_lua);
 
     nv_load_plugin(L, "./plugload/");
 
