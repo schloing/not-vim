@@ -29,7 +29,7 @@ add_executable(nv ${SRC_FILES})
 target_include_directories(nv PRIVATE "./include" "./")
 
 if(LuaJIT_FOUND)
-    add_library(nvlua SHARED nvlua.c)
+    add_library(nvlua SHARED "./lua/nvlua.c" "./lua/events.c")
     target_include_directories(nvlua PRIVATE ${LuaJIT_INCLUDE_DIRS} "./include" "./")
     target_link_directories(nvlua PRIVATE ${LuaJIT_LIBRARY_DIRS})
     target_link_libraries(nvlua PRIVATE ${LuaJIT_LIBRARIES})
