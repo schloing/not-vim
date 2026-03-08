@@ -24,7 +24,11 @@ static int nv_get_input(struct tb_event* ev);
 static void nv_redraw_all();
 static void nv_close_pollers();
 static void nv_on_tty(uv_poll_t* handle, int status, int events);
+static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
+static void nv_tty_stream_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds);
+static void nv_on_nng_recv(uv_poll_t* handle, int status, int events);
+static void nv_on_nng_send(uv_poll_t* handle, int status, int events);
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
 
@@ -233,6 +237,36 @@ static void nv_on_tty(uv_poll_t* handle, int status, int events)
     }
 }
 
+static void nv_on_nng_recv(uv_poll_t* handle, int status, int events)
+{
+    if ((events & UV_READABLE) != true) {
+        return;
+    }
+
+    int fd;
+    uv_fileno((uv_handle_t*)handle, &fd);
+    if (fd < 0) {
+        return;
+    }
+
+    char buffer[1024];
+    ssize_t nread = recv(fd, buffer, 1024, 0);
+    if (nread == 0 || nread < 1) {
+        uv_poll_stop(handle);
+        return;
+    }
+
+    nv_log("nvrpc received on nng recv socket\n");
+    nv_editor->nvrpc->nvrpc_execute_request(buffer, (size_t)nread);
+}
+
+static void nv_on_nng_send(uv_poll_t* handle, int status, int events)
+{
+    if ((events & UV_WRITABLE) != true) {
+        return;
+    }
+}
+
 static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
     (void)stream;
@@ -331,12 +365,12 @@ void nv_main()
             {
                 .fd = nv_editor->nvrpc->nng_recv_fd,
                 .poller_index = NV_POLLER_INDEX_NNG_RECV,
-                .cb = nv_on_tty,
+                .cb = nv_on_nng_recv,
             },
             {
                 .fd = nv_editor->nvrpc->nng_send_fd,
                 .poller_index = NV_POLLER_INDEX_NNG_SEND,
-                .cb = nv_on_tty,
+                .cb = nv_on_nng_send,
             }
         }, 2);
     }
