@@ -381,6 +381,11 @@ static int nvlua_load(struct nv_api* nv_api)
     return NV_OK;
 }
 
+static struct nv_conf* nv_get_config()
+{
+    return &nv_editor->config;
+}
+
 int main(int argc, char** argv)
 {
     nv_setup_signal_handlers();
@@ -414,6 +419,7 @@ int main(int argc, char** argv)
         .nv_event_register_sub = nv_event_register_sub,
         .nv_event_str = nv_event_str,
         .nv_str_event = nv_str_event,
+        .nv_get_config = nv_get_config,
     };
 
     if (nvrpc_load(&nv_api) != NV_OK) {
