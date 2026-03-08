@@ -11,3 +11,6 @@
 [submodule "yyjson"]
 	path = yyjson
 	url = https://github.com/ibireme/yyjson.git
+[submodule "lua/luajit-nng-ffi"]
+	path = lua/luajit-nng-ffi
+	url = https://github.com/schloing/luajit-nng-ffi.git
