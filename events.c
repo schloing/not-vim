@@ -1,9 +1,10 @@
 // events are built for lua plugins only
 // dynamic .so are not gunna be supported for now, so not gunna generalise events
-#ifndef NV_NO_LUAJIT
 #include <string.h>
 
 #include "cvector.h"
+#include "editor.h"
+#include "nvlua.h"
 #include "error.h"
 #include "events.h"
 
@@ -77,8 +78,8 @@ int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx)
 
     for (int i = 0; i < callbacks; i++) {
         int ref = event_lua_callbacks[(int)event][i];
+        (void)nv_editor->nvlua->nvlua_call_func_ref(ref);
     }
 
     return NV_OK;
 }
-#endif

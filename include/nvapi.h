@@ -15,6 +15,7 @@ struct nv_api {
 struct nvlua_api {
     int (*nvlua_main)();
     void (*nvlua_free)();
+    int (*nvlua_pcall)(int ref);
     void* reserved[16];
     void* dl_handle;
 };
@@ -22,6 +23,7 @@ struct nvlua_api {
 struct nvrpc_api {
     int (*nvrpc_main)();
     void (*nvrpc_free)();
+    void (*nvrpc_execute_request)(const char* buffer, size_t bufsiz);
     int nng_send_fd;
     int nng_recv_fd;
     void* reserved[16];
