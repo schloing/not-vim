@@ -5,6 +5,7 @@
 
 #include "error.h"
 #include "nvapi.h"
+#include "rpc.h"
 #include "nvrpc.h"
 
 // plugin registration, nvapi compat
@@ -16,7 +17,13 @@ static const struct nv_api_version version = {
 };
 // end plugin
 
+static void nvrpc_execute_request(const char* buffer, size_t bufsiz);
 static struct nvrpc_state nvrpc = { 0 };
+
+static void nvrpc_execute_request(const char* buffer, size_t bufsiz)
+{
+    (void)nv_rpc_parse(buffer, bufsiz);
+}
 
 nv_plugin_init_t nvrpc_plugin_init(size_t indicated_version, const struct nv_api* api)
 {
@@ -29,6 +36,7 @@ nv_plugin_init_t nvrpc_plugin_init(size_t indicated_version, const struct nv_api
     nvrpc_api = (struct nvrpc_api) {
         .nvrpc_main = nvrpc_main,
         .nvrpc_free = nvrpc_free,
+        .nvrpc_execute_request = nvrpc_execute_request,
     };
 
     if (indicated_version > version.max) {
