@@ -11,8 +11,10 @@ git clone --recursive https://github.com/schloing/not-vim.git
 - luajit (optional)
 - libuv
 - nng
+- nvtree
+- yyjson
 
-libuv and nng are automatically installed by the build script
+if cloned with --recursive, libuv, nng, nvtree, yyjson are compiled by build script and linked appropriately
 
 ### Makefile
 ```sh
@@ -56,6 +58,8 @@ sh run_gdb.sh [file]...
     - [ ] rectangular select, multiple cursors, macros
 - [ ] save editor state (open windows)
 - [ ] shell integration. maybe even primarily work as a terminal multiplexer with a shit ton of shit
+- [ ] msgpack + nng for rpc, remote gui, external plugins
+- [ ] yyjson + nng for json-rpc, lsp support
 - [ ] make the code less ass
 ### dependencies & libraries:
 all functionally required dependencies are statically linked by default, so no additional installation is required
@@ -64,6 +68,4 @@ all functionally required dependencies are statically linked by default, so no a
 - [nvtree](https://github.com/schloing/nvtree)
 - [libuv](https://github.com/libuv/libuv)
 - [nng](https://github.com/nanomsg/nng)
-
-### read
-https://www.codingwiththomas.com/blog/a-lua-c-api-cheat-sheet
+- [yyjson](https://github.com/ibireme/yyjson)
