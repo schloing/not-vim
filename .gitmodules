@@ -4,10 +4,9 @@
 [submodule "libuv"]
 	path = libuv
 	url = https://github.com/libuv/libuv.git
-[submodule "nng"]
-	path = nng
-	url = https://github.com/nanomsg/nng.git
-	branch = main
 [submodule "yyjson"]
 	path = yyjson
 	url = https://github.com/ibireme/yyjson.git
+[submodule "nng"]
+	path = nng
+	url = https://github.com/nanomsg/nng.git
