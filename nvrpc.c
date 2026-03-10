@@ -90,7 +90,15 @@ int nvrpc_main()
 
 void nvrpc_free()
 {
-    nng_listener_close(nvrpc.l);
-    // nng_socket_close(nvrpc.s);
-    return;
+    if (nvrpc.l.id != 0) {
+        nng_listener_close(nvrpc.l);
+        nvrpc.l = (nng_listener){0};
+    }
+
+    if (nvrpc.s.id != 0) {
+        nng_socket_close(nvrpc.s);
+        nvrpc.s = (nng_socket){0};
+    }
+
+    nng_fini();
 }
