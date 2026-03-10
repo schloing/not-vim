@@ -1,5 +1,4 @@
 #include <nng/nng.h>
-#include <nng/protocol/reqrep0/req.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -60,7 +59,14 @@ int nvrpc_main()
     nng_listener listener;
     size_t status;
 
-    if ((status = nng_req_open(&sock)) != 0) {
+    if ((status = nng_init(NULL)) != 0) {
+        nvapi->nv_log("failed to init nvrpc: %s\n", nng_strerror(status));
+        return NV_ERR;
+    }
+
+    nvapi->nv_log("nng version: %s\n", nng_version());
+
+    if ((status = nng_req0_open(&sock)) != 0) {
         nvapi->nv_log("nvrpc failed to open socket: %s\n", nng_strerror(status));
         return NV_ERR;
     }
