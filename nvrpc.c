@@ -78,7 +78,7 @@ int nvrpc_main()
     nvrpc.s = sock;
     nvrpc.l = listener;
     nng_socket_get_int(sock, NNG_OPT_SENDFD, &nvrpc_api.nng_send_fd);
-    nng_socket_get_int(sock, NNG_OPT_RECVFD, &nvrpc_api.nng_send_fd);
+    nng_socket_get_int(sock, NNG_OPT_RECVFD, &nvrpc_api.nng_recv_fd);
     return NV_OK;
 }
 
