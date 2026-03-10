@@ -247,7 +247,7 @@ void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, i
     size_t gutter_offset = 0;
     char* string = (char*)malloc(length + 1);
     (void)stpncpy(string, lbuf, length);
-    string[length + 1] = '\0';
+    string[length] = '\0';
 
     if (view->gutter_width_cols > 0) {
         gutter_offset = view->gutter_width_cols + view->gutter_gap;
