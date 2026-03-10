@@ -55,6 +55,7 @@ static void nv_editor_cleanup(struct nv_editor* editor)
     tb_shutdown();
     nv_free_windows();
     nv_free_views();
+    nv_event_free();
     editor->focus = NULL;
     editor->window = NULL;
     editor->logger = NULL;
