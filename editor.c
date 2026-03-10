@@ -29,6 +29,10 @@ static void nv_tty_stream_alloc(uv_handle_t* handle, size_t suggested_size, uv_b
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds);
 static void nv_on_nng_recv(uv_poll_t* handle, int status, int events);
 static void nv_on_nng_send(uv_poll_t* handle, int status, int events);
+static void nv_shutdown();
+static void nv_on_poller_closed(uv_handle_t* handle);
+static void nv_on_tty_closed(uv_handle_t* handle);
+
 
 _Thread_local struct nv_editor* nv_editor = NULL; // extern in editor.h 
 
@@ -211,6 +215,16 @@ void nv_resize_for_layout(int width, int height)
     nv_editor->height = height;
 }
 
+static void nv_on_poller_closed(uv_handle_t* handle)
+{
+    free(handle);
+}
+
+static void nv_on_tty_closed(uv_handle_t* handle)
+{
+    free(handle);
+}
+
 static void nv_close_pollers()
 {
     for (int i = 0; i < NV_POLLER_COUNT; i++) {
@@ -218,6 +232,8 @@ static void nv_close_pollers()
             continue;
         }
         uv_poll_stop(nv_editor->pollers[i]);
+        uv_close((uv_handle_t*)nv_editor->pollers[i], nv_on_poller_closed);
+        nv_editor->pollers[i] = NULL;
     }
 }
 
@@ -231,10 +247,6 @@ static void nv_on_tty(uv_poll_t* handle, int status, int events)
     tb_peek_event(&ev, 0); // consume
     nv_get_input(&ev);
     nv_redraw_all();
-
-    if (!nv_editor->running) {
-        nv_close_pollers();
-    }
 }
 
 static void nv_on_nng_recv(uv_poll_t* handle, int status, int events)
@@ -275,7 +287,7 @@ static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t*
     nv_on_tty(NULL, 0, UV_READABLE);
 
     if (!nv_editor->running) {
-        uv_close((uv_handle_t*)stream, NULL);
+        nv_shutdown();
     }
 }
 
@@ -315,6 +327,17 @@ static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size
     }
 }
 
+static void nv_shutdown()
+{
+    nv_close_pollers();
+
+    if (nv_editor->tty) {
+        uv_read_stop((uv_stream_t*)nv_editor->tty);
+        uv_close((uv_handle_t*)nv_editor->tty, nv_on_tty_closed);
+        nv_editor->tty = NULL;
+    }
+}
+
 void nv_main()
 {
     if (nv_editor->running) {
@@ -341,15 +364,15 @@ void nv_main()
     int tb_tty_fd, tb_resize_fd;
     tb_get_fds(&tb_tty_fd, &tb_resize_fd);
     // register termbox pollers
-    uv_tty_t tty;
+    nv_editor->tty = (uv_tty_t*)malloc(sizeof(uv_tty_t));
     // tb_tty_fd is an fd for /dev/tty which cannot be kqueue'd on macos,
     // do not register that as a traditional poller
-    if (uv_tty_init(loop, &tty, STDIN_FILENO, UV_READABLE) != 0) {
+    if (uv_tty_init(loop, nv_editor->tty, STDIN_FILENO, UV_READABLE) != 0) {
         nv_editor->status = NV_ERR;
         exit(nv_editor->status);
     }
-    (void)uv_tty_set_mode(&tty, UV_TTY_MODE_RAW);
-    (void)uv_read_start((uv_stream_t*)&tty, nv_tty_stream_alloc, nv_on_tty_stream);
+    (void)uv_tty_set_mode(nv_editor->tty, UV_TTY_MODE_RAW);
+    (void)uv_read_start((uv_stream_t*)nv_editor->tty, nv_tty_stream_alloc, nv_on_tty_stream);
 
     nv_register_pollers(loop, (struct nv_poller_fd[]) {
         {
@@ -376,6 +399,11 @@ void nv_main()
     }
 
     uv_run(loop, UV_RUN_DEFAULT);
+
+    nv_shutdown();
+
+    uv_run(loop, UV_RUN_DEFAULT);
+
     uv_loop_close(loop);
     free(loop);
 }

@@ -82,6 +82,7 @@ struct nv_editor {
     struct timespec start;
     struct nv_conf config;
     uv_poll_t* pollers[NV_POLLER_COUNT];
+    uv_tty_t* tty;
     const struct nvlua_api* nvlua;
     const struct nvrpc_api* nvrpc;
     POOL_MANAGED struct nv_window_node *focus, *window, *logger, *statline;
