@@ -83,8 +83,8 @@ int nvrpc_main()
     nvapi->nv_log("succesfully opened rpc socket\n");
     nvrpc.s = sock;
     nvrpc.l = listener;
-    nng_socket_get_int(sock, NNG_OPT_SENDFD, &nvrpc_api.nng_send_fd);
-    nng_socket_get_int(sock, NNG_OPT_RECVFD, &nvrpc_api.nng_recv_fd);
+    nng_socket_get_send_poll_fd(sock, &nvrpc_api.nng_send_fd);
+    nng_socket_get_recv_poll_fd(sock, &nvrpc_api.nng_recv_fd);
     return NV_OK;
 }
 
