@@ -8,6 +8,7 @@ typedef enum {
     NV_ERR_MEM,
     NV_OK              = 0,
     NV_WARN,
+    NV_WARN_UNIMPLEMENTED,
 } nv_err;
 
 const char* nv_strerror(nv_err code);
