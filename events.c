@@ -29,13 +29,18 @@ void nv_event_free()
 }
 
 // does NOT type check lua_callback_ref, caller is expected to do that from lua context
-void nv_event_register_sub(enum nv_event_sub event, int lua_callback_ref)
+void nv_event_register_sub(enum nv_event_sub event, struct nv_event_callback callback)
 {
+    if (callback.type != NV_EVENT_TYPE_LUA_REF) {
+        nv_editor->status = NV_WARN_UNIMPLEMENTED;
+        return;
+    }
+
     if (!nv_event_is_valid(event)) {
         return;
     }
 
-    cvector_push_back(event_lua_callbacks[(int)event], lua_callback_ref);
+    cvector_push_back(event_lua_callbacks[(int)event], callback.ref);
 }
 
 const char* nv_event_str(enum nv_event_sub event)

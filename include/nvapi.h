@@ -6,7 +6,7 @@
 
 struct nv_api {
     void (*nv_log)(const char* fmt, ...);
-    void (*nv_event_register_sub)(enum nv_event_sub event, int lua_callback_ref);
+    void (*nv_event_register_sub)(enum nv_event_sub event, struct nv_event_callback callback);
     const char* (*nv_event_str)(enum nv_event_sub event);
     struct nv_conf* (*nv_get_config)();
     enum nv_event_sub (*nv_str_event)(const char* string);
