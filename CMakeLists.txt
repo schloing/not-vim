@@ -22,7 +22,7 @@ endif()
 file(GLOB SRC_FILES
     "buffer.c" "editor.c" "events.c"
     "cursor.c" "error.c" "main.c" "window.c"
-    "draw.c" "input.c"
+    "draw.c" "input.c" "arena.c"
 )
 
 add_executable(nv ${SRC_FILES})
