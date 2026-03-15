@@ -10,14 +10,18 @@
 
 #define CVECTOR_LOGARITHMIC_GROWTH
 
+#include "arena.h"
 #include "buffer.h"
 #include "color.h"
 #include "editor.h"
 #include "error.h"
+#include "window.h"
 #define TB_IMPL
+#define tb_malloc nv_arena_malloc
+#define tb_realloc nv_arena_realloc
+#define tb_free nv_arena_free
 #include "termbox2.h"
 #undef TB_IMPL
-#include "window.h"
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename);
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext);
@@ -83,6 +87,7 @@ static void nv_cleanup()
     if (nv_editor) {
         nv_editor_cleanup(nv_editor);
     }
+    nv_arena_free_all();
 }
 
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
@@ -390,6 +395,7 @@ static struct nv_conf* nv_get_config()
 int main(int argc, char** argv)
 {
     nv_setup_signal_handlers();
+    nv_arena_init();
 
     struct nv_editor editor = { 0 };
     if (nv_editor_init(&editor) != NV_OK) {
