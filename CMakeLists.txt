@@ -19,7 +19,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     #    add_compile_options(-Wextra)
 endif()
 
-file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h"
+file(GLOB SRC_FILES
     "buffer.c" "editor.c" "events.c"
     "cursor.c" "error.c" "main.c" "window.c"
     "draw.c" "input.c"
@@ -27,6 +27,11 @@ file(GLOB SRC_FILES "nvtree/*.c" "nvtree/*.h"
 
 add_executable(nv ${SRC_FILES})
 target_include_directories(nv PRIVATE "./include" "./")
+
+add_library(nvtree "nvtree/main.c")
+target_compile_definitions(nvtree PRIVATE NVTREE_CONFIG="nvtree_conf.h")
+target_include_directories(nvtree PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/nvtree)
+target_link_libraries(nv PRIVATE nvtree)
 
 if(LuaJIT_FOUND)
     add_library(nvlua SHARED "./lua/nvlua.c" "./lua/events.c")
