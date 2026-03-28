@@ -13,7 +13,7 @@
 #include "view.h"
 
 static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff);
-static size_t nv_collect_lines(struct nv_view* view, struct nv_tree_node* current, size_t line_no, size_t left_lf, size_t lines_remaining);
+static bool nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, char** line_buf, size_t* line_len, size_t* line_cap);
 
 bool is_elf(const char* buffer)
 {
@@ -269,10 +269,10 @@ nv_pool_index line(struct nv_context* ctx, int lineno)
         return NV_NULL_INDEX;
     }
 
-    return nv_find_by_line(ctx->buffer->tree, lineno);
+    return nv_find_by_line(ctx->buffer->tree, lineno, NULL);
 }
 
-struct nv_node* nv_get_computed_line(struct nv_context* ctx, int lineno)
+struct nv_render_line* nv_get_computed_line(struct nv_context* ctx, int lineno)
 {
     if (!ctx || !ctx->buffer || !ctx->view) {
         return NULL;
@@ -326,106 +326,166 @@ int nv_free_buffer(struct nv_buff* buff)
     return NV_OK;
 }
 
-static size_t nv_collect_lines(struct nv_view* view, struct nv_tree_node* current, size_t line_no, size_t left_lf, size_t lines_remaining)
+static void nv_render_lines_clear(struct nv_buff* buff)
 {
-    // line is within this node
-    char* buf = nv_buffers[current->data.buff_id];
-    if (!buf) {
-        return 0;
-    }
-
-    size_t bufsiz = cvector_size(buf);
-    // how many lines to skip to get the target line?
-    size_t lines_to_skip = line_no - left_lf;
-
-    struct nv_node line_node = {
-        .buff_id = current->data.buff_id,
-        .buff_index = current->data.buff_index,
-        .length = 0,
-        .lfcount = 1,
-    };
-
-    // skip necessary amt of lines
-    while (line_node.buff_index < bufsiz && lines_to_skip > 0) {
-        if (buf[line_node.buff_index] == '\n') {
-            lines_to_skip--;
-        }
-        line_node.buff_index++;
-    }
-
-    size_t lines_collected = 0;
-    // collect the rest of the lines in this node
-    while (line_node.buff_index < bufsiz && lines_collected < lines_remaining) {
-        if (line_node.buff_index + line_node.length >= bufsiz) {
-            return lines_collected;
-        }
-
-        if (buf[line_node.buff_index + line_node.length] == '\n') {
-            cvector_push_back(view->buffer->lines, line_node);  // do not include the \n in line nodes
-            line_node.buff_index += line_node.length + 1;       // skip the newline
-            line_node.length = 0;
-            lines_collected++;
-        }
-        else {
-            line_node.length++;
-        }
-    }
-
-    return lines_collected;
-}
-
-// FIXME: really shitty code, difficult to understand, sometimes inefficient, potentially unsafe
-void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
-{
-    if (!view || !view->buffer) {
+    if (!buff) {
         return;
     }
 
-#ifdef NV_DEBUG_INEFFICIENT_TREE_FLATTEN
-    for (int line = view->top_line_index - 1; line < line + area->h; line++) {
-        nv_tree_pool_index l = nv_find_by_line(view->buffer->tree, line);
-        if (l == NV_NULL_INDEX) {
-            break;
-        }
-        cvector_push_back(view->buffer->lines, NODE_FROM_POOL(l)->data);
+    for (int i = 0; i < cvector_size(buff->lines); i++) {
+        free(buff->lines[i].text);
+        buff->lines[i].text = NULL;
+        buff->lines[i].length = 0;
     }
 
-    return;
-#endif
+    cvector_clear(buff->lines);
+}
 
-    size_t line = view->top_line_index - 1;
-    size_t lines_remaining = area->h; // how many lines after 'line' to flatten
-    bool searching_for_top = true;
-    struct nv_tree_node* current = NODE_FROM_POOL(tree);
+static void nv_render_line_push(struct nv_buff* buff, const char* buf, size_t len)
+{
+    struct nv_render_line line = {0};
 
-    while (current && lines_remaining > 0) {
-        struct nv_tree_node* left = current->left ? NODE_FROM_POOL(current->left) : NULL;
-        struct nv_tree_node* right = current->right ? NODE_FROM_POOL(current->right) : NULL;
+    line.text = (char*)malloc(len + 1);
+    if (!line.text) {
+        return;
+    }
+    if (len > 0) {
+        memcpy(line.text, buf, len);
+    }
 
-        size_t left_lf = left ? left->data.lfcount : 0;
-        size_t right_lf = right ? right->data.lfcount : 0;
-        size_t local_lf = current->data.lfcount - left_lf - right_lf;
+    line.text[len] = '\0';
+    line.length = len;
 
-        if (left_lf == 0 && right_lf == 0 && local_lf == 0 && line == 0) {
-            // edge case - there is only 1 line
-            cvector_push_back(view->buffer->lines, current->data);
+    cvector_push_back(buff->lines, line);
+}
+
+static bool nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, char** line_buf, size_t* line_len, size_t* line_cap)
+{
+    if (!buff || !data || data->length == 0 || !lines_remaining || !lines_to_skip ||
+        !line_buf || !line_len || !line_cap) {
+        return true;
+    }
+
+    char* buf = nv_buffers[data->buff_id];
+    if (!buf) {
+        return true;
+    }
+
+    size_t start = data->buff_index;
+    size_t end = start + data->length;
+
+    for (size_t i = start; i < end && *lines_remaining > 0; i++) {
+        char c = buf[i];
+
+        if (c == '\0') {
             break;
         }
 
-        if (line < left_lf) {
-            // line in left tree
-            current = left;
+        if (c == '\r') {
+            if (i + 1 < end && buf[i + 1] == '\n') {
+                i++;
+            }
+            c = '\n';
         }
-        else if (searching_for_top ? (line < left_lf + local_lf) : false) {
-            searching_for_top = false; // this node has top_line_index
-            lines_remaining -= nv_collect_lines(view, current, line, left_lf, lines_remaining);
-            line = 0;
-            current = right;
-        }
-        else {
-            // line in right tree
-            line -= left_lf + local_lf;
-            current = right;
+
+        if (c == '\n') {
+            if (*lines_to_skip > 0) {
+                (*lines_to_skip)--;
+                *line_len = 0;
+            } else {
+                nv_render_line_push(buff, *line_buf ? *line_buf : "", *line_len);
+                *line_len = 0;
+                (*lines_remaining)--;
+            }
+        } else {
+            if (*lines_to_skip > 0) {
+                continue;
+            }
+
+            if (*line_len + 1 >= *line_cap) {
+                size_t new_cap = *line_cap ? *line_cap * 2 : 64;
+                char* new_buf = (char*)realloc(*line_buf, new_cap);
+                if (!new_buf) {
+                    return false;
+                }
+                *line_buf = new_buf;
+                *line_cap = new_cap;
+            }
+
+            (*line_buf)[(*line_len)++] = c;
         }
     }
+
+    return true;
+}
+
+void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
+{
+    if (!view || !view->buffer || tree == NV_NULL_INDEX || area->h == 0) {
+        return;
+    }
+
+    nv_render_lines_clear(view->buffer);
+
+    nv_pool_index stack[NVTREE_MAX_STACK_DEPTH];
+    int top = 0;
+    nv_pool_index current = tree;
+
+    size_t lines_remaining = area->h;
+    size_t lines_to_skip = view->top_line_index > 0 ? view->top_line_index - 1 : 0;
+
+    char* line_buf = NULL;
+    size_t line_len = 0;
+    size_t line_cap = 0;
+
+    while ((current != NV_NULL_INDEX || top > 0) && lines_remaining > 0) {
+        while (current != NV_NULL_INDEX) {
+            if (top >= NVTREE_MAX_STACK_DEPTH) {
+                goto cleanup;
+            }
+
+            stack[top++] = current;
+
+            struct nv_tree_node* n = NODE_FROM_POOL(current);
+            if (!n) {
+                current = NV_NULL_INDEX;
+                break;
+            }
+
+            current = n->left;
+        }
+
+        if (top == 0) {
+            break;
+        }
+
+        current = stack[--top];
+        struct nv_tree_node* node = NODE_FROM_POOL(current);
+        if (!node) {
+            current = NV_NULL_INDEX;
+            continue;
+        }
+
+        if (!nv_flatten_node_text(
+                view->buffer,
+                &node->data,
+                &lines_remaining,
+                &lines_to_skip,
+                &line_buf,
+                &line_len,
+                &line_cap)) {
+            goto cleanup;
+        }
+
+        current = node->right;
+    }
+
+    if (lines_remaining > 0 && lines_to_skip == 0) {
+        if (line_len > 0 || cvector_size(view->buffer->lines) == 0) {
+            nv_render_line_push(view->buffer, line_buf ? line_buf : "", line_len);
+        }
+    }
+
+cleanup:
+    free(line_buf);
 }
