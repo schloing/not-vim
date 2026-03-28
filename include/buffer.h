@@ -38,6 +38,11 @@ extern char* nv_str_buff_fmt[NV_FILE_FORMAT_END];
 
 typedef nv_pool_index nv_tree_pool_index;
 
+struct nv_render_line {
+    char* text;
+    size_t length;
+};
+
 struct nv_buff {
     FILE* file;
     char* path;
@@ -49,7 +54,7 @@ struct nv_buff {
     nv_buff_type type;
     nv_buff_fmt format;
     nv_tree_pool_index tree;
-    cvector(struct nv_node) lines;
+    cvector(struct nv_render_line) lines;
     cvector(char) buffer;
     cvector(char) add_buffer;
 };
@@ -61,7 +66,7 @@ int nv_buffer_open_file(struct nv_buff* buff, const char* path);
 int nv_rebuild_lines(struct nv_buff* buff, int* out_line_count);
 int nv_free_view(struct nv_view* view);
 int nv_free_buffer(struct nv_buff* buff);
-struct nv_node* nv_get_computed_line(struct nv_context* ctx, int lineno);
+struct nv_render_line* nv_get_computed_line(struct nv_context* ctx, int lineno);
 nv_pool_index line(struct nv_context* ctx, int lineno);
 void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area);
 

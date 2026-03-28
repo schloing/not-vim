@@ -6,7 +6,6 @@
 #include "editor.h"
 #include "events.h"
 #include "error.h"
-#include "nvtree/nvtree.h"
 #include "termbox2.h"
 #include "view.h"
 #include "window.h"
@@ -49,7 +48,7 @@ void nv_draw_cursor()
     }
 
     int effective_row = 0;
-    struct nv_node* l;
+    struct nv_render_line* l;
 
     for (int cindex = 0; cindex < cvector_size(ctx.view->cursors); cindex++) {
         c = ctx.view->cursors[cindex];
@@ -139,19 +138,19 @@ int nv_draw_text_buffer(struct nv_view* view, const struct nv_window_area* area)
             break;
         }
 
-        struct nv_node node = view->buffer->lines[RELATIVE_LINE_INDEX];
+        struct nv_render_line line = view->buffer->lines[RELATIVE_LINE_INDEX];
 
-        if (node.length > 0) {
-            for (int i = 0; i < node.length; i += VIEW_DRAWABLE_WIDTH) {
+        if (line.length > 0) {
+            for (int i = 0; i < line.length; i += VIEW_DRAWABLE_WIDTH) {
                 if (view->top_line_index + row > view->buffer->line_count) {
                     break;
                 }
-                nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index + i], VIEW_DRAWABLE_WIDTH);
+                nv_buffer_printf(view, area, row, line_no, line.text + i, VIEW_DRAWABLE_WIDTH);
                 row++;
             }
         }
         else {
-            nv_buffer_printf(view, area, row, line_no, &nv_buffers[node.buff_id][node.buff_index], 0);
+            nv_buffer_printf(view, area, row, line_no, line.text, 0);
             row++;
         }
 
@@ -236,11 +235,7 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 
 void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length)
 {
-    if (!lbuf || !view) {
-        return;
-    }
-
-    if (length > area->w) {
+    if (!lbuf || !view || length > area->w) {
         return;
     }
 
