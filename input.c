@@ -56,7 +56,7 @@ void nv_handle_key_input(struct tb_event* ev)
 
     if (nv_editor->mode == NV_MODE_INSERT) {
         if (isprint(ev->ch)) {
-            // nv_cursor_insert_ch(&ctx, cursor, ev->ch);
+            nv_cursor_insert_ch(&focus, cursor, ev->ch);
         }
         else if (ev->key == TB_KEY_ESC) {
             nv_set_mode(NV_MODE_NAVIGATE);
