@@ -18,6 +18,7 @@ compile_commands.json
 .cache
 *.gitignore
 *.dylib
+*.a
 *.so
 *.dll
 CPackConfig.cmake
