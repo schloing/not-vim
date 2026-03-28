@@ -1,17 +1,25 @@
 #include "cursor.h"
 #include "buffer.h"
 #include "context.h"
-#include "editor.h"
+#include "cvector.h"
+#include "nvtree.h"
 #include "termbox2.h"
 #include "window.h"
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
 {
-    // TODO: implement
-    nv_log("unimplemented %s\n", __PRETTY_FUNCTION__);
-    (void)ctx;
-    (void)cursor;
-    (void)ch;
+    cvector_push_back(ctx->buffer->add_buffer, ch);
+    // cvector reallocation might have changed pointer
+    nv_buffers[ctx->buffer->buff_id + NV_BUFF_ID_ADD] = ctx->buffer->add_buffer;
+
+    ctx->buffer->tree = nv_tree_insert(ctx->buffer->tree, 1, (struct nv_node) {
+        .buff_id = ctx->buffer->buff_id + NV_BUFF_ID_ADD,
+        .buff_index = cvector_size(ctx->buffer->add_buffer) - 1,
+        .length = 1,
+        .lfcount = 0
+    });
+
+    ctx->buffer->tree = nv_tree_paint(ctx->buffer->tree, B);
     cursor->x++;
 }
 
@@ -57,7 +65,7 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
 
 void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
 {
-    struct nv_node* l = nv_get_computed_line(ctx, cursor->line);
+    struct nv_render_line* l = nv_get_computed_line(ctx, cursor->line);
 
     if (!l) {
         return;
