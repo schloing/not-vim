@@ -75,6 +75,11 @@ const bool nv_event_is_valid(enum nv_event_sub event)
 // TODO: support specific emitters for different event types, or have varargs for different event callback types
 int nv_event_emit(enum nv_event_sub event, struct nv_context* ctx)
 {
+    if (!nv_editor->nvlua) {
+        // WARN: nvlua is the only event receiver. nv has no internal dependence on the event system
+        return NV_OK;
+    }
+
     if (!nv_event_is_valid(event)) {
         return NV_ERR;
     }

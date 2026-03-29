@@ -185,7 +185,6 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         return NV_ERR_NOT_INIT;
     }
 
-#ifndef NV_NO_LUAJIT
     // TODO: indicate window = NULL?
     struct nv_context ctx = {
         .window = NULL,
@@ -193,7 +192,6 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         .buffer = view->buffer,
     };
     nv_event_emit(NV_EVENT_BUFFDRAW, &ctx);
-#endif
 
     switch (view->buffer->type) {
     case NV_BUFF_TYPE_LOG:
