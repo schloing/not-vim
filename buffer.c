@@ -13,7 +13,9 @@
 #include "view.h"
 
 static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff);
-static bool nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, char** line_buf, size_t* line_len, size_t* line_cap);
+static void nv_render_lines_clear(struct nv_buff* buff);
+static int nv_render_line_push(struct nv_buff* buff, const char* buf, size_t len);
+static int nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, size_t* line_len);
 
 bool is_elf(const char* buffer)
 {
@@ -92,7 +94,7 @@ struct nv_view* nv_view_init(const char* buffer_file_path)
     cvector_reserve(view->cursors, NV_CURSOR_CAP);
     view->cursors[NV_PRIMARY_CURSOR] = (struct cursor) { .line = 1 };
     cvector_set_size(view->cursors, 1);
-    
+
     if (nv_editor->status != NV_OK) {
         return NULL;
     }
@@ -153,13 +155,12 @@ static size_t nv_calculate_tree_node_granularity(struct nv_buff* buff)
         return 0;
     }
 
-    size_t granularity = (buff->chunk_size * 1024) / buff->bytes_loaded;
-
-    if (granularity < 0) {
-        granularity = 1;
+    if (buff->bytes_loaded == 0) {
+        return NV_MIN_GRANULARITY;
     }
 
-    granularity = granularity * 1024;
+    size_t granularity = (buff->chunk_size * 1024) / buff->bytes_loaded;
+    granularity *= 1024;
 
     if (granularity < NV_MIN_GRANULARITY) {
         granularity = NV_MIN_GRANULARITY;
@@ -246,18 +247,23 @@ struct nv_buff* nv_buffer_init(const char* path)
         return NULL;
     }
 
+#define NV_BUFF_RENDER_BUFF_SIZE      4096
+#define NV_BUFF_INT_SCRATCH_BUFF_SIZE 256
+
     static size_t buff_id;
     buffer->type = NV_BUFF_TYPE_PLAINTEXT;
     buffer->chunk_size = NV_BUFF_CHUNK_SIZE;
     buffer->buff_id = buff_id++;
+    cvector_reserve(buffer->renders, NV_BUFF_RENDER_BUFF_SIZE);
+    cvector_reserve(buffer->scratch, NV_BUFF_INT_SCRATCH_BUFF_SIZE);
     cvector_reserve(buffer->buffer, (size_t)NV_BUFF_CHUNK_SIZE);
-    cvector_reserve(buffer->add_buffer, (size_t)NV_BUFF_CHUNK_SIZE); // TODO: determine size to allocate here
+    cvector_reserve(buffer->add_buffer, (size_t)NV_BUFF_CHUNK_SIZE);
     cvector_reserve(buffer->lines, (size_t)NV_LINE_CAP);
 
     if (path) {
         buffer->path = (char*)path;
         nv_editor->status = nv_buffer_open_file(buffer, path);
-        nv_buffer_build_tree(buffer); // only fails when nv_buff or nv_buff->buffer is NULL
+        (void)nv_buffer_build_tree(buffer);
     }
 
     return nv_editor->status == NV_OK ? buffer : NULL;
@@ -302,7 +308,6 @@ int nv_free_view(struct nv_view* view)
     return NV_OK;
 }
 
-
 int nv_free_buffer(struct nv_buff* buff)
 {
     if (!buff) {
@@ -319,6 +324,8 @@ int nv_free_buffer(struct nv_buff* buff)
     }
 
     cvector_free(buff->lines);
+    cvector_free(buff->renders);
+    cvector_free(buff->scratch);
     cvector_free(buff->buffer);
     cvector_free(buff->add_buffer);
 
@@ -332,43 +339,43 @@ static void nv_render_lines_clear(struct nv_buff* buff)
         return;
     }
 
-    for (int i = 0; i < cvector_size(buff->lines); i++) {
-        free(buff->lines[i].text);
-        buff->lines[i].text = NULL;
-        buff->lines[i].length = 0;
-    }
-
     cvector_clear(buff->lines);
+    cvector_clear(buff->renders);
+    cvector_clear(buff->scratch);
 }
 
-static void nv_render_line_push(struct nv_buff* buff, const char* buf, size_t len)
+static int nv_render_line_push(struct nv_buff* buff, const char* buf, size_t len)
 {
-    struct nv_render_line line = {0};
-
-    line.text = (char*)malloc(len + 1);
-    if (!line.text) {
-        return;
+    if (!buff) {
+        return NV_ERR_NOT_INIT;
     }
+
+    struct nv_render_line line = { 0 };
+
+    size_t start = cvector_size(buff->renders);
+    cvector_set_size(buff->renders, start + len + 1);
+
     if (len > 0) {
-        memcpy(line.text, buf, len);
+        memcpy(&buff->renders[start], buf, len);
     }
+    buff->renders[start + len] = '\0';
 
-    line.text[len] = '\0';
+    line.text = &buff->renders[start];
     line.length = len;
-
     cvector_push_back(buff->lines, line);
+
+    return NV_OK;
 }
 
-static bool nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, char** line_buf, size_t* line_len, size_t* line_cap)
+static int nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* data, size_t* lines_remaining, size_t* lines_to_skip, size_t* line_len)
 {
-    if (!buff || !data || data->length == 0 || !lines_remaining || !lines_to_skip ||
-        !line_buf || !line_len || !line_cap) {
-        return true;
+    if (!buff || !data || data->length == 0 || !lines_remaining || !lines_to_skip || !line_len) {
+        return NV_ERR_NOT_INIT;
     }
 
     char* buf = nv_buffers[data->buff_id];
     if (!buf) {
-        return true;
+        return NV_ERR_NOT_INIT;
     }
 
     size_t start = data->buff_index;
@@ -388,44 +395,40 @@ static bool nv_flatten_node_text(struct nv_buff* buff, const struct nv_node* dat
             c = '\n';
         }
 
-        if (c == '\n') {
-            if (*lines_to_skip > 0) {
-                (*lines_to_skip)--;
-                *line_len = 0;
-            } else {
-                nv_render_line_push(buff, *line_buf ? *line_buf : "", *line_len);
-                *line_len = 0;
-                (*lines_remaining)--;
-            }
-        } else {
+        if (c != '\n') {
             if (*lines_to_skip > 0) {
                 continue;
             }
 
-            if (*line_len + 1 >= *line_cap) {
-                size_t new_cap = *line_cap ? *line_cap * 2 : 64;
-                char* new_buf = (char*)realloc(*line_buf, new_cap);
-                if (!new_buf) {
-                    return false;
-                }
-                *line_buf = new_buf;
-                *line_cap = new_cap;
-            }
-
-            (*line_buf)[(*line_len)++] = c;
+            cvector_push_back(buff->scratch, c);
+            (*line_len)++;
+            continue;
         }
+
+        if (*lines_to_skip > 0) {
+            (*lines_to_skip)--;
+        } else {
+            if (nv_render_line_push(buff, buff->scratch, *line_len) != NV_OK) {
+                return NV_ERR;
+            }
+            (*lines_remaining)--;
+        }
+
+        *line_len = 0;
+        cvector_clear(buff->scratch);
     }
 
-    return true;
+    return NV_OK;
 }
 
 void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const struct nv_window_area* area)
 {
-    if (!view || !view->buffer || tree == NV_NULL_INDEX || area->h == 0) {
+    if (!view || !view->buffer || tree == NV_NULL_INDEX || !area || area->h == 0) {
         return;
     }
 
-    nv_render_lines_clear(view->buffer);
+    struct nv_buff* buff = view->buffer;
+    nv_render_lines_clear(buff);
 
     nv_pool_index stack[NVTREE_MAX_STACK_DEPTH];
     int top = 0;
@@ -433,15 +436,12 @@ void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const stru
 
     size_t lines_remaining = area->h;
     size_t lines_to_skip = view->top_line_index > 0 ? view->top_line_index - 1 : 0;
-
-    char* line_buf = NULL;
     size_t line_len = 0;
-    size_t line_cap = 0;
 
     while ((current != NV_NULL_INDEX || top > 0) && lines_remaining > 0) {
         while (current != NV_NULL_INDEX) {
             if (top >= NVTREE_MAX_STACK_DEPTH) {
-                goto cleanup;
+                return;
             }
 
             stack[top++] = current;
@@ -466,26 +466,16 @@ void nv_buffer_flatten_tree(nv_pool_index tree, struct nv_view* view, const stru
             continue;
         }
 
-        if (!nv_flatten_node_text(
-                view->buffer,
-                &node->data,
-                &lines_remaining,
-                &lines_to_skip,
-                &line_buf,
-                &line_len,
-                &line_cap)) {
-            goto cleanup;
+        if (nv_flatten_node_text(buff, &node->data, &lines_remaining, &lines_to_skip, &line_len) != NV_OK) {
+            return;
         }
 
         current = node->right;
     }
 
     if (lines_remaining > 0 && lines_to_skip == 0) {
-        if (line_len > 0 || cvector_size(view->buffer->lines) == 0) {
-            nv_render_line_push(view->buffer, line_buf ? line_buf : "", line_len);
+        if (line_len > 0 || cvector_size(buff->lines) == 0) {
+            (void)nv_render_line_push(buff, buff->scratch, line_len);
         }
     }
-
-cleanup:
-    free(line_buf);
 }

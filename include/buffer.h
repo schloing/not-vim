@@ -55,6 +55,8 @@ struct nv_buff {
     nv_buff_fmt format;
     nv_tree_pool_index tree;
     cvector(struct nv_render_line) lines;
+    cvector(char) renders;
+    cvector(char) scratch;
     cvector(char) buffer;
     cvector(char) add_buffer;
 };
