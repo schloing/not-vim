@@ -31,6 +31,11 @@ void nv_draw_background_rect(int x1, int y1, int x2, int y2)
     // caller needa call tb_present()
 }
 
+void nv_draw()
+{
+    tb_present();
+}
+
 void nv_draw_background()
 {
     tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);

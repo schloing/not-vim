@@ -206,7 +206,7 @@ static void nv_redraw_all()
         });
     }
     nv_draw_cursor();
-    tb_present();
+    nv_draw();
 }
 
 void nv_resize_for_layout(int width, int height)
