@@ -19,13 +19,29 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     #    add_compile_options(-Wextra)
 endif()
 
+add_executable(nv)
+
 file(GLOB SRC_FILES
     "buffer.c" "editor.c" "events.c"
     "cursor.c" "error.c" "main.c" "window.c"
     "draw.c" "input.c" "arena.c"
 )
 
-add_executable(nv ${SRC_FILES})
+if(APPLE)
+    target_compile_definitions(nv PRIVATE _DARWIN_C_SOURCE)
+    list(APPEND SRC_FILES tui_posix.c)
+elseif(UNIX)
+    target_compile_definitions(nv PRIVATE
+        _XOPEN_SOURCE=700
+        _DEFAULT_SOURCE
+        _BSD_SOURCE
+    )
+    list(APPEND SRC_FILES tui_posix.c)
+elseif(WIN32)
+    # TODO: add when tui_win32 exists
+endif()
+
+target_sources(nv PRIVATE ${SRC_FILES})
 target_include_directories(nv PRIVATE "./include" "./")
 
 add_library(nvtree STATIC "nvtree/main.c")
@@ -65,16 +81,6 @@ target_link_libraries(nvrpc PRIVATE nng yyjson)
 target_compile_definitions(nv PRIVATE
     TB_OPT_ATTR_W=64
 )
-
-if(APPLE)
-    target_compile_definitions(nv PRIVATE _DARWIN_C_SOURCE)
-elseif(UNIX)
-    target_compile_definitions(nv PRIVATE
-        _XOPEN_SOURCE=700
-        _DEFAULT_SOURCE
-        _BSD_SOURCE
-    )
-endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
