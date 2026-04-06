@@ -353,6 +353,7 @@ static int nv_render_line_push(struct nv_buff* buff, const char* buf, size_t len
     struct nv_render_line line = { 0 };
 
     size_t start = cvector_size(buff->renders);
+    cvector_reserve(buff->renders, start + len + 1);
     cvector_set_size(buff->renders, start + len + 1);
 
     if (len > 0) {
