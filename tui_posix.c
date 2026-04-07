@@ -57,30 +57,26 @@ static int nv_tui_query_dimensions(size_t* width, size_t* height)
 static int nv_tui_resize(size_t width, size_t height)
 {
     size_t count = width * height;
-    struct nv_tui_cell* curr = realloc(
-        nv_tui_state.curr,
-        count * sizeof(struct nv_tui_cell)
-    );
-    if (!curr && count != 0) {
+    size_t bytes = count * sizeof(struct nv_tui_cell);
+
+    struct nv_tui_cell* curr_new = (struct nv_tui_cell*)realloc(nv_tui_state.curr, bytes);
+    if (!curr_new && count) {
         return NV_ERR;
     }
 
-    struct nv_tui_cell* new = realloc(
-        nv_tui_state.new,
-        count * sizeof(struct nv_tui_cell)
-    );
-    if (!new && count != 0) {
+    struct nv_tui_cell* new_new = (struct nv_tui_cell*)realloc(nv_tui_state.new, bytes);
+    if (!new_new && count) {
         return NV_ERR;
     }
 
-    nv_tui_state.curr = curr;
-    nv_tui_state.new = new;
+    nv_tui_state.curr = curr_new;
+    nv_tui_state.new = new_new;
     nv_tui_state.width = width;
     nv_tui_state.height = height;
 
-    if (count != 0) {
-        memset(nv_tui_state.curr, 0, count * sizeof(struct nv_tui_cell));
-        memset(nv_tui_state.new, 0, count * sizeof(struct nv_tui_cell));
+    if (count) {
+        memset(nv_tui_state.curr, 0, bytes);
+        memset(nv_tui_state.new, 0, bytes);
     }
 
     return NV_OK;
@@ -119,55 +115,58 @@ void nv_tui_present()
     cvector(char) buf = NULL;
     cvector_reserve(buf, 1024);
 
-    int width = nv_tui_state.width;
-    int height = nv_tui_state.height;
+    size_t width = nv_tui_state.width;
+    size_t height = nv_tui_state.height;
 
-    for (int row = 0; row < height; row++) {
-        int start = row * width;
-        struct nv_tui_cell* new_row = &nv_tui_state.new[start];
+    for (size_t row = 0; row < height; row++) {
+        size_t start = row * width;
+        struct nv_tui_cell* new_row  = &nv_tui_state.new[start];
         struct nv_tui_cell* curr_row = &nv_tui_state.curr[start];
 
         if (memcmp(new_row, curr_row, width * sizeof(struct nv_tui_cell)) == 0) {
             continue;
         }
 
-        int col = 0;
+        size_t col = 0;
         while (col < width) {
             if (nv_tui_cell_eq(new_row[col], curr_row[col])) {
                 col++;
                 continue;
             }
 
-            int run_start = col;
-
+            size_t run_start = col;
             while (col < width && !nv_tui_cell_eq(new_row[col], curr_row[col])) {
                 col++;
             }
 
-            int off = cvector_size(buf);
-
+            size_t off = cvector_size(buf);
             cvector_reserve(buf, off + 64 + (col - run_start));
 
             int size = snprintf(
                 buf + off,
                 cvector_capacity(buf) - off,
-                "\x1b[%d;%dH",
+                "\x1b[%zu;%zuH",
                 row + 1,
                 run_start + 1
             );
 
             cvector_set_size(buf, off + size);
 
-            for (int k = run_start; k < col; k++) {
-                buf[cvector_size(buf)] = new_row[k].rune;
+            for (size_t k = run_start; k < col; k++) {
+                char ch = new_row[k].rune ? (char)new_row[k].rune : ' ';
+                buf[cvector_size(buf)] = ch;
                 cvector_set_size(buf, cvector_size(buf) + 1);
-
                 curr_row[k] = new_row[k];
             }
         }
     }
 
-    write(STDOUT_FILENO, buf, cvector_size(buf));
+    memset(nv_tui_state.new, 0, width * height * sizeof(struct nv_tui_cell));
+
+    if (cvector_size(buf)) {
+        (void)write(STDOUT_FILENO, buf, cvector_size(buf));
+    }
+
     cvector_free(buf);
 }
 
@@ -183,9 +182,8 @@ void nv_tui_set_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg)
         return;
     }
 
-    int linear = y * nv_tui_state.width + x;
+    size_t linear = (size_t)y * nv_tui_state.width + (size_t)x;
     nv_tui_state.new[linear].rune = ch;
-    // TODO: set hl based on fg/bg
 }
 
 void nv_tui_printf(int x, int y, uint32_t fg, uint32_t bg, const char* fmt, ...)
@@ -220,7 +218,7 @@ int nv_tui_init()
     signal(SIGWINCH, nv_tui_handle_resize);
 
     struct termios raw;
-    tcgetattr(STDIN_FILENO, &raw);
+    (void)tcgetattr(STDIN_FILENO, &raw);
     nv_tui_state.termios0 = raw;
 
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
@@ -231,15 +229,17 @@ int nv_tui_init()
     raw.c_cc[VTIME] = 1;
 
     (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    (void)write(STDOUT_FILENO, "\x1b[?25l", 6);
 
     return rv;
 }
 
 static void nv_tui_deinit()
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &nv_tui_state.termios0);
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &nv_tui_state.termios0);
+    (void)write(STDOUT_FILENO, "\x1b[?25h", 6);
+    (void)write(STDOUT_FILENO, "\x1b[2J", 4);
+    (void)write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 void nv_tui_free()
@@ -257,6 +257,15 @@ void nv_tui_free()
 
 void nv_tui_clear()
 {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    size_t count = nv_tui_state.width * nv_tui_state.height;
+
+    if (count) {
+        memset(nv_tui_state.curr, 0,
+               count * sizeof(struct nv_tui_cell));
+        memset(nv_tui_state.new, 0,
+               count * sizeof(struct nv_tui_cell));
+    }
+
+    (void)write(STDOUT_FILENO, "\x1b[2J", 4);
+    (void)write(STDOUT_FILENO, "\x1b[H", 3);
 }
