@@ -191,7 +191,8 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
         .view = view,
         .buffer = view->buffer,
     };
-    nv_event_emit(NV_EVENT_BUFFDRAW, &ctx);
+
+    nv_event_emit(NV_EVENT_BUFFDRAW_START, &ctx);
 
     switch (view->buffer->type) {
     case NV_BUFF_TYPE_LOG:
@@ -227,9 +228,11 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 
     default:
         nv_log("unsupported bufftype %d\n", view->buffer->type);
+        nv_event_emit(NV_EVENT_BUFFDRAW_UNSUPPORTED, &ctx);
         break;
     }
 
+    nv_event_emit(NV_EVENT_BUFFDRAW_END, &ctx);
     return NV_OK;
 }
 
