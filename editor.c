@@ -317,6 +317,8 @@ void nv_main()
     }
 
     nv_editor->running = true;
+
+    nv_tui_clear();
     nv_redraw_all();
 
     uv_loop_t* loop = (uv_loop_t*)malloc(sizeof(uv_loop_t));
