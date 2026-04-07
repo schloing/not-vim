@@ -9,6 +9,7 @@
 #include "termbox2.h"
 #include "view.h"
 #include "window.h"
+#include <tui.h>
 
 static int count_no_digits(int n);
 
@@ -21,9 +22,9 @@ void nv_draw_background_rect(int x1, int y1, int x2, int y2)
     for (int i = x1; i < x2; i++) {
         for (int j = y1; j < y2; j++) {
 #ifdef NV_DEBUG_WINDOW_BACKGROUND_COLOURS
-            tb_set_cell(i, j, ' ', nv_editor->config.fg_main, colour);
+            nv_tui_set_cell(i, j, ' ', nv_editor->config.fg_main, colour);
 #else
-            tb_set_cell(i, j, ' ', nv_editor->config.fg_main, nv_editor->config.bg_main);
+            nv_tui_set_cell(i, j, ' ', nv_editor->config.fg_main, nv_editor->config.bg_main);
 #endif
         }
     }
@@ -33,8 +34,8 @@ void nv_draw_background_rect(int x1, int y1, int x2, int y2)
 
 void nv_draw_background()
 {
-    tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);
-    tb_clear();
+    // tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);
+    nv_tui_clear();
 }
 
 void nv_draw_cursor()
@@ -67,7 +68,7 @@ void nv_draw_cursor()
             ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
             (c.x > l->length ? l->length : c.x);                        // cap the cursor to the end of the line
 
-        tb_set_cell(effective_row, c.line - ctx.view->top_line_index, ' ', NV_BLACK, NV_WHITE);
+        nv_tui_set_cell(effective_row, c.line - ctx.view->top_line_index, ' ', NV_BLACK, NV_WHITE);
     }
 }
 
@@ -231,7 +232,7 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 }
 
 #define NV_PRINTF(x, y, fg, fmt, ...) \
-    tb_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
+    nv_tui_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
 
 void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length)
 {

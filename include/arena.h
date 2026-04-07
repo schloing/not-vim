@@ -23,6 +23,6 @@ void* nv_arena_malloc(size_t size);
 void* nv_arena_calloc(size_t nmemb, size_t size);
 void* nv_arena_realloc(void* ptr, size_t size);
 
-#define NV_ARENA_DEFAULT_ALLOC_SIZE 1024 * 1024
+#define NV_ARENA_DEFAULT_ALLOC_SIZE 1024 * 1024 * 10
 
 #endif

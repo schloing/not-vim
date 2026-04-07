@@ -16,6 +16,7 @@
 #include "editor.h"
 #include "error.h"
 #include "window.h"
+#include <tui.h>
 #define TB_IMPL
 #define tb_malloc nv_arena_malloc
 #define tb_realloc nv_arena_realloc
@@ -56,7 +57,7 @@ static int nv_open_file_in_window(struct nv_editor* editor, const char* filename
 
 static void nv_editor_cleanup(struct nv_editor* editor)
 {
-    tb_shutdown();
+    nv_tui_free();
     nv_free_windows();
     nv_free_views();
     nv_event_free();
@@ -84,16 +85,18 @@ static void nv_editor_cleanup(struct nv_editor* editor)
 
 static void nv_cleanup()
 {
+    int rv = nv_editor->status;
     if (nv_editor) {
         nv_editor_cleanup(nv_editor);
     }
     nv_arena_free_all();
+    fprintf(stderr, "%s (%d)\n", nv_strerror(rv), rv);
 }
 
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
 {
     (void)ucontext;
-    tb_shutdown();
+    nv_tui_free();
 
     const char* sig_name;
 
@@ -405,13 +408,13 @@ int main(int argc, char** argv)
 
     assert(nv_editor);
 
-    if (!editor.config.show_headless && (editor.status = tb_init()) != TB_OK) {
+    if (!editor.config.show_headless && (editor.status = nv_tui_init()) != TB_OK) {
         fprintf(stderr, "%s\n", tb_strerror(editor.status));
         nv_editor_cleanup(&editor);
         return editor.status;
     }
 
-    nv_resize_for_layout(tb_width(), tb_height());
+    nv_resize_for_layout(nv_tui_width(), nv_tui_height());
     nv_init_base_window();
     nv_init_logger_window();
 #ifdef NV_DEBUG_OPEN_LOG
