@@ -46,13 +46,15 @@ void nv_event_register_sub(enum nv_event_sub event, struct nv_event_callback cal
 const char* nv_event_str(enum nv_event_sub event)
 {
     switch (event) {
-    case NV_EVENT_BUFFLOAD:         return "BUFFLOAD";
-    case NV_EVENT_BUFFCLOSE:        return "BUFFCLOSE";
-    case NV_EVENT_BUFFDRAW:         return "BUFFDRAW";
-    case NV_EVENT_WINDOW_SPLIT:     return "WINDOW_SPLIT";
-    case NV_EVENT_KEYPRESS:         return "KEYPRESS";
-    case NV_EVENT_HOTKEY:           return "HOTKEY";
-    default:                        return "UNKNOWN";
+    case NV_EVENT_BUFFLOAD:                 return "BUFFLOAD";
+    case NV_EVENT_BUFFCLOSE:                return "BUFFCLOSE";
+    case NV_EVENT_BUFFDRAW_START:           return "BUFFDRAW_START";
+    case NV_EVENT_BUFFDRAW_END:             return "BUFFDRAW_END";
+    case NV_EVENT_BUFFDRAW_UNSUPPORTED:     return "BUFFDRAW_END";
+    case NV_EVENT_WINDOW_SPLIT:             return "WINDOW_SPLIT";
+    case NV_EVENT_KEYPRESS:                 return "KEYPRESS";
+    case NV_EVENT_HOTKEY:                   return "HOTKEY";
+    default:                                return "UNKNOWN";
     }
 }
 
