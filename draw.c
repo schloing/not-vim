@@ -34,7 +34,7 @@ void nv_draw_background_rect(int x1, int y1, int x2, int y2)
 
 void nv_draw()
 {
-    tb_present();
+    nv_tui_present();
 }
 
 void nv_draw_background()
