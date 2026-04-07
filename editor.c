@@ -16,14 +16,14 @@
 #include "error.h"
 #include "nvapi.h"
 #include "termbox2.h"
+#include <tui.h>
 #include <uv.h>
 #include "view.h"
 #include "window.h"
 
-static int nv_get_input(struct tb_event* ev);
+static int nv_get_input(unsigned char ansi);
 static void nv_redraw_all();
 static void nv_close_pollers();
-static void nv_on_tty(uv_poll_t* handle, int status, int events);
 static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 static void nv_tty_stream_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds);
@@ -115,69 +115,47 @@ int nv_editor_init(struct nv_editor* editor)
 
 void nv_log(const char* fmt, ...)
 {
-    va_list ap;
-    va_start(ap, fmt);
-
     struct nv_context logger = nv_get_context(nv_editor->logger);
     if (!logger.buffer || !logger.buffer->buffer) {
-        va_end(ap);
         return;
     }
 
     size_t cur = logger.buffer->append_cursor, cap = logger.buffer->chunk_size;
-    char* buf = logger.buffer->buffer;
     if (cur >= cap || cap == 0) {
-        va_end(ap);
         return;
     }
+
+    char* buf = logger.buffer->buffer;
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    double time_taken;
-    time_taken = (now.tv_sec - nv_editor->start.tv_sec) * 1e9;
-    time_taken = (time_taken + (now.tv_nsec - nv_editor->start.tv_nsec)) * 1e-9;
-    int ts_written = snprintf(buf + cur, cap - cur, "[%.3f] ", time_taken);
-
-    if (ts_written <= 0) {
-        va_end(ap);
+    double t = (now.tv_sec - nv_editor->start.tv_sec) + (now.tv_nsec - nv_editor->start.tv_nsec) * 1e-9;
+    int ts = snprintf(buf + cur, cap - cur, "[%.3f] ", t);
+    if (ts <= 0 || (size_t)ts >= cap - cur) {
         return;
     }
 
-    if ((size_t)ts_written >= cap - cur) {
-        va_end(ap);
-        return;
-    }
+    va_list ap;
+    va_start(ap, fmt);
+    int len = vsnprintf(buf + cur + ts, cap - cur - ts, fmt, ap);
+    va_end(ap);
 
-    cur += (size_t)ts_written;
-
-    va_list ap2;
-    va_copy(ap2, ap);
-    int msg_len = vsnprintf(buf + cur, cap - cur, fmt, ap2);
-    va_end(ap2);
-
-    if (msg_len < 0) {
-        va_end(ap);
-        return;
-    }
-
-    if ((size_t)msg_len >= cap - cur) {
+    if (len < 0 || (size_t)len >= cap - cur - ts) {
         logger.buffer->append_cursor = 0;
-        va_end(ap);
         return;
     }
 
-    for (size_t i = 0, end = cur + (size_t)msg_len; cur + i < end; ++i) {
-        if (buf[cur + i] == '\n') {
+    for (size_t i = 0; i < (size_t)len; i++) {
+        if (buf[cur + ts + i] == '\n') {
             logger.buffer->line_count++;
         }
     }
 
-    cur += (size_t)msg_len;
-    buf[cur] = '\0';
-    logger.buffer->append_cursor = cur;
-    cvector_set_size(logger.buffer->buffer, logger.buffer->append_cursor);
+    cur += (size_t)ts + (size_t)len;
+    buf[cur] = 0;
 
-    va_end(ap);
+    logger.buffer->append_cursor = cur;
+    cvector_set_size(logger.buffer->buffer, cur);
 }
 
 void nv_fatal(const char* operation)
@@ -237,18 +215,6 @@ static void nv_close_pollers()
     }
 }
 
-static void nv_on_tty(uv_poll_t* handle, int status, int events)
-{
-    if ((events & UV_READABLE) != true) {
-        return;
-    }
-
-    struct tb_event ev;
-    tb_peek_event(&ev, 0); // consume
-    nv_get_input(&ev);
-    nv_redraw_all();
-}
-
 static void nv_on_nng_recv(uv_poll_t* handle, int status, int events)
 {
     if ((events & UV_READABLE) != true) {
@@ -281,10 +247,16 @@ static void nv_on_nng_send(uv_poll_t* handle, int status, int events)
 
 static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
-    (void)stream;
-    (void)nread;
-    (void)buf;
-    nv_on_tty(NULL, 0, UV_READABLE);
+    if (nread < 0 || nread == UV_EOF) {
+        uv_read_stop(stream);
+        return;
+    }
+
+    if (buf->len == 1) {
+        nv_get_input(buf->base[0]);
+    }
+
+    nv_redraw_all();
 
     if (!nv_editor->running) {
         nv_shutdown();
@@ -293,9 +265,8 @@ static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t*
 
 static void nv_tty_stream_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 {
-    (void)handle;
-    (void)suggested_size;
-    (void)buf;
+    buf->base = (char*)malloc(suggested_size);
+    buf->len = suggested_size;
 }
 
 static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size_t nfds)
@@ -315,12 +286,12 @@ static void nv_register_pollers(uv_loop_t* loop, struct nv_poller_fd fds[], size
         }
 
         if ((rv = uv_poll_init(loop, *poller, fds[i].fd)) != 0) {
-            tb_shutdown();
+            nv_tui_free();
             printf("failed to register poller: %s\n", uv_strerror(rv));
             exit(NV_ERR);
         }
         if ((rv = uv_poll_start(*poller, UV_READABLE, fds[i].cb)) != 0) {
-            tb_shutdown();
+            nv_tui_free();
             printf("failed to start poller: %s\n", uv_strerror(rv));
             exit(NV_ERR);
         }
@@ -344,13 +315,6 @@ void nv_main()
         return;
     }
 
-    tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
-#ifdef TB_OUTPUT_TRUECOLOR
-    tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
-#else
-    tb_set_output_mode(TB_OUTPUT_NORMAL);
-#endif
-
     nv_editor->running = true;
     nv_redraw_all();
 
@@ -361,26 +325,13 @@ void nv_main()
     }
     uv_loop_init(loop);
 
-    int tb_tty_fd, tb_resize_fd;
-    tb_get_fds(&tb_tty_fd, &tb_resize_fd);
-    // register termbox pollers
     nv_editor->tty = (uv_tty_t*)malloc(sizeof(uv_tty_t));
-    // tb_tty_fd is an fd for /dev/tty which cannot be kqueue'd on macos,
-    // do not register that as a traditional poller
     if (uv_tty_init(loop, nv_editor->tty, STDIN_FILENO, UV_READABLE) != 0) {
         nv_editor->status = NV_ERR;
         exit(nv_editor->status);
     }
     (void)uv_tty_set_mode(nv_editor->tty, UV_TTY_MODE_RAW);
     (void)uv_read_start((uv_stream_t*)nv_editor->tty, nv_tty_stream_alloc, nv_on_tty_stream);
-
-    nv_register_pollers(loop, (struct nv_poller_fd[]) {
-        {
-            .fd = tb_resize_fd,
-            .poller_index = NV_POLLER_INDEX_RESIZE,
-            .cb = nv_on_tty,
-        }
-    }, 1);
 
     // register nng pollers if rpc api is on
     if (nv_editor->nvrpc) {
@@ -408,33 +359,36 @@ void nv_main()
     free(loop);
 }
 
-static int nv_get_input(struct tb_event* ev)
+static int nv_get_input(unsigned char ansi)
 {
     if (nv_editor->config.show_headless) {
         return NV_OK;
     }
 
-    nv_editor->inputs[0] = ev->key;
+    nv_editor->inputs[0] = ansi;
     nv_editor->inputs[1] = 0;
 
-    switch (ev->type) {
-    case TB_EVENT_MOUSE:
-        nv_handle_mouse_input(ev);
-        break;
+    nv_handle_key_input(ansi);
+    // TODO: differentiate + parse MOUSE, KEY, RESIZE
 
-    case TB_EVENT_KEY:
-        nv_handle_key_input(ev);
-        break;
+    // switch (ev->type) {
+    // case TB_EVENT_MOUSE:
+    //     nv_handle_mouse_input(ev);
+    //     break;
 
-    case TB_EVENT_RESIZE:
-        if (!nv_editor->config.show_headless) {
-            nv_resize_for_layout(tb_width(), tb_height());
-        }
-        break;
+    // case TB_EVENT_KEY:
+    //     nv_handle_key_input(ev);
+    //     break;
 
-    default:
-        break;
-    }
+    // case TB_EVENT_RESIZE:
+    //     if (!nv_editor->config.show_headless) {
+    //         nv_resize_for_layout(nv_tui_width(), nv_tui_height());
+    //     }
+    //     break;
+
+    // default:
+    //     break;
+    // }
 
     // cursor->line = cursor->line < 1 ? 1 : cursor->line;
     // cursor->line = cursor->line > ctx.buffer->line_count ? ctx.buffer->line_count : cursor->line;

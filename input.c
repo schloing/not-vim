@@ -44,30 +44,30 @@ void nv_handle_mouse_input(struct tb_event* ev)
     }
 }
 
-void nv_handle_key_input(struct tb_event* ev)
+void nv_handle_key_input(unsigned char ansi)
 {
     struct nv_context focus = nv_get_context(nv_get_focused_window());
 
-    if (!ev || !focus.window) {
+    if (!focus.window) {
         return;
     }
 
     struct cursor* cursor = &focus.view->cursors[NV_PRIMARY_CURSOR];
 
     if (nv_editor->mode == NV_MODE_INSERT) {
-        if (isprint(ev->ch)) {
-            nv_cursor_insert_ch(&focus, cursor, ev->ch);
+        if (isprint(ansi)) {
+            nv_cursor_insert_ch(&focus, cursor, ansi);
         }
-        else if (ev->key == TB_KEY_ESC) {
+        else if (ansi == TB_KEY_ESC) {
             nv_set_mode(NV_MODE_NAVIGATE);
         }
     }
     else {
-        if (ev->key == TB_KEY_ESC) {
+        if (ansi == TB_KEY_ESC) {
             nv_editor->running = false;
         }
         else {
-            switch (ev->ch) {
+            switch (ansi) {
                 case 'i':
                     nv_set_mode(NV_MODE_INSERT);
                     break;

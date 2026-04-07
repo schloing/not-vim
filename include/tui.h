@@ -2,6 +2,7 @@
 #define NV_TUI_H
 
 #include <stdint.h>
+#include <cvector.h>
 
 /* ASCII key constants (`tb_event.key`) */
 #define TB_KEY_CTRL_TILDE 0x00
@@ -150,7 +151,6 @@ struct nv_hl {
     uint16_t attr;
 };
 
-extern struct nv_hl nv_hls[];
 // hl_index is an index into nv_hls
 typedef uint32_t hl_index;
 
@@ -161,6 +161,11 @@ struct nv_tui_cell {
 
 int nv_tui_init();
 void nv_tui_free();
-void nv_tui_refresh();
+void nv_tui_clear();
+void nv_tui_present();
+void nv_tui_set_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg);
+void nv_tui_printf(int x, int y, uint32_t fg, uint32_t bg, const char* fmt, ...);
+size_t nv_tui_width();
+size_t nv_tui_height();
 
 #endif
