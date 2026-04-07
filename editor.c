@@ -172,7 +172,6 @@ static void nv_redraw_all()
     }
 
     nv_calculate_statline();
-    nv_draw_background(); // clear
     nv_draw_windows(nv_editor->window, (struct nv_window_area) { 0, 0, nv_editor->width, nv_editor->height });
     if (nv_editor->logger->leaf.view->visible) {
         nv_draw_windows(nv_editor->logger,
@@ -249,10 +248,12 @@ static void nv_on_tty_stream(uv_stream_t* stream, ssize_t nread, const uv_buf_t*
 {
     if (nread < 0 || nread == UV_EOF) {
         uv_read_stop(stream);
+        nv_editor->tty = NULL;
+        uv_close((uv_handle_t*)nv_editor->tty, nv_on_tty_closed);
         return;
     }
 
-    if (buf->len == 1) {
+    if (nread == 1) {
         nv_get_input(buf->base[0]);
     }
 

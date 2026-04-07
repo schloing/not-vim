@@ -120,7 +120,6 @@ int nv_draw_windows(struct nv_window_node* root, const struct nv_window_area are
                                     // needa be moved into draw_view
         // FIXME: doing this only for ez compile, there's no reason 2 pass area in nv_draw_windows
         root->leaf.area = area;
-        nv_draw_background_rect(area.x, area.y, area.x + area.w, area.y + area.h);
         nv_draw_view(root->leaf.view, &area);
     }
 
