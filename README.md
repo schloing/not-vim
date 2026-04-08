@@ -64,7 +64,6 @@ sh run_gdb.sh [file]...
 ### dependencies & libraries:
 all functionally required dependencies are statically linked by default, so no additional installation is required
 - [cvector](https://github.com/eteran/c-vector/tree/master)
-- [termbox2](https://github.com/termbox/termbox2)
 - [nvtree](https://github.com/schloing/nvtree)
 - [libuv](https://github.com/libuv/libuv)
 - [nng](https://github.com/nanomsg/nng)
