@@ -78,6 +78,7 @@ static void nv_editor_cleanup(struct nv_editor* editor)
 
 static void nv_cleanup()
 {
+    nv_tui_clear();
     int rv = nv_editor->status;
     if (nv_editor) {
         nv_editor_cleanup(nv_editor);
