@@ -12,7 +12,6 @@
 
 #include "arena.h"
 #include "buffer.h"
-#include "color.h"
 #include "editor.h"
 #include "error.h"
 #include "window.h"

@@ -8,7 +8,6 @@
 #include <unistd.h>
 
 #include "buffer.h"
-#include "color.h"
 #include "cvector.h"
 #include "draw.h"
 #include "editor.h"

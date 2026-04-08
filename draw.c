@@ -1,5 +1,4 @@
 #include "buffer.h"
-#include "color.h"
 #include "cursor.h"
 #include "cvector.h"
 #include "draw.h"
