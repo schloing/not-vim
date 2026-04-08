@@ -4,7 +4,7 @@
 #define NV_TRUECOLOR
 
 #ifdef NV_TRUECOLOR
-#define NV_BLACK    TB_HI_BLACK
+#define NV_BLACK    0x000000
 #define NV_RED      0xff0000
 #define NV_GREEN    0x00ff00
 #define NV_YELLOW   0xffff00
