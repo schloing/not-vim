@@ -84,7 +84,9 @@ static void nv_cleanup()
         nv_editor_cleanup(nv_editor);
     }
     nv_arena_free_all();
-    fprintf(stderr, "%s (%d)\n", nv_strerror(rv), rv);
+    if (rv != NV_OK) {
+        fprintf(stderr, "%s (%d)\n", nv_strerror(rv), rv);
+    }
 }
 
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext)
