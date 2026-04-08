@@ -17,12 +17,6 @@
 #include "error.h"
 #include "window.h"
 #include <tui.h>
-#define TB_IMPL
-#define tb_malloc nv_arena_malloc
-#define tb_realloc nv_arena_realloc
-#define tb_free nv_arena_free
-#include "termbox2.h"
-#undef TB_IMPL
 
 static int nv_open_file_in_window(struct nv_editor* editor, const char* filename);
 static void nv_fatal_signal(int sig, siginfo_t* info, void* ucontext);
@@ -408,8 +402,8 @@ int main(int argc, char** argv)
 
     assert(nv_editor);
 
-    if (!editor.config.show_headless && (editor.status = nv_tui_init()) != TB_OK) {
-        fprintf(stderr, "%s\n", tb_strerror(editor.status));
+    if (!editor.config.show_headless && (editor.status = nv_tui_init()) != NV_OK) {
+        fprintf(stderr, "%s\n", nv_strerror(editor.status));
         nv_editor_cleanup(&editor);
         return editor.status;
     }

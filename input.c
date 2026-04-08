@@ -2,8 +2,8 @@
 
 #include "draw.h"
 #include "editor.h"
-#include "termbox2.h"
 #include "window.h"
+#include <tui.h>
 
 void nv_set_mode(nv_mode mode)
 {
@@ -11,38 +11,38 @@ void nv_set_mode(nv_mode mode)
     nv_calculate_statline();
 }
 
-void nv_handle_mouse_input(struct tb_event* ev)
-{
-    struct nv_context focus = nv_get_context(nv_get_focused_window());
+// void nv_handle_mouse_input(struct tb_event* ev)
+// {
+//     struct nv_context focus = nv_get_context(nv_get_focused_window());
 
-    if (!ev || !focus.window) {
-        return;
-    }
+//     if (!ev || !focus.window) {
+//         return;
+//     }
 
-    struct cursor* cursor = nv_primary_cursor(&focus);
+//     struct cursor* cursor = nv_primary_cursor(&focus);
 
-    switch (ev->key) {
-    case TB_KEY_MOUSE_WHEEL_UP:
-        if (focus.view) {
-            if (focus.view->top_line_index > 1) {
-                focus.view->top_line_index--;
-                cursor->line--;
-            }
-        }
+//     switch (ev->key) {
+//     case TB_KEY_MOUSE_WHEEL_UP:
+//         if (focus.view) {
+//             if (focus.view->top_line_index > 1) {
+//                 focus.view->top_line_index--;
+//                 cursor->line--;
+//             }
+//         }
 
-        break;
+//         break;
 
-    case TB_KEY_MOUSE_WHEEL_DOWN:
-        if (focus.view && focus.buffer) {
-            focus.view->top_line_index++;
-            focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
-            cursor->line++;
-            cursor->line = cursor->line > focus.buffer->line_count ? focus.buffer->line_count : cursor->line;
-        }
+//     case TB_KEY_MOUSE_WHEEL_DOWN:
+//         if (focus.view && focus.buffer) {
+//             focus.view->top_line_index++;
+//             focus.view->top_line_index = focus.view->top_line_index > focus.buffer->line_count ? focus.buffer->line_count : focus.view->top_line_index;
+//             cursor->line++;
+//             cursor->line = cursor->line > focus.buffer->line_count ? focus.buffer->line_count : cursor->line;
+//         }
 
-        break;
-    }
-}
+//         break;
+//     }
+// }
 
 void nv_handle_key_input(unsigned char ansi)
 {
