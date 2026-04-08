@@ -169,15 +169,21 @@ struct nv_hl {
 // hl_index is an index into nv_hls
 typedef uint32_t hl_index;
 
+enum nv_tui_flags {
+    NV_TUI_FLAGS_INVERT = 1 << 0,
+};
+
 struct nv_tui_cell {
     uint32_t rune;
     hl_index hl;
+    enum nv_tui_flags flags;
 };
 
 int nv_tui_init();
 void nv_tui_free();
 void nv_tui_clear();
 void nv_tui_present();
+void nv_tui_invert_cell(int x, int y);
 void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl);
 void nv_tui_printf(int x, int y, hl_index hl, const char* fmt, ...);
 size_t nv_tui_width();

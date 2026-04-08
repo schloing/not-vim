@@ -104,7 +104,12 @@ static int nv_tui_process_resize(void)
 
 static bool nv_tui_cell_eq(struct nv_tui_cell a, struct nv_tui_cell b)
 {
-    return a.rune == b.rune && a.hl == b.hl;
+    return a.rune == b.rune && a.hl == b.hl && a.flags == b.flags;
+}
+
+static bool nv_tui_same_style(struct nv_tui_cell a, struct nv_tui_cell b)
+{
+    return a.hl == b.hl && a.flags == b.flags;
 }
 
 void nv_tui_present()
@@ -137,13 +142,23 @@ void nv_tui_present()
             }
 
             size_t run_start = col;
-            while (col < width && !nv_tui_cell_eq(new_row[col], curr_row[col])) {
+            col++;
+
+            while (col < width &&
+                !nv_tui_cell_eq(new_row[col], curr_row[col]) &&
+                nv_tui_same_style(new_row[col], new_row[run_start])) {
                 col++;
             }
 
             size_t off = cvector_size(buf);
             cvector_reserve(buf, off + 64 + (col - run_start));
-            struct nv_hl hl = nv_tui_state.nv_hls[new_row[col].hl];
+            struct nv_hl hl = nv_tui_state.nv_hls[new_row[run_start].hl];
+
+            if (new_row[run_start].flags & NV_TUI_FLAGS_INVERT) {
+                uint32_t tmp = hl.bg;
+                hl.bg = hl.fg;
+                hl.fg = tmp;
+            }
 
 #define NV_LINEAR_HEX_TO_RGB(c) (((c) >> 16) & 0xff), (((c) >> 8) & 0xff), ((c) & 0xff)
 
@@ -175,6 +190,19 @@ void nv_tui_present()
     }
 
     cvector_free(buf);
+}
+
+void nv_tui_invert_cell(int x, int y)
+{
+    if (x < 0 || y < 0) {
+        return;
+    }
+    if ((size_t)x >= nv_tui_state.width || (size_t)y >= nv_tui_state.height) {
+        return;
+    }
+
+    size_t linear = (size_t)y * nv_tui_state.width + (size_t)x;
+    nv_tui_state.new[linear].flags |= NV_TUI_FLAGS_INVERT;
 }
 
 void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl)
