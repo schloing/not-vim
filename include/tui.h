@@ -135,15 +135,30 @@
 #define TB_HARDCAP_OVERLINE "\x1b[53m"
 
 /* Colors (numeric) and attributes (bitwise) (`tb_cell.fg`, `tb_cell.bg`) */
-#define TB_DEFAULT 0x0000
-#define TB_BLACK 0x0001
-#define TB_RED 0x0002
-#define TB_GREEN 0x0003
-#define TB_YELLOW 0x0004
-#define TB_BLUE 0x0005
-#define TB_MAGENTA 0x0006
-#define TB_CYAN 0x0007
-#define TB_WHITE 0x0008
+#define TB_DEFAULT 39
+#define TB_BLACK   30
+#define TB_RED     31
+#define TB_GREEN   32
+#define TB_YELLOW  33
+#define TB_BLUE    34
+#define TB_MAGENTA 35
+#define TB_CYAN    36
+#define TB_WHITE   37
+
+#define TB_BG_DEFAULT 49
+#define TB_BG_BLACK   40
+#define TB_BG_RED     41
+#define TB_BG_GREEN   42
+#define TB_BG_YELLOW  43
+#define TB_BG_BLUE    44
+#define TB_BG_MAGENTA 45
+#define TB_BG_CYAN    46
+#define TB_BG_WHITE   47
+
+enum {
+    NV_TUI_HL_WHITE_ON_BLACK = 0,
+    NV_TUI_HL_BLACK_ON_WHITE = 1,
+};
 
 struct nv_hl {
     uint32_t fg;
@@ -163,8 +178,8 @@ int nv_tui_init();
 void nv_tui_free();
 void nv_tui_clear();
 void nv_tui_present();
-void nv_tui_set_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg);
-void nv_tui_printf(int x, int y, uint32_t fg, uint32_t bg, const char* fmt, ...);
+void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl);
+void nv_tui_printf(int x, int y, hl_index hl, const char* fmt, ...);
 size_t nv_tui_width();
 size_t nv_tui_height();
 

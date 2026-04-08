@@ -1,3 +1,4 @@
+#include "cvector.h"
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -8,6 +9,7 @@
 #include <stdint.h>
 #include <termios.h>
 #include <unistd.h>
+#include <color.h>
 #include <tui.h>
 #include <error.h>
 
@@ -141,11 +143,16 @@ void nv_tui_present()
 
             size_t off = cvector_size(buf);
             cvector_reserve(buf, off + 64 + (col - run_start));
+            struct nv_hl hl = nv_tui_state.nv_hls[new_row[col].hl];
+
+#define NV_LINEAR_HEX_TO_RGB(c) (((c) >> 16) & 0xff), (((c) >> 8) & 0xff), ((c) & 0xff)
 
             int size = snprintf(
                 buf + off,
                 cvector_capacity(buf) - off,
-                "\x1b[%zu;%zuH",
+                "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm\x1b[%zu;%zuH",
+                NV_LINEAR_HEX_TO_RGB(hl.fg),
+                NV_LINEAR_HEX_TO_RGB(hl.bg),
                 row + 1,
                 run_start + 1
             );
@@ -170,11 +177,8 @@ void nv_tui_present()
     cvector_free(buf);
 }
 
-void nv_tui_set_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg)
+void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl)
 {
-    (void)fg;
-    (void)bg;
-
     if (x < 0 || y < 0) {
         return;
     }
@@ -184,9 +188,10 @@ void nv_tui_set_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg)
 
     size_t linear = (size_t)y * nv_tui_state.width + (size_t)x;
     nv_tui_state.new[linear].rune = ch;
+    nv_tui_state.new[linear].hl = hl;
 }
 
-void nv_tui_printf(int x, int y, uint32_t fg, uint32_t bg, const char* fmt, ...)
+void nv_tui_printf(int x, int y, hl_index hl, const char* fmt, ...)
 {
     char buf[128];
 
@@ -203,7 +208,7 @@ void nv_tui_printf(int x, int y, uint32_t fg, uint32_t bg, const char* fmt, ...)
     }
 
     for (int i = 0; i < len; i++) {
-        nv_tui_set_cell(x + i, y, buf[i], fg, bg);
+        nv_tui_set_cell(x + i, y, buf[i], hl);
     }
 }
 
@@ -216,6 +221,19 @@ int nv_tui_init()
     }
 
     signal(SIGWINCH, nv_tui_handle_resize);
+
+    cvector_reserve(nv_tui_state.nv_hls, 32);
+
+    nv_tui_state.nv_hls[NV_TUI_HL_BLACK_ON_WHITE] = (struct nv_hl){
+        .fg = NV_BLACK,
+        .bg = NV_WHITE,
+        .attr = 0,
+    };
+    nv_tui_state.nv_hls[NV_TUI_HL_WHITE_ON_BLACK] = (struct nv_hl){
+        .fg = NV_WHITE,
+        .bg = NV_BLACK,
+        .attr = 0,
+    };
 
     struct termios raw;
     (void)tcgetattr(STDIN_FILENO, &raw);
@@ -248,6 +266,7 @@ void nv_tui_free()
 
     free(nv_tui_state.curr);
     free(nv_tui_state.new);
+    cvector_free(nv_tui_state.nv_hls);
 
     nv_tui_state.curr = NULL;
     nv_tui_state.new = NULL;
