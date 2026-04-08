@@ -28,6 +28,7 @@ static int nv_tui_query_dimensions(size_t* width, size_t* height);
 static int nv_tui_resize(size_t width, size_t height);
 static void nv_tui_handle_resize(int sig);
 static int nv_tui_process_resize(void);
+static void nv_tui_cellbuf_clear();
 
 size_t nv_tui_width()
 {
@@ -252,6 +253,11 @@ int nv_tui_init()
 
     cvector_reserve(nv_tui_state.nv_hls, 32);
 
+    nv_tui_state.nv_hls[NV_TUI_HL_BACKGROUND] = (struct nv_hl){
+        .fg = NV_WHITE,
+        .bg = NV_BLACK,
+        .attr = 0,
+    };
     nv_tui_state.nv_hls[NV_TUI_HL_BLACK_ON_WHITE] = (struct nv_hl){
         .fg = NV_BLACK,
         .bg = NV_WHITE,
@@ -302,7 +308,7 @@ void nv_tui_free()
     nv_tui_state.height = 0;
 }
 
-void nv_tui_clear()
+static void nv_tui_cellbuf_clear()
 {
     size_t count = nv_tui_state.width * nv_tui_state.height;
 
@@ -312,7 +318,11 @@ void nv_tui_clear()
         memset(nv_tui_state.new, 0,
                count * sizeof(struct nv_tui_cell));
     }
+}
 
+void nv_tui_clear()
+{
+    nv_tui_cellbuf_clear();
     (void)write(STDOUT_FILENO, "\x1b[2J", 4);
     (void)write(STDOUT_FILENO, "\x1b[H", 3);
 }

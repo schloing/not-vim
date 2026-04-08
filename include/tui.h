@@ -156,8 +156,9 @@
 #define TB_BG_WHITE   47
 
 enum {
-    NV_TUI_HL_WHITE_ON_BLACK = 0,
-    NV_TUI_HL_BLACK_ON_WHITE = 1,
+    NV_TUI_HL_BACKGROUND,
+    NV_TUI_HL_WHITE_ON_BLACK,
+    NV_TUI_HL_BLACK_ON_WHITE,
 };
 
 struct nv_hl {
