@@ -70,7 +70,7 @@ void nv_draw_cursor()
             ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
             (c.x > l->length ? l->length : c.x);                        // cap the cursor to the end of the line
 
-        nv_tui_set_cell(effective_row, c.line - ctx.view->top_line_index, '|', NV_TUI_HL_WHITE_ON_BLACK);
+        nv_tui_invert_cell(effective_row, c.line - ctx.view->top_line_index);
     }
 }
 
