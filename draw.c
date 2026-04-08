@@ -23,7 +23,7 @@ void nv_draw_background_rect(int x1, int y1, int x2, int y2)
 #ifdef NV_DEBUG_WINDOW_BACKGROUND_COLOURS
             nv_tui_set_cell(i, j, ' ', nv_editor->config.fg_main, colour);
 #else
-            nv_tui_set_cell(i, j, ' ', nv_editor->config.fg_main, nv_editor->config.bg_main);
+            nv_tui_set_cell(i, j, ' ', NV_TUI_HL_BLACK_ON_WHITE);
 #endif
         }
     }
@@ -38,7 +38,6 @@ void nv_draw()
 
 void nv_draw_background()
 {
-    // tb_set_clear_attrs(nv_editor->config.fg_main, nv_editor->config.bg_main);
     nv_tui_clear();
 }
 
@@ -72,7 +71,7 @@ void nv_draw_cursor()
             ctx.view->gutter_width_cols + ctx.view->gutter_gap +        // space taken by line numbers
             (c.x > l->length ? l->length : c.x);                        // cap the cursor to the end of the line
 
-        nv_tui_set_cell(effective_row, c.line - ctx.view->top_line_index, ' ', NV_BLACK, NV_WHITE);
+        nv_tui_set_cell(effective_row, c.line - ctx.view->top_line_index, '|', NV_TUI_HL_WHITE_ON_BLACK);
     }
 }
 
@@ -236,7 +235,7 @@ int nv_draw_view(struct nv_view* view, const struct nv_window_area* area)
 }
 
 #define NV_PRINTF(x, y, fg, fmt, ...) \
-    nv_tui_printf(x, y, fg, nv_editor->config.bg_main, fmt, ##__VA_ARGS__)
+    nv_tui_printf(x, y, fg, fmt, ##__VA_ARGS__)
 
 void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, int row, int line_no, char* lbuf, size_t length)
 {
@@ -251,10 +250,10 @@ void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, i
 
     if (view->gutter_width_cols > 0) {
         gutter_offset = view->gutter_width_cols + view->gutter_gap;
-        NV_PRINTF(area->x, area->y + row, NV_GRAY, "%*d", view->gutter_width_cols, line_no);
+        NV_PRINTF(area->x, area->y + row, NV_TUI_HL_WHITE_ON_BLACK, "%*d", view->gutter_width_cols, line_no);
     }
 
-    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_WHITE, "%s", string);
+    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_TUI_HL_WHITE_ON_BLACK, "%s", string);
 
     free(string);
 }
