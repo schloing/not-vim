@@ -15,7 +15,6 @@
 #include "input.h"
 #include "error.h"
 #include "nvapi.h"
-#include "termbox2.h"
 #include <tui.h>
 #include <uv.h>
 #include "view.h"

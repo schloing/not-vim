@@ -3,7 +3,6 @@
 #include "context.h"
 #include "cvector.h"
 #include "nvtree.h"
-#include "termbox2.h"
 #include "window.h"
 
 void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)

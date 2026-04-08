@@ -1,13 +1,7 @@
 #ifndef NV_COLOR_H
 #define NV_COLOR_H
 
-#include "termbox2.h"
-
-#if TB_OPT_ATTR_W >= 32
 #define NV_TRUECOLOR
-#endif
-
-#define NV_DEFAULT  TB_DEFAULT
 
 #ifdef NV_TRUECOLOR
 #define NV_BLACK    TB_HI_BLACK

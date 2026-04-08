@@ -6,7 +6,6 @@
 #include "editor.h"
 #include "events.h"
 #include "error.h"
-#include "termbox2.h"
 #include "view.h"
 #include "window.h"
 #include <tui.h>

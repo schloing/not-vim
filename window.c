@@ -6,7 +6,6 @@
 #include "cvector.h"
 #include "editor.h"
 #include "error.h"
-#include "termbox2.h"
 #include "window.h"
 
 struct nv_window_node* nv_window_node_init(enum nv_window_kind kind)
