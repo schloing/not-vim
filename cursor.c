@@ -58,8 +58,8 @@ void nv_cursor_move_up(struct nv_context* ctx, struct cursor* cursor, int amt)
         cursor->line = 1;
     }
 
-    if (ctx->view->top_line_index < 1) {
-        ctx->view->top_line_index = 1;
+    if (cursor->line < ctx->view->top_line_index) {
+        ctx->view->top_line_index = cursor->line;
     }
 }
 
