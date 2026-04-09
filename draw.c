@@ -249,10 +249,10 @@ void nv_buffer_printf(struct nv_view* view, const struct nv_window_area* area, i
 
     if (view->gutter_width_cols > 0) {
         gutter_offset = view->gutter_width_cols + view->gutter_gap;
-        NV_PRINTF(area->x, area->y + row, NV_TUI_HL_WHITE_ON_BLACK, "%*d", view->gutter_width_cols, line_no);
+        NV_PRINTF(area->x, area->y + row, NV_TUI_HL_GRAY, "%*d", view->gutter_width_cols, line_no);
     }
 
-    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_TUI_HL_WHITE_ON_BLACK, "%s", string);
+    NV_PRINTF(area->x + gutter_offset, area->y + row, NV_TUI_HL_FOREGROUND, "%s", string);
 
     free(string);
 }
