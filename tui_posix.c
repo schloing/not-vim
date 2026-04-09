@@ -1,4 +1,5 @@
 #include "cvector.h"
+#include "editor.h"
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -15,6 +16,7 @@
 
 static struct {
     cvector(struct nv_hl) nv_hls;
+    uint32_t colours[NV_TUI_COLOUR_COUNT];
     struct nv_tui_cell* new;
     struct nv_tui_cell* curr;
     size_t width;
@@ -29,6 +31,8 @@ static int nv_tui_resize(size_t width, size_t height);
 static void nv_tui_handle_resize(int sig);
 static int nv_tui_process_resize(void);
 static void nv_tui_cellbuf_clear();
+static void nv_tui_newbuf_clear();
+static void nv_tui_hl_init();
 
 size_t nv_tui_width()
 {
@@ -77,10 +81,7 @@ static int nv_tui_resize(size_t width, size_t height)
     nv_tui_state.width = width;
     nv_tui_state.height = height;
 
-    if (count) {
-        memset(nv_tui_state.curr, 0, bytes);
-        memset(nv_tui_state.new, 0, bytes);
-    }
+    nv_tui_cellbuf_clear();
 
     return NV_OK;
 }
@@ -184,7 +185,7 @@ void nv_tui_present()
         }
     }
 
-    memset(nv_tui_state.new, 0, width * height * sizeof(struct nv_tui_cell));
+    nv_tui_newbuf_clear();
 
     if (cvector_size(buf)) {
         (void)write(STDOUT_FILENO, buf, cvector_size(buf));
@@ -206,7 +207,7 @@ void nv_tui_invert_cell(int x, int y)
     nv_tui_state.new[linear].flags |= NV_TUI_FLAGS_INVERT;
 }
 
-void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl)
+void nv_tui_set_cell(int x, int y, uint32_t ch, enum nv_tui_hl hl)
 {
     if (x < 0 || y < 0) {
         return;
@@ -220,7 +221,7 @@ void nv_tui_set_cell(int x, int y, uint32_t ch, hl_index hl)
     nv_tui_state.new[linear].hl = hl;
 }
 
-void nv_tui_printf(int x, int y, hl_index hl, const char* fmt, ...)
+void nv_tui_printf(int x, int y, enum nv_tui_hl hl, const char* fmt, ...)
 {
     char buf[128];
 
@@ -241,6 +242,56 @@ void nv_tui_printf(int x, int y, hl_index hl, const char* fmt, ...)
     }
 }
 
+#define NV_TUI_NEW_HL(_hl, _fg, _bg, _attr) \
+    nv_tui_state.nv_hls[_hl] = (struct nv_hl) { \
+        .fg = nv_tui_state.colours[_fg], \
+        .bg = nv_tui_state.colours[_bg], \
+        .attr = _attr, \
+    };
+
+static void nv_tui_hl_init()
+{
+    cvector_reserve(nv_tui_state.nv_hls, 32);
+
+    nv_tui_state.colours[NV_TUI_COLOUR_FOREGROUND] = nv_editor->config.fg_main;
+    nv_tui_state.colours[NV_TUI_COLOUR_BACKGROUND] = nv_editor->config.bg_main;
+    nv_tui_state.colours[NV_TUI_COLOUR_BLACK] = NV_BLACK;
+    nv_tui_state.colours[NV_TUI_COLOUR_WHITE] = NV_WHITE;
+    nv_tui_state.colours[NV_TUI_COLOUR_GRAY] = NV_GRAY;
+    
+    NV_TUI_NEW_HL(
+        NV_TUI_HL_BACKGROUND,
+        NV_TUI_COLOUR_FOREGROUND,
+        NV_TUI_COLOUR_BACKGROUND, 0
+    );
+
+    NV_TUI_NEW_HL(
+        NV_TUI_HL_FOREGROUND,
+        NV_TUI_COLOUR_FOREGROUND,
+        NV_TUI_COLOUR_BACKGROUND, 0
+    );
+
+    NV_TUI_NEW_HL(
+        NV_TUI_HL_BLACK_ON_WHITE,
+        NV_TUI_COLOUR_BLACK,
+        NV_TUI_COLOUR_WHITE, 0
+    );
+
+    NV_TUI_NEW_HL(
+        NV_TUI_HL_WHITE_ON_BLACK,
+        NV_TUI_COLOUR_WHITE,
+        NV_TUI_COLOUR_BLACK, 0
+    );
+
+    NV_TUI_NEW_HL(
+        NV_TUI_HL_GRAY,
+        NV_TUI_COLOUR_GRAY,
+        NV_TUI_COLOUR_BACKGROUND, 0
+    );
+
+    nv_tui_state.nv_hls[NV_TUI_HL_UNSET] = nv_tui_state.nv_hls[NV_TUI_HL_BACKGROUND];
+}
+
 int nv_tui_init()
 {
     int rv = NV_OK;
@@ -251,23 +302,7 @@ int nv_tui_init()
 
     signal(SIGWINCH, nv_tui_handle_resize);
 
-    cvector_reserve(nv_tui_state.nv_hls, 32);
-
-    nv_tui_state.nv_hls[NV_TUI_HL_BACKGROUND] = (struct nv_hl){
-        .fg = NV_WHITE,
-        .bg = NV_BLACK,
-        .attr = 0,
-    };
-    nv_tui_state.nv_hls[NV_TUI_HL_BLACK_ON_WHITE] = (struct nv_hl){
-        .fg = NV_BLACK,
-        .bg = NV_WHITE,
-        .attr = 0,
-    };
-    nv_tui_state.nv_hls[NV_TUI_HL_WHITE_ON_BLACK] = (struct nv_hl){
-        .fg = NV_WHITE,
-        .bg = NV_BLACK,
-        .attr = 0,
-    };
+    nv_tui_hl_init();
 
     struct termios raw;
     (void)tcgetattr(STDIN_FILENO, &raw);
@@ -289,6 +324,7 @@ int nv_tui_init()
 static void nv_tui_deinit()
 {
     (void)tcsetattr(STDIN_FILENO, TCSAFLUSH, &nv_tui_state.termios0);
+    (void)write(STDOUT_FILENO, "\x1b[0m", 4);
     (void)write(STDOUT_FILENO, "\x1b[?25h", 6);
     (void)write(STDOUT_FILENO, "\x1b[2J", 4);
     (void)write(STDOUT_FILENO, "\x1b[H", 3);
@@ -308,15 +344,28 @@ void nv_tui_free()
     nv_tui_state.height = 0;
 }
 
+static void nv_tui_newbuf_clear()
+{
+    size_t count = nv_tui_state.width * nv_tui_state.height;
+    if (!count) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        nv_tui_state.new[i] = (struct nv_tui_cell){ .hl = NV_TUI_HL_BACKGROUND };
+    }
+}
+
 static void nv_tui_cellbuf_clear()
 {
     size_t count = nv_tui_state.width * nv_tui_state.height;
+    if (!count) {
+        return;
+    }
 
-    if (count) {
-        memset(nv_tui_state.curr, 0,
-               count * sizeof(struct nv_tui_cell));
-        memset(nv_tui_state.new, 0,
-               count * sizeof(struct nv_tui_cell));
+    for (size_t i = 0; i < count; i++) {
+        nv_tui_state.new[i] = (struct nv_tui_cell){ .hl = NV_TUI_HL_BACKGROUND };
+        nv_tui_state.curr[i] = (struct nv_tui_cell){ .hl = NV_TUI_HL_UNSET };
     }
 }
 
