@@ -10,3 +10,6 @@
 [submodule "nng"]
 	path = nng
 	url = https://github.com/nanomsg/nng.git
+[submodule "tree-sitter"]
+	path = tree-sitter
+	url = https://github.com/tree-sitter/tree-sitter.git

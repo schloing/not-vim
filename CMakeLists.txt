@@ -74,6 +74,11 @@ add_subdirectory(nng EXCLUDE_FROM_ALL)
 set(YYJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(yyjson EXCLUDE_FROM_ALL)
 
+# tree-sitter
+add_library(tree-sitter STATIC "./tree-sitter/lib/src/lib.c")
+target_include_directories(tree-sitter PRIVATE "./tree-sitter/lib/src" PUBLIC "./tree-sitter/lib/include")
+target_link_libraries(nv PRIVATE tree-sitter)
+
 add_library(nvrpc SHARED nvrpc.c rpc.c)
 target_include_directories(nvrpc PRIVATE "./include" "./")
 target_link_libraries(nvrpc PRIVATE nng yyjson)
