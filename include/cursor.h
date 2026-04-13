@@ -5,10 +5,9 @@
 #include "context.h"
 
 struct cursor {
-    size_t x;
-    int line; // 1-indexed
-    char ch;
-    size_t buff_id;
+    size_t col;
+    size_t line; // 1-indexed
+    size_t offset; // absolute buffer index
 };
 
 #define NV_CURSOR_CAP 5

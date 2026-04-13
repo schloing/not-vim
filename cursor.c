@@ -19,7 +19,7 @@ void nv_cursor_insert_ch(struct nv_context* ctx, struct cursor* cursor, char ch)
     });
 
     ctx->buffer->tree = nv_tree_paint(ctx->buffer->tree, B);
-    cursor->x++;
+    cursor->col++;
 }
 
 void nv_cursor_move_down(struct nv_context* ctx, struct cursor* cursor, int amt)
@@ -71,16 +71,16 @@ void nv_cursor_move_x(struct nv_context* ctx, struct cursor* cursor, int amt)
     }
 
     // cursor could be out of range before any change to the cursor
-    if (cursor->x > l->length)
-        cursor->x = l->length;
+    if (cursor->col > l->length)
+        cursor->col = l->length;
 
-    cursor->x += amt;
+    cursor->col += amt;
 
-    if (cursor->x > l->length)
-        cursor->x = l->length;
+    if (cursor->col > l->length)
+        cursor->col = l->length;
 
-    if (cursor->x < 0)
-        cursor->x = 0;
+    if (cursor->col < 0)
+        cursor->col = 0;
 }
 
 struct cursor* nv_primary_cursor(struct nv_context* ctx)
